@@ -34,7 +34,10 @@ class OperationSafetyTests(unittest.TestCase):
 
     def test_connectivity_cannot_create_bucket_or_access_retail_services(self):
         policy = json.loads(config.configuration(self.values)["session_policy"])
-        self.assertEqual({"sts:GetCallerIdentity", "iam:GetOpenIDConnectProvider"}, {s["Action"] for s in policy["Statement"]})
+        actions = {a for s in policy["Statement"] for a in (s["Action"] if isinstance(s["Action"], list) else [s["Action"]])}
+        self.assertEqual({"sts:GetCallerIdentity", "iam:GetOpenIDConnectProvider", "iam:GetRole", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies"}, actions)
+        role = next(s for s in policy["Statement"] if isinstance(s["Action"], list))
+        self.assertEqual(self.values["ROLE_ARN"], role["Resource"])
 
     def test_wrong_ref_bucket_and_malformed_arn_are_rejected(self):
         for name, value in [("GITHUB_REF", "refs/heads/bootstrap"), ("TF_STATE_BUCKET", "mhachem-retail-fixture"),

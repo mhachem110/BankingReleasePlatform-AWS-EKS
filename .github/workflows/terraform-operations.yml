@@ -222,10 +222,11 @@ jobs:
           unset-current-credentials: true
           translate-env-variables: false
       - run: aws sts get-caller-identity
-      - name: Verify existing IAM OIDC provider and audience
+      - name: Verify existing IAM role, OIDC provider and reviewed policies
         env:
           AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
-        run: python scripts/bootstrap/check-oidc-provider.py
+          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        run: python scripts/bootstrap/check-iam-configuration.py
   initialize:
     if: inputs.action == 'initialize'
     needs: prerequisites
