@@ -20,3 +20,10 @@ crash.log
 *.key
 *.pfx
 *.log
+*.tfbackend
+*.tfbackend.json
+!*.tfbackend.example
+**/backend_override.tf
+**/.bootstrap-local/
+__pycache__/
+*.pyc
