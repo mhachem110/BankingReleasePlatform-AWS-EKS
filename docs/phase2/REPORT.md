@@ -40,7 +40,7 @@ Unverified: actual backend ownership/settings, real IAM permission effectiveness
 
 ## E. What I Must Do
 
-1. Review the separate governance and Phase 2 preparation PRs into dev. No PR is merged automatically. Before manual dispatch becomes available, promote the workflow through stage and uat to default branch main using reviewed PRs; execute the lab bootstrap only from dev after explicit AWS authorization.
+1. Review the separate governance and Phase 2 preparation PRs into dev. No PR is merged automatically. The repository default is dev, so a reviewed merge of the workflow into dev makes manual dispatch available. Execute the lab bootstrap only from dev after explicit AWS authorization; main remains production-approved.
 2. Provide the complete CloudOpsTrackerBootstrap inline JSON, approved Region and exact approved bucket (or confirm none approved), and any existing KMS key/policy details.
 3. Confirm the role ARN in IAM. The supplied ARN omitted `:role/`. Confirm you/your administrator may authorize reuse and modify trust/add an inline policy.
 4. Confirm the GitHub IAM identity provider and audience under IAM  ->  Identity providers. Referencing it in trust does not verify current existence/configuration.

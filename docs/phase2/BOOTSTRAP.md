@@ -34,7 +34,7 @@ For a new dedicated bucket, the owner must explicitly approve creation, security
 
 ## Offline validation (safe to run now)
 
-From the preparation directory, or the repository root after these files are integrated:
+From the repository root on this feature branch:
 
 ```powershell
 terraform fmt -check -recursive infra
@@ -89,7 +89,7 @@ GitHub  ->  Settings  ->  Secrets and variables  ->  Actions:
 - Optional `TF_STATE_KMS_KEY_ARN`: exact approved existing customer KMS key for a reused SSE-KMS bucket.
 - `DEDICATED_BUCKET_MANAGEMENT_APPROVED` and `BOOTSTRAP_STATE_MIGRATED`: default absent/false. Set true only for an approved dedicated bucket and verified migration. Never enable them for a shared bucket.
 
-After reviewing and merging Phase 2 code manually into dev, the dispatchable workflow must also reach the default branch main through approved dev -> stage -> uat -> main promotion PRs before GitHub exposes workflow_dispatch. Promoting configuration code does not deploy AWS resources. Until that happens, do not expect the Run workflow button or attempt to bypass branch governance. Once this and all AWS prerequisites are authorized, Actions  ->  Controlled Terraform operations  ->  Run workflow  ->  branch `dev`.
+The repository default is now dev. After reviewing and merging Phase 2 code manually into dev, GitHub can expose workflow_dispatch because the workflow exists on the default branch. No production promotion is needed to bootstrap the development environment. Only after all AWS prerequisites and explicit AWS operations authorization, Actions  ->  Controlled Terraform operations  ->  Run workflow  ->  branch `dev`.
 A `plan` run authenticates after reviewer approval, verifies the existing bucket, initializes remote state, validates and saves a plan. It makes no bucket repairs. Backend initialization/locking may write S3 objects and incur request charges even for plan; do not run it without connectivity/backend authorization.
 
 An `apply` run additionally needs `APPLY-REVIEWED-PLAN` and a second environment approval after planning. Review `plan.txt` and the backend before approving the apply job. Apply consumes that run's saved binary plan and exact backend configuration; it does not recalculate a plan. No automatic push/PR applies, no destroy workflow and no application release workflow are included.
