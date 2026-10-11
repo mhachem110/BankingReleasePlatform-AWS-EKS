@@ -105,6 +105,8 @@ module "eks" {
   operator_role_arn    = var.operator_role_arn
   deployer_role_arn    = var.deployer_role_arn
   addon_versions       = var.addon_versions
+  # Ensure private outbound routes/NAT are ready before workers bootstrap.
+  depends_on = [module.network]
 }
 output "vpc_id" { value = module.network.vpc_id }
 output "public_subnet_ids" { value = module.network.public_subnet_ids }
