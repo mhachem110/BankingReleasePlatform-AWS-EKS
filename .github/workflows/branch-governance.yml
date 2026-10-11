@@ -1,0 +1,36 @@
+name: Repository governance
+
+on:
+  pull_request:
+    branches: [dev, stage, uat, main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions: {}
+
+jobs:
+  branch-route:
+    name: Branch promotion policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source and destination branches
+        shell: bash
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" ]]; then
+            echo 'Promotion branches must belong to this repository.'
+            exit 1
+          fi
+          case "$BASE_BRANCH:$HEAD_BRANCH" in
+            dev:feature/?* | stage:dev | uat:stage | main:uat)
+              echo "Allowed promotion: $HEAD_BRANCH -> $BASE_BRANCH"
+              ;;
+            *)
+              echo 'Allowed routes: feature/* -> dev -> stage -> uat -> main.'
+              exit 1
+              ;;
+          esac
