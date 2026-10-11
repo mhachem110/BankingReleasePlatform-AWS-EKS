@@ -1,5 +1,11 @@
 # Governance verification evidence
 
+## Current migration progress
+
+PR #1 merged at e0beff1, PR #3 at ab58a7f, and PR #2 at 3db5bcc, each after individual owner approval. PR #4 is synchronized normally with dev and remains unmerged. The trusted governance workflow is now installed in dev; its real PR #4 checks must be observed before requiring the aggregate. Required-status activation will be performed manually by the owner using the instructions below. No AWS operation or GitHub environment configuration ran.
+
+## Earlier preparation evidence (historical snapshot)
+
 Verified on 2026-10-11. This evidence describes repository governance, not an AWS authorization/deployment test.
 
 | Check actually performed | Result |
@@ -28,3 +34,7 @@ GitHub REST reported `mergeable_state: blocked` for these PRs at the final read.
 The policy workflow is not yet installed in the empty default dev, so its final jobs have not executed as required GitHub checks. Required-status activation must follow an actual successful current-PR run after the approved migration. CODEOWNERS review requests likewise need the file on each destination branch; independent required review needs another eligible reviewer. Tests were local, except for API readback, GitHub syntax validation and ordinary branch push.
 
 Not performed: negative update attempt by another real identity, destructive push/deletion tests, PR merges, application/Helm CI implementation, environment creation, AWS calls, IAM changes, Terraform apply, deployment or charge-incurring infrastructure. The API snapshots and test harness remain in ignored artifacts; no credentials are written to evidence files or committed.
+
+## Manual required-status activation
+
+After a successful current PR #4 run, open Settings > Rules > Rulesets > banking-dev-governance. Keep enforcement Active, exact refs/heads/dev targeting and the empty bypass list. Enable Require status checks to pass and add exactly Repository security policy, choosing GitHub Actions as expected source. Leave Require branches to be up to date before merging unchecked for the documented promotion model. Retain PR, conversation-resolution, no-delete and no-force rules. Do not globally require the path-filtered Terraform validate job, or enable independent code-owner review while there is no second eligible reviewer. Save, reopen the ruleset and verify the entry. On PR #4 verify the aggregate is both successful and required. Do not merge until the owner separately approves PR #4. Add the check to stage, uat and main only after observing it on actual promotion PRs.

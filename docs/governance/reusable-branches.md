@@ -1,6 +1,6 @@
 # Reusable working branches and safe PR migration
 
-This checkpoint changes repository governance only. It does not merge PRs, continue Phase 2 implementation, change AWS authentication, or deploy resources. All merge steps below are a proposal for the owner's review, not execution approval.
+Migration progress on 2026-10-11: PRs #1, #3 and #2 were merged into dev with individual owner approval and merge commits. PR #4 is synchronized with that history and still requires its own approval. Phase 2 preparation is included, but AWS configuration, connectivity and resources remain unexecuted. Instructions below do not authorize any remaining merge or AWS operation.
 
 ## Target structure
 
@@ -20,7 +20,7 @@ flowchart LR
 | `bootstrap` | Terraform backend, S3 state and GitHub OIDC/bootstrap work | Original PR #3 bootstrap history |
 | `infra` | VPC, EKS, ECR, networking, RDS, monitoring, Helm, workflows and governance | Existing dev baseline; this migration PR adds governance files only |
 
-`dev` remains the repository default. `stage`, `uat` and `main` retain their original histories and protections. All four still contain the initial common baseline because no PR has been merged. After synchronization, a working branch contains the shared repository; its workstream controls what you change, not what files it may contain.
+`dev` remains the repository default. `stage`, `uat` and `main` retain their original histories and protections. dev now includes the approved application, bootstrap and governance merges; stage, uat and main retain the initial baseline. No environment promotion has occurred. After synchronization, a working branch contains the shared repository; its workstream controls what you change, not what files it may contain.
 
 ## Why existing PR heads are retained
 
@@ -34,14 +34,14 @@ Do not start new work on the old phase branches. Retiring them is a separate fut
 
 | PR | Source -> target | Status and purpose |
 | --- | --- | --- |
-| [#1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) | feature/phase1-banking-apis -> dev | Open, application work preserved; feature/app has the same application history |
-| [#2](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/2) | feature/repository-governance -> dev | Open, updated in place with CODEOWNERS, trusted route/file validation and security guidance |
-| [#3](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/3) | feature/phase2-terraform-bootstrap -> dev | Draft, bootstrap preparation preserved; bootstrap initially points to the same commit |
+| [#1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) | feature/phase1-banking-apis -> dev | Merged at e0beff1; application history preserved on feature/app |
+| [#2](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/2) | feature/repository-governance -> dev | Merged at 3db5bcc; trusted route/file workflow and CODEOWNERS installed in dev |
+| [#3](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/3) | feature/phase2-terraform-bootstrap -> dev | Merged at ab58a7f; reusable bootstrap synchronized after its merge; AWS execution remains unapproved |
 | [#4](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/4) | infra -> dev | Adds the runbook, persistent agent instructions, ignore safeguards and working/authority ruleset configurations; no replacement of PRs #1-#3 |
 
 The executable security policy is updated in existing PR #2. This separate infra PR records how to adopt it without breaking the original reviews. Its full [security report](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/blob/feature/repository-governance/docs/governance/security.md) separates active native controls from prepared policy enforcement.
 
-## Exact proposed merge order
+## Migration order and remaining approvals
 
 Review all changes first. Do not perform these merges until the owner approves the sequence. Use **Create a merge commit** in every PR; do not squash, rebase, bypass protections, or enable auto-merge.
 
@@ -147,4 +147,4 @@ The future environment mapping remains dev/dev, stage/stage, uat/uat, prod/main,
 
 ## Validation and limits
 
-The exact executable policy accepted all six permitted routes and rejected 26 invalid route/repository combinations. The actual aggregate shell step passed all 16 dependency-result pairs; only success/success is accepted. Actionlint and 23 Python file-policy tests passed, and local trusted validation against PR #4's live API metadata passed. The five original rulesets and read-only Actions defaults were read back unchanged; both new guards are Active. The owner can push an ordinary infra commit; a second real identity was not used to test rejection. Original application/bootstrap commits remain ancestors of their reusable branches. Existing PRs remain open, and environment branch SHAs remain unchanged. No PR merge or AWS operation ran. The required file/route gate remains pending PR #2's reviewed merge and real status activation; prepared policy is not live enforcement.
+The exact executable policy accepted all six permitted routes and rejected 26 invalid route/repository combinations. The actual aggregate shell step passed all 16 dependency-result pairs; only success/success is accepted. Actionlint and 23 Python file-policy tests passed, and local trusted validation against PR #4's live API metadata passed. The five original rulesets and read-only Actions defaults were read back unchanged; both new guards are Active. The owner can push an ordinary infra commit; a second real identity was not used to test rejection. Original application/bootstrap commits remain ancestors of their reusable branches. PR #4 remains open; dev advanced through approved merges while stage, uat and main remain unchanged. PRs #1, #3 and #2 were merged with individual approval; PR #4 is unmerged. The trusted policy is installed in dev. Verify its actual PR #4 run before manual required-status activation. No AWS operation ran.
