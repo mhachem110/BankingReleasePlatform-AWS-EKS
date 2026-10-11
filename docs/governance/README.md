@@ -1,5 +1,7 @@
 # Repository governance checkpoint
 
+> Historical governance preparation snapshot. PRs #1, #3 and #2 have since merged with individual owner approval. See [current migration progress](reusable-branches.md) and [verification evidence](security-verification.md) for the remaining PR #4 and status-check activation. AWS operations remain unexecuted.
+
 Repository: https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS
 
 ## Branches and common baseline

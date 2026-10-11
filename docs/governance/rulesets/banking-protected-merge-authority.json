@@ -1,0 +1,31 @@
+{
+  "rules": [
+    {
+      "type": "update",
+      "parameters": {
+        "update_allows_fetch_and_merge": false
+      }
+    }
+  ],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/dev",
+        "refs/heads/stage",
+        "refs/heads/uat",
+        "refs/heads/main"
+      ],
+      "exclude": []
+    }
+  },
+  "name": "banking-protected-merge-authority",
+  "bypass_actors": [
+    {
+      "bypass_mode": "pull_request",
+      "actor_id": 150286776,
+      "actor_type": "User"
+    }
+  ],
+  "enforcement": "active",
+  "target": "branch"
+}

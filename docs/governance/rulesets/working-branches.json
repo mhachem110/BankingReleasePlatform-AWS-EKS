@@ -1,0 +1,24 @@
+{
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "refs/heads/feature/app",
+        "refs/heads/bootstrap",
+        "refs/heads/infra"
+      ]
+    }
+  },
+  "name": "banking-working-branches",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "target": "branch",
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    }
+  ]
+}

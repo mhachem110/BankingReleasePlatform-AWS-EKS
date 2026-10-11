@@ -1,0 +1,29 @@
+{
+  "rules": [
+    {
+      "type": "update",
+      "parameters": {
+        "update_allows_fetch_and_merge": false
+      }
+    }
+  ],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/bootstrap",
+        "refs/heads/infra"
+      ],
+      "exclude": []
+    }
+  },
+  "name": "banking-cloud-working-authority",
+  "bypass_actors": [
+    {
+      "bypass_mode": "always",
+      "actor_id": 150286776,
+      "actor_type": "User"
+    }
+  ],
+  "enforcement": "active",
+  "target": "branch"
+}
