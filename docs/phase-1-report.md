@@ -2,6 +2,14 @@
 
 Review date: October 10, 2026, America/New_York. Project name: Banking Release Platform. Only Phase 1 was authorized and implemented.
 
+## GitHub publishing checkpoint follow-up
+
+The owner confirmed [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS). It existed and was empty before publishing: the GitHub API reported size zero and `git ls-remote` returned no refs. `origin` now points to this repository. Both existing branches were pushed, and [PR #1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) is open from `feature/phase1-banking-apis` into `main`, using the prepared description plus verified test results and review guidance.
+
+The committed history was checked for generated binaries/directories, credential files, recognized secret patterns and Terraform state/plan files; none were found. Ignore rules for binaries, build output, test artifacts, `.env` and Terraform state were verified. The publishing follow-up changes documentation only; application code and its previously recorded test results are unchanged. No GitHub CI workflow, Phase 2 implementation or AWS change was added. The PR has not been merged.
+
+The A–G report below records the original local checkpoint. Its pending-repository notes and manual publishing instructions are historical; publishing is now complete. Do not rerun the original `git remote add origin` instructions.
+
 ## A. Phase Completed
 
 Phase 1 — Banking Application and Docker: local implementation and Checkpoint 1 complete. Both APIs run natively and in their own Docker containers, real HTTP communication works, automated tests pass and run instructions are available. GitHub repository identity/publishing and the actual pull request remain pending the owner's repository URL. No remote was configured at initial inspection. No AWS infrastructure or IAM change was made.

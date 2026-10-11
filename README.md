@@ -2,7 +2,7 @@
 
 AWS Week 4 Financial Services CI/CD and Kubernetes Release Platform, by Mahmoud Hachem. Phase 1 implements two ASP.NET Core APIs using .NET 10 LTS and local Docker containers. All customers and payments are fictional.
 
-The current folder was empty and was not a Git repository at the initial inspection. This implementation initializes local Git with `main` and the feature branch `feature/phase1-banking-apis`. No remote repository is configured; the new GitHub repository URL must be confirmed by the owner. The earlier CloudOpsTracker repository is a read-only reference, not this project's remote.
+The current folder was empty and was not a Git repository at the initial inspection. Local Git was initialized with `main` and the feature branch `feature/phase1-banking-apis`. The confirmed remote is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS). Both branches are published, and [Phase 1 PR #1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) is open for review. The earlier CloudOpsTracker repository is a read-only reference.
 
 Only Phase 1 is implemented. AWS provisioning, IAM changes, Terraform, Helm and CI/CD workflows require approval of their respective phases. See [requirements mapping](docs/assignment-requirements.md), [architecture and repository layout](docs/architecture.md), [reference review](docs/reference-project-review.md) and [Phase 1 report](docs/phase-1-report.md).
 
@@ -123,4 +123,4 @@ While Account API is stopped, Payment's `/health` stays healthy but payment requ
 
 ## Feature branch and pull request
 
-The implementation is on `feature/phase1-banking-apis`. The initial `main` commit provides a local base for review. Confirm the destination GitHub repository before setting `origin` or publishing. The exact GitHub steps and prepared PR description are in [the Phase 1 report](docs/phase-1-report.md). No GitHub Actions workflow or AWS secret is needed in this phase.
+The implementation is on `feature/phase1-banking-apis`, tracking `origin/feature/phase1-banking-apis`. The initial `main` commit provides the PR base. Review [PR #1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) before merging. The [Phase 1 report](docs/phase-1-report.md) records the original local checkpoint and subsequent publishing status. No GitHub Actions workflow or AWS secret is needed in this phase.

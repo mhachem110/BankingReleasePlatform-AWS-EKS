@@ -1,6 +1,6 @@
 # Architecture and repository layout
 
-Project name: Banking Release Platform. Local workspace: `bank_system_week4_project_mahmoudhachem`. GitHub owner/repository identity: awaiting confirmation; no remote existed at initial inspection. This is a new project, separate from CloudOpsTracker.
+Project name: Banking Release Platform. Local workspace: `bank_system_week4_project_mahmoudhachem`. Confirmed GitHub identity: [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS). No remote existed at initial inspection; `origin` now points to the confirmed repository. This is a new project, separate from CloudOpsTracker.
 
 ## Implemented Phase 1 architecture
 
