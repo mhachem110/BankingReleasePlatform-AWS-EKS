@@ -2,24 +2,19 @@ mock_provider "aws" {
   mock_data "aws_vpc" { defaults = { cidr_block = "10.70.0.0/16" } }
 }
 variables {
-  name                 = "banking-dev"
-  vpc_id               = "vpc-00000000000000000"
-  subnet_ids           = ["subnet-00000000000000001", "subnet-00000000000000002"]
-  cluster_role_arn     = "arn:aws:iam::123456789012:role/test-cluster"
-  node_role_arn        = "arn:aws:iam::123456789012:role/test-nodes"
-  controller_role_arn  = "arn:aws:iam::123456789012:role/test-controller"
-  operator_role_arn    = "arn:aws:iam::123456789012:role/test-operator"
-  deployer_role_arn    = "arn:aws:iam::123456789012:role/test-deployer"
-  kms_key_arn          = "arn:aws:kms:us-east-2:123456789012:key/00000000-0000-0000-0000-000000000000"
-  kubernetes_version   = "1.36"
-  node_release_version = "1.36.0-offline-fixture"
-  endpoint_cidrs       = ["203.0.113.10/32"]
+  name                       = "banking-dev"
+  vpc_id                     = "vpc-00000000000000000"
+  subnet_ids                 = ["subnet-00000000000000001", "subnet-00000000000000002"]
+  cluster_role_arn           = "arn:aws:iam::123456789012:role/test-cluster"
+  fargate_execution_role_arn = "arn:aws:iam::123456789012:role/test-fargate"
+  operator_role_arn          = "arn:aws:iam::123456789012:role/test-operator"
+  deployer_role_arn          = "arn:aws:iam::123456789012:role/test-deployer"
+  kms_key_arn                = "arn:aws:kms:us-east-2:123456789012:key/00000000-0000-0000-0000-000000000000"
+  kubernetes_version         = "1.36"
+  endpoint_cidrs             = ["203.0.113.10/32"]
   addon_versions = {
-    vpc-cni                = "v1.0.0-eksbuild.1"
-    kube-proxy             = "v1.0.0-eksbuild.1"
-    coredns                = "v1.0.0-eksbuild.1"
-    metrics-server         = "v1.0.0-eksbuild.1"
-    eks-pod-identity-agent = "v1.0.0-eksbuild.1"
+    coredns        = "v1.0.0-eksbuild.1"
+    metrics-server = "v1.0.0-eksbuild.1"
   }
 }
 run "cluster_security" {
@@ -37,12 +32,28 @@ run "cluster_security" {
     error_message = "Avoid automatic extended-support charges and retain all control-plane log types."
   }
   assert {
-    condition     = aws_launch_template.nodes.metadata_options[0].http_tokens == "required" && aws_launch_template.nodes.metadata_options[0].http_put_response_hop_limit == 1 && aws_launch_template.nodes.block_device_mappings[0].ebs[0].encrypted
-    error_message = "Worker disks must be encrypted; pods must not inherit node metadata credentials."
+    condition     = !aws_eks_cluster.this.bootstrap_self_managed_addons && toset(keys(aws_eks_addon.this)) == toset(["coredns", "metrics-server"])
+    error_message = "Fargate must not bootstrap EC2 DaemonSets or a Pod Identity agent."
   }
   assert {
-    condition     = aws_eks_node_group.this.scaling_config[0].desired_size == 2 && aws_eks_node_group.this.capacity_type == "ON_DEMAND" && aws_eks_node_group.this.ami_type == "AL2023_x86_64_STANDARD"
-    error_message = "Reviewed baseline uses two managed AL2023 workers."
+    condition     = one(aws_eks_fargate_profile.banking.selector).namespace == "banking-dev" && try(length(one(aws_eks_fargate_profile.banking.selector).labels), 0) == 0
+    error_message = "Every banking-dev Pod must match the application profile."
+  }
+  assert {
+    condition     = one(aws_eks_fargate_profile.coredns.selector).labels["k8s-app"] == "kube-dns" && length(aws_eks_fargate_profile.controller.selector) == 2
+    error_message = "DNS, controller and Metrics Server must have matching profiles."
+  }
+  assert {
+    condition     = aws_eks_fargate_profile.banking.subnet_ids == toset(var.subnet_ids) && aws_eks_fargate_profile.banking.pod_execution_role_arn == var.fargate_execution_role_arn
+    error_message = "Fargate must use reviewed private subnets and the distinct execution role."
+  }
+  assert {
+    condition     = jsondecode(aws_eks_addon.this["coredns"].configuration_values).computeType == "Fargate" && length(jsondecode(aws_eks_addon.this["coredns"].configuration_values).topologySpreadConstraints) == 0
+    error_message = "CoreDNS must explicitly schedule on Fargate without unsupported spreading."
+  }
+  assert {
+    condition     = aws_iam_openid_connect_provider.cluster.client_id_list == toset(["sts.amazonaws.com"])
+    error_message = "The cluster IRSA provider must require STS audience."
   }
 }
 run "public_endpoint_rejected" {
@@ -53,5 +64,21 @@ run "public_endpoint_rejected" {
 run "missing_addon_rejected" {
   command = plan
   variables { addon_versions = {} }
+  expect_failures = [var.addon_versions]
+}
+run "execution_role_path_rejected" {
+  command = plan
+  variables { fargate_execution_role_arn = "arn:aws:iam::123456789012:role/path/test-fargate" }
+  expect_failures = [var.fargate_execution_role_arn]
+}
+run "daemonset_addons_rejected" {
+  command = plan
+  variables {
+    addon_versions = {
+      coredns                = "v1.0.0-eksbuild.1"
+      metrics-server         = "v1.0.0-eksbuild.1"
+      eks-pod-identity-agent = "v1.0.0-eksbuild.1"
+    }
+  }
   expect_failures = [var.addon_versions]
 }

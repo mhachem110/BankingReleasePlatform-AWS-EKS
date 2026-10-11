@@ -4,6 +4,8 @@ on:
     branches: [dev, stage, uat, main]
     paths:
       - 'infra/**'
+      - 'iam/**'
+      - 'docs/infrastructure/**'
       - 'scripts/bootstrap/**'
       - 'scripts/infra/**'
       - 'helm/**'
@@ -13,6 +15,8 @@ on:
     branches: [dev, stage, uat, main]
     paths:
       - 'infra/**'
+      - 'iam/**'
+      - 'docs/infrastructure/**'
       - 'scripts/bootstrap/**'
       - 'scripts/infra/**'
       - 'helm/**'
@@ -45,6 +49,7 @@ jobs:
             terraform -chdir="$root" test
           done
           python -m unittest discover -s scripts/bootstrap/tests -v
+          python -m pip install -r scripts/infra/requirements.txt
           python -m unittest discover -s scripts/infra/tests -v
       - uses: azure/setup-helm@bf6a7d304bc2fdb57e0331155b7ebf2c504acf0a # v4
         with:

@@ -1,54 +1,61 @@
-# Phase 3 implementation preparation report
+# Phase 3 Fargate implementation report
 
-## A. Phase Completed
+## A. Phase completed
 
-Phase 2 is **COMPLETE**, with actual AWS evidence in [COMPLETION.md](../phase2/COMPLETION.md). Phase 3 **code preparation is complete; deployment is pending owner approval and administrator prerequisites**. Work uses existing `infra`, synchronized normally with reviewed dev. No additional feature branch or paid infrastructure was created.
+**Fargate source preparation complete; paid deployment pending approval.** Existing PR #8, infra -> dev, is updated for a Fargate-only Banking platform. This redesign changes only the infrastructure owner's assigned paths. No PR merge, Terraform apply, IAM modification or Phase 3 AWS resource creation is authorized or performed by this checkpoint.
 
-## B. What You Built
+Phase 2 remains COMPLETE. Its verified recovery run is https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38175836629. Existing backend protections, state identities and both Phase 2 roots remain unchanged. Read-back at this checkpoint confirms bootstrap BOOTSTRAP_STATE_READY=true and repository AWS_OPERATIONS_ENABLED=false.
 
-- `infra/modules/network`: two-AZ VPC, six subnets across three tiers, Internet Gateway, one NAT/EIP, distinct public/private/isolated routes, closed new default security group, free S3 Gateway Endpoint and encrypted flow logs.
-- `infra/modules/registry`: separate Account and Payment ECR repositories, immutable tags, push scanning, AES256 encryption, safe untagged cleanup and protected tagged releases.
-- `infra/modules/eks`: EKS 1.36 with private/narrowly allowed public endpoint, KMS secret/log encryption, five control-plane log types, hardened managed AL2023 workers, dedicated security groups/rules, explicit operator and namespace deployer access, five pinned managed add-ons and controller Pod Identity association.
-- `infra/environments/dev/platform`: composed platform root and prerequisites, separate platform S3 state path. Both existing Phase 2 roots remain unchanged.
-- `.github/workflows/terraform-validation.yml`: expanded credential-free Terraform/Python/Checkov/Helm PR validation.
-- `.github/workflows/infra-operations.yml`: disabled-by-default manual OIDC plan/apply with existing protected bootstrap reviews, exact saved-plan hash, unchanged inputs and strict creation-only scope.
-- `helm/banking`: separate Kubernetes objects for both APIs, private service DNS, digest images, probes/limits, non-root/read-only containers, disruption budgets, optional HPA and HTTPS Ingress disabled by default.
-- Administrator policy generator, pinned official controller policy, collision/prerequisite checks, cost estimate, architecture, cleanup/deployment procedure and remaining-assignment matrix.
+## B. What was built
 
-## C. How It Works
+- infra/modules/eks and infra/environments/dev/platform: EKS banking-dev, explicit API access, private/restricted public endpoint, KMS encryption, five control-plane log types, three sequential private-subnet Fargate profiles, two pinned Fargate-compatible managed add-ons and a new cluster-specific IAM OIDC provider.
+- CoreDNS runs on Fargate explicitly. The controller profile also schedules Metrics Server; the namespace-wide banking-dev profile schedules both APIs. Managed EC2 workers, node launch templates/disks/AMI pins and Pod Identity association are removed from the AWS source.
+- Existing network/registry modules retain six subnets across two AZs, single NAT/IGW, isolated database routes, S3 gateway endpoint, encrypted flow logs and two immutable/scanned ECR repositories.
+- scripts/infra: strict protected input/saved-plan guards, role/service-linked-role/version/schema preflight, read-only post-apply verification, exact IRSA-trust export, additive administrator-policy generator and reproducible cost estimate.
+- infra-operations.yml retains OIDC, two protected approvals, exact same-run saved-plan SHA256/configuration validation and native state locking. Terraform validation retains credential-free tests and Checkov.
+- iam/phase3 records the reviewed upstream controller policy provenance. ADMIN-REQUEST.md, DEPLOYMENT.md, ARCHITECTURE.md, COSTS.md and INTERFACE.md document prerequisites and the Chat 2 handoff.
 
-The VPC separates public routing, private compute and isolated future databases. NAT permits outbound access for private workers without exposing those workers publicly. EKS runs the Kubernetes control plane; the managed worker group runs containers. ECR stores built images. Helm packages the two APIs and their Kubernetes traffic/health/scaling configuration.
+## C. How it works
 
-IAM service/node/controller roles are distinct, administrator-provided inputs. EKS access entries grant Kubernetes authorization separately from AWS IAM. OIDC authenticates a reviewed GitHub job; the environment controls approval, while session caps and permission policies limit AWS actions. This workflow keeps the existing Banking bootstrap subject and Retail relationship intact.
+EKS runs the Kubernetes control plane. Fargate profiles tell AWS which namespaces/labels should receive a private compute environment for each Pod. Fargate's execution role permits infrastructure image pulls; controller application AWS calls use a distinct IRSA workload role trusted through this cluster's actual issuer. GitHub job authentication still uses the existing GitHub provider and protected bootstrap environment, independently of cluster IRSA.
 
-## D. Tests and Results
+Payment calls Account through an internal Kubernetes Service on port 8080. A later authorized controller/ALB deployment uses IP targets; no ALB is created by these Terraform profiles. Chat 2 owns all chart/application/release changes. No file in Helm, apps, tests, scripts/deploy or application workflows is edited by this redesign. Earlier chart files remain in PR #8's existing history and need Chat 2's reviewed Fargate replacement.
 
-Local actual checks:
+One NAT is a development availability/cost tradeoff. Fargate does not enforce AWS VPC CNI NetworkPolicies or topology spread constraints. Its EKS-managed SG has self traffic and broad default outbound access. These limitations are explicitly documented; no production isolation or even-AZ-placement claim is made.
 
-- Seven Terraform configurations initialized/validated without AWS backends or credentials across preparation; formatting passes.
-- Eight new mock Terraform tests pass: two network, one ECR, three EKS, two integrated platform. They create no AWS resources. Three existing state-module tests remain covered by CI.
-- Thirteen infrastructure policy/workflow regression tests, seven Helm rendering/lint/safety tests and 48 existing bootstrap tests pass.
-- Twenty-three existing governance tests pass. The branch/path policy is unchanged.
-- actionlint passes both changed workflows.
-- The initial GitHub run exposed missing Linux content checksums in the new Windows-generated provider locks. Terraform retrieved signed Windows/Linux packages to populate both verified platform hashes; a regression test checks all four new locks while CI keeps `-lockfile=readonly`.
-- Checkov 3.3.17: 88 passed, zero failed, eleven explicit scoped exceptions; no parsing errors. Exceptions cover four existing state-bucket deferrals plus ECR customer-KMS deferral, two 30-day log-retention choices, controlled EKS public-access checks and stale scanner version enumeration, counted per module/root scan occurrence. No global check suppression is added.
+## D. Tests and results
 
-Offline fixtures are fictional. Their EKS add-on/AMI versions are deliberately test-only and are never deployment defaults. Runtime versions must be obtained from AWS, pinned in approved inputs and checked for compatibility before a live plan.
+Actually executed locally:
+- Terraform fmt check and backend-disabled, read-only-lockfile init/validate for seven configurations: passed.
+- 13 Terraform mock tests: 3 backend, 2 network, 1 registry, 5 Fargate EKS and 2 integrated platform tests: passed.
+- 32 infrastructure Python regressions: passed (gates, exact policies, IRSA subject/audience, profile/selectors/health, schemas/compute compatibility, saved-plan scope and costs).
+- 48 existing bootstrap Python regressions: passed, including the offline AWS 6.68.0 lifecycle representation regression. These tests make no AWS changes.
+- 7 existing Helm tests: passed read-only against the retained chart baseline. They do not verify Chat 2's in-progress chart.
+- 23 existing governance Python tests: passed unchanged.
+- Actionlint for the two changed Terraform workflows and git diff whitespace validation: passed.
+- Checkov 3.3.17: 43 passed, zero failed, 11 documented scoped exceptions, zero parsing errors on the local Fargate source. Exceptions retain backend lifecycle/log-retention, ECR CMK deferral and restricted public EKS/version-scanner limitations; no new broad scanner exclusion.
+- Upstream controller v2.14.1 IAM JSON was fetched and compared semantically to the retained policy; match confirmed and SHA256 recorded.
 
-Live Phase 3 Terraform plan/apply, effective service-role permissions, SCPs/quotas, node registration, add-on health, Kubernetes endpoint reachability, image publication and live Helm deployment are **unverified**. Those require the consolidated administrator response and an approved protected workflow execution. No success is implied by static checks.
+PR #8's current GitHub check results must be inspected on the pushed Fargate commit; historical EC2-run success is not evidence for this redesign. The PR page carries current checks.
 
-## E. What I Must Do
+Not executed: live resource plan/apply, effective SCP/quota evaluation, actual add-on pins/schemas in Ohio, cluster/Pod health, controller IRSA token exchange, Helm releases or ALB traffic. Post-apply verifier tests use synthetic responses; they do not establish an existing live Banking cluster.
 
-Review the infra PR, [administrator request](ADMIN-REQUEST.md), [cost estimate](COSTS.md) and [exact deployment instructions](DEPLOYMENT.md) together. The administrator must supply four authorized service roles, an approved symmetric encryption key, distinct operator/deployer identities, effective-policy/quotas confirmation and operator/runner CIDRs. Keep both existing inline policies unchanged; the generated additional policy grants exact Banking PassRole/key/platform-state access only.
+## E. What the owner/administrator must do
 
-Supply `PLATFORM_INPUTS_JSON` only after actual values and compatible versions are known. Leave `AWS_OPERATIONS_ENABLED=false` until a specific plan is authorized. Review the resulting real creation plan and costs before approving apply. The prepared workflow creates no roles and never manages the S3 bucket.
+Review PR #8 and the consolidated ADMIN-REQUEST.md. Administrator supplies/authorizes the three prerequisite roles, required existing service-linked roles, actual key, operator/deployer identities and quotas/permissions. Add BankingReleasePlatformPhase3 separately; preserve both current inline policies and both GitHub trust relationships. No general IAM role-creation grant is requested for the training user.
+
+The new EKS OIDC provider needs explicit creation/tagging approval; Terraform manages that provider only, not roles. Exact controller IRSA trust is exported after the real cluster issuer is verified, then applied by the administrator to the dedicated controller role before Chat 2 installs it.
+
+Use the complete PLATFORM_INPUTS_JSON shape and Console paths in DEPLOYMENT.md. Confirm actual compatible Fargate add-on pins and approved Kubernetes API source addresses. Approve the live plan operation separately; then approve the ACTUAL saved resource plan and costs at the protected apply gate. Current AWS gate stays false.
+
+Planning costs: infrastructure with CoreDNS/Metrics Server is about $137.53/month before usage. Full assumed nine-Pod release is $198.08/month before ALB, traffic and telemetry; $205–225 is a light-usage allowance excluding ALB, not a cap. API Pods at 250m/512Mi bill 1GB after overhead. COSTS.md cites regional SKUs and exclusions.
 
 ## F. Checkpoint
 
-The PR must show green real GitHub checks before merging. No nonexistent required status check has been activated. The active governance aggregate remains required; neither branch protections nor environment approvals were changed. The manual plan/apply workflow is not executed by CI or code merge.
+Review the Fargate commit's real PR checks, architecture, plan guard, administrator policy request and cost model together. Confirm no managed node group/launch template/Pod Identity association and three correct private profiles. Confirm deployment remains blocked until prerequisite identities, real plan/cost approval and protected GitHub reviews are present.
 
-After later approved deployment, its verification must show ACTIVE cluster/node group and all five add-ons, both ECR policies and a zero-change platform plan. The first-deployment workflow intentionally rejects mutation/deletion of existing resources, including partially deployed resources needing repair; such recovery needs a reviewed bounded update procedure rather than silently rerunning initialization.
+Before merging the app work, synchronize it with the approved infrastructure baseline and reconcile charts. The installed feature/app path policy blocks some newly assigned Helm/deploy/workflow paths; request a scoped owner-reviewed governance change rather than bypassing it. No governance setting is changed in this checkpoint.
 
-## G. Next Phase
+## G. Next step
 
-The next authorized action is review of this code/IAM/cost package, followed by administrator prerequisites and a protected live plan when approved. Paid deployment remains gated. Phase 4 will install the controller/applications and demonstrate healthy pods/internal communication/authorized HTTPS ingress. RDS, events, release scanning/CD/rollback, dashboards/security findings and measured cost evidence remain assigned to later phases in REQUIREMENTS.md.
+Owner review of PR #8, consolidated administrator response and authorized live resource plan. Chat 2 completes application/Helm CI/CD against INTERFACE.md. No paid deployment or merge proceeds automatically.

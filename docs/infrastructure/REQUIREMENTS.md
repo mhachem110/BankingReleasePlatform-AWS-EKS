@@ -6,8 +6,8 @@ The official Week 4 CI/CD Engineering assignment remains the deliverable source;
 | --- | --- |
 | Account/Payment application, Docker, local communication/tests | Phase 1 complete |
 | OIDC, secure remote state, lifecycle, native locking | Phase 2 complete; COMPLETION.md has actual run evidence |
-| Two-AZ VPC/public/private/isolated networking, ECR, EKS managed nodes | Phase 3 code prepared; administrator prerequisites/live plan/deployment pending |
-| Kubernetes services, Helm, probes, limits, replicas/HPA, Ingress | Chart prepared; controller/application deployment and EKS demonstration pending Phase 4 |
+| Two-AZ VPC/public/private/isolated networking, ECR, EKS Fargate profiles | Phase 3 code prepared; administrator prerequisites/live plan/deployment pending |
+| Kubernetes services, Helm, probes, limits, replicas/HPA, Ingress | Chat 2 owns Fargate chart/release work; controller/application live deployment pending authorization |
 | PR build/tests/static checks, Trivy, Terraform Checkov, Helm | Terraform/Checkov/Helm validation prepared; full application CI and release scans pending Phase 5 |
 | OIDC SHA/digest image publication, approvals, smoke/rollback, separate infra workflow | Controlled infra workflow prepared; application release/promotion workflows pending Phase 5 |
 | RDS/Aurora and migration of sample persistence | Mandatory Phase 6; isolated subnet outputs reserved, not omitted |
@@ -22,3 +22,9 @@ The official Week 4 CI/CD Engineering assignment remains the deliverable source;
 | Fifteen-minute presentation | Final: 2 min business, 4 min apps, 3 min CI/CD, 3 min security/incident, 2 min costs/migration, 1 min lessons |
 
 No production-readiness, availability, security-findings or live-deployment success is claimed by offline validation.
+
+## Fargate redesign and remaining evidence
+
+Fargate is the user-approved compute alternative; no managed node group is required. No DaemonSets, Pod Identity agent or VPC CNI policy enforcement are claimed. Metrics Server supports HPA/current utilization; historical monitoring, app metrics, Fargate logging, relational persistence and asynchronous events remain mandatory later-phase work. IRSA controller trust depends on the actual cluster issuer and administrator approval. Code preparation and mock plans do not fulfill live EKS/application acceptance criteria.
+
+Parallel application changes can be blocked by the installed feature/app file policy; this infrastructure checkpoint documents the scoped review requirement rather than changing governance or bypassing security checks. See INTERFACE.md.

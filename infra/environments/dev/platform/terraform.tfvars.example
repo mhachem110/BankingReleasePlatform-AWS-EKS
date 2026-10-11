@@ -6,19 +6,14 @@ availability_zones  = ["us-east-2a", "us-east-2b"]
 vpc_cidr            = "10.70.0.0/16"
 endpoint_cidrs      = ["REPLACE_WITH_APPROVED_OPERATOR_OR_RUNNER_IPV4_CIDR"]
 cluster_role_arn    = "REPLACE_WITH_ADMINISTRATOR_CLUSTER_ROLE_ARN"
-node_role_arn       = "REPLACE_WITH_ADMINISTRATOR_NODE_ROLE_ARN"
+fargate_execution_role_arn       = "REPLACE_WITH_ADMINISTRATOR_PATHLESS_FARGATE_EXECUTION_ROLE_ARN"
 flow_log_role_arn   = "REPLACE_WITH_ADMINISTRATOR_FLOW_LOG_ROLE_ARN"
-controller_role_arn = "REPLACE_WITH_ADMINISTRATOR_CONTROLLER_ROLE_ARN"
 operator_role_arn   = "REPLACE_WITH_VERIFIED_EXISTING_OPERATOR_IAM_ROLE_ARN"
 deployer_role_arn   = "REPLACE_WITH_VERIFIED_EXISTING_APPLICATION_DEPLOY_ROLE_ARN"
-kms_key_arn        = "REPLACE_WITH_APPROVED_ENABLED_SYMMETRIC_KEY_ARN"
+kms_key_arn         = "REPLACE_WITH_APPROVED_ENABLED_SYMMETRIC_KEY_ARN"
 # Resolve compatibility through the reviewed read-only GitHub preflight, then
 # paste exact versions here. Do not guess versions or use most_recent in Terraform.
-node_release_version = "REPLACE_WITH_AL2023_1_36_RELEASE_VERSION"
 addon_versions = {
-  vpc-cni                = "REPLACE_WITH_COMPATIBLE_VERSION"
-  kube-proxy             = "REPLACE_WITH_COMPATIBLE_VERSION"
   coredns                = "REPLACE_WITH_COMPATIBLE_VERSION"
   metrics-server         = "REPLACE_WITH_COMPATIBLE_VERSION"
-  eks-pod-identity-agent = "REPLACE_WITH_COMPATIBLE_VERSION"
 }

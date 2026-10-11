@@ -1,6 +1,7 @@
 """Read-only AWS prerequisite/collision check; credentials come from protected OIDC."""
 import ipaddress
 import json
+from jsonschema import validators
 import subprocess
 from pathlib import Path
 
@@ -17,6 +18,42 @@ def overlaps(cidr, vpcs):
             if association.get("CidrBlockState", {}).get("State") in {"associated", "associating"} and proposed.overlaps(ipaddress.ip_network(association["CidrBlock"])):
                 raise ValueError("Proposed CIDR overlaps an existing VPC; stop without changes.")
 
+
+
+def verify_service_role(field, role, values):
+    if role["Arn"] != values[field] or role.get("PermissionsBoundary"):
+        raise ValueError("Role identity/boundary requires administrator review: " + field)
+    service = {"cluster_role_arn": "eks.amazonaws.com",
+               "fargate_execution_role_arn": "eks-fargate-pods.amazonaws.com",
+               "flow_log_role_arn": "vpc-flow-logs.amazonaws.com"}[field]
+    statements = role["AssumeRolePolicyDocument"]["Statement"]
+    matches = [s for s in statements if s.get("Effect") == "Allow" and s.get("Principal", {}).get("Service") == service
+               and "sts:AssumeRole" in ([s.get("Action")] if isinstance(s.get("Action"), str) else s.get("Action", []))]
+    if not matches:
+        raise ValueError("Required service trust is absent: " + field)
+    if field == "fargate_execution_role_arn":
+        if "/" in role["Arn"].split(":role/")[1]:
+            raise ValueError("Fargate execution role cannot have a path.")
+        expected = f"arn:aws:eks:us-east-2:{values['expected_account_id']}:fargateprofile/banking-dev/*"
+        if not all(s.get("Condition", {}).get("ArnLike", {}).get("aws:SourceArn") == expected and
+                   s.get("Condition", {}).get("StringEquals", {}).get("aws:SourceAccount") == values["expected_account_id"]
+                   for s in matches):
+            raise ValueError("Fargate trust must be scoped to this account and Banking profiles.")
+
+
+def verify_addon_version(addon, pinned, version, available):
+    candidates = [v for entry in available["addons"] for v in entry["addonVersions"]
+                  if v["addonVersion"] == pinned and "amd64" in v.get("architecture", []) and
+                  "fargate" in [kind.lower() for kind in v.get("computeTypes", [])] and
+                  any(c["clusterVersion"] == version for c in v.get("compatibilities", []))]
+    if not candidates:
+        raise ValueError("Pinned add-on must explicitly support this Kubernetes version and Fargate: " + addon)
+
+
+def verify_addon_schema(config, schema):
+    validator = validators.validator_for(schema)
+    validator.check_schema(schema)
+    validator(schema).validate(config)
 
 def main():
     values = json.loads(Path("platform.tfvars.json").read_text())
@@ -36,23 +73,18 @@ def main():
     from guard import ROLE_NAMES
     for field, name in ROLE_NAMES.items():
         role = aws("iam", "get-role", "--role-name", name)["Role"]
-        if role["Arn"] != values[field]:
-            raise ValueError("Role ARN mismatch: " + field)
-        if role.get("PermissionsBoundary"):
-            raise ValueError("Role boundary needs administrator review: " + field)
-        services = {"cluster_role_arn": "eks.amazonaws.com", "node_role_arn": "ec2.amazonaws.com",
-                    "flow_log_role_arn": "vpc-flow-logs.amazonaws.com", "controller_role_arn": "pods.eks.amazonaws.com"}
-        statements = role["AssumeRolePolicyDocument"]["Statement"]
-        if not any(s.get("Effect") == "Allow" and s.get("Principal", {}).get("Service") == services[field]
-                   and "sts:AssumeRole" in ([s.get("Action")] if isinstance(s.get("Action"), str) else s.get("Action", []))
-                   for s in statements):
-            raise ValueError("Required service trust is absent: " + field)
+        verify_service_role(field, role, values)
         required = {"cluster_role_arn": {"AmazonEKSClusterPolicy"},
-                    "node_role_arn": {"AmazonEKSWorkerNodePolicy", "AmazonEC2ContainerRegistryPullOnly", "AmazonEKS_CNI_Policy"}}
+                    "fargate_execution_role_arn": {"AmazonEKSFargatePodExecutionRolePolicy"}}
         if field in required:
             attached = {policy["PolicyName"] for policy in aws("iam", "list-attached-role-policies", "--role-name", name)["AttachedPolicies"]}
             if not required[field] <= attached:
-                raise ValueError("Required AWS managed role policies are absent: " + field)
+                raise ValueError("Required managed role policy is absent: " + field)
+    for name, service in [("AWSServiceRoleForAmazonEKS", "eks.amazonaws.com"),
+                          ("AWSServiceRoleForAmazonEKSForFargate", "eks-fargate.amazonaws.com")]:
+        role = aws("iam", "get-role", "--role-name", name)["Role"]
+        if role["Arn"] != f"arn:aws:iam::{values['expected_account_id']}:role/aws-service-role/{service}/{name}":
+            raise ValueError("Administrator must confirm existing service-linked role: " + name)
     for field in ["operator_role_arn", "deployer_role_arn"]:
         role = aws("iam", "get-role", "--role-name", values[field].split("/")[-1])["Role"]
         if role["Arn"] != values[field]:
@@ -61,14 +93,16 @@ def main():
     if key["KeyState"] != "Enabled" or key["KeySpec"] != "SYMMETRIC_DEFAULT" or key["KeyUsage"] != "ENCRYPT_DECRYPT":
         raise ValueError("An enabled symmetric encryption KMS key is required.")
     version = values.get("kubernetes_version", "1.36")
-    release = aws("ssm", "get-parameter", "--name", f"/aws/service/eks/optimized-ami/{version}/amazon-linux-2023/x86_64/standard/recommended/release_version")["Parameter"]["Value"]
-    if release != values["node_release_version"]:
-        raise ValueError("Review and pin the current AL2023 release: " + release)
+    versions = aws("eks", "describe-cluster-versions", "--cluster-versions", version)
+    if not any(v["clusterVersion"] == version and v.get("versionStatus") == "STANDARD_SUPPORT" for v in versions["clusterVersions"]):
+        raise ValueError("Reviewed Kubernetes version is unavailable or outside standard support.")
+    configs = json.loads(Path("infra/modules/eks/addon-configuration.json").read_text())
     for addon, pinned in values["addon_versions"].items():
         available = aws("eks", "describe-addon-versions", "--addon-name", addon, "--kubernetes-version", version)
-        if not any(item["addonVersion"] == pinned and "amd64" in item.get("architecture", []) for entry in available["addons"] for item in entry["addonVersions"]):
-            raise ValueError("Pinned add-on is not compatible: " + addon)
-    print("Verified account, non-overlapping CIDR, absent Banking names, AZs, role identities, key and pinned releases. No AWS writes.")
+        verify_addon_version(addon, pinned, version, available)
+        schema = aws("eks", "describe-addon-configuration", "--addon-name", addon, "--addon-version", pinned)
+        verify_addon_schema(configs[addon], json.loads(schema["configurationSchema"]))
+    print("Verified account, non-overlapping CIDR, absent Banking names, AZs, role identities, service-linked roles, key and pinned Fargate add-on schemas. No AWS writes.")
 
 
 if __name__ == "__main__":

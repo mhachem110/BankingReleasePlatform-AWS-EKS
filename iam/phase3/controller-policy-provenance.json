@@ -1,0 +1,8 @@
+{
+  "source": "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.14.1/docs/install/iam_policy.json",
+  "version": "v2.14.1",
+  "retrieved_date": "2026-10-11",
+  "upstream_sha256": "16f232c9d9f79366fe949c4550ad517a202380058a9e48d45a4e215044a20a6a",
+  "local_json_semantically_matches_upstream": true,
+  "scope": "Dedicated controller IRSA role only. Not attached or applied."
+}

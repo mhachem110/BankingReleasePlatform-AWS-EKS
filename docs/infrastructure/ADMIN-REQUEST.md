@@ -1,61 +1,66 @@
-# Consolidated Phase 3 administrator request — proposed, not applied
+# Consolidated Fargate administrator request — proposed, not applied
 
-Account: `866934333672`. Region: `us-east-2`. Project: `BankingReleasePlatform`, environment: `dev`, cluster: `banking-dev`. GitHub repository: `mhachem110/BankingReleasePlatform-AWS-EKS`.
+Account 866934333672; Region us-east-2; cluster banking-dev; project BankingReleasePlatform/dev. The training user cannot create IAM roles. Review this request, PR #8 and COSTS.md together before authorizing changes. Do not create a paid KMS key or infrastructure without the owner's approval.
 
-Please review this request together with the infrastructure PR and cost estimate. **Do not create the chargeable encryption key or deploy infrastructure until the owner approves that expense.** The operator cannot create IAM roles. Terraform contains no IAM role or identity-provider creation resources.
+## Initial deployment prerequisites
 
-## Required identities
-
-Create or explicitly authorize these distinct project roles; return their complete actual ARNs, including paths:
-
-| Role name | Trusted service | Permission policy |
+| Administrator-provided identity | Trust | Permissions |
 | --- | --- | --- |
 | cloudbatch818-mahmoud-banking-eks-cluster | eks.amazonaws.com | AWS managed AmazonEKSClusterPolicy |
-| cloudbatch818-mahmoud-banking-eks-nodes | ec2.amazonaws.com | AmazonEKSWorkerNodePolicy, AmazonEC2ContainerRegistryPullOnly, AmazonEKS_CNI_Policy |
-| cloudbatch818-mahmoud-banking-flow-logs | vpc-flow-logs.amazonaws.com | Generated BankingFlowLogs.json, exact Banking log group |
-| cloudbatch818-mahmoud-banking-alb-controller | pods.eks.amazonaws.com | Reviewed AWS controller policy in iam/phase3/aws-load-balancer-controller-v2.14.1.json |
+| cloudbatch818-mahmoud-banking-fargate-execution | eks-fargate-pods.amazonaws.com, restricted to Banking profiles and SourceAccount | AWS managed AmazonEKSFargatePodExecutionRolePolicy |
+| cloudbatch818-mahmoud-banking-flow-logs | vpc-flow-logs.amazonaws.com, restricted to Ohio/account | Generated BankingFlowLogs.json |
+| Approved existing operator role | Preserve current authorized trust; authorize its actual human/operator use | Explicit EKS cluster-admin access entry |
+| A distinct approved application deployment role | Protected GitHub environment OIDC subject verified by Chat 2 | Namespace-scoped AmazonEKSEditPolicy in banking-dev; separately approved ECR publication policy |
 
-The node's CNI policy deliberately supports first boot with AWS default add-ons, preventing a circular dependency between node readiness and managed add-on installation. Pods cannot inherit IMDS credentials because worker metadata requires IMDSv2 and hop limit 1. Migrate CNI permissions to a dedicated workload role in Phase 6 after validating that bootstrap path; do not remove them prematurely. The existing bootstrap role must never serve as the cluster or node role.
+Return exact actual ARNs. The Fargate execution role MUST have no IAM path. Cluster/flow roles may have paths; the generator uses pathless defaults. If either has a path, add --cluster-role-arn ACTUAL_ARN and/or --flow-log-role-arn ACTUAL_ARN to the generator command so the entire output is ready to paste without editing individual JSON statements. None may be the GitHub bootstrap role. No EC2 worker/node role is required. Application containers do not inherit the Fargate execution role; give future AWS-using services their own reviewed IRSA roles.
 
-The controller role uses EKS Pod Identity, restricted to cluster `banking-dev`, namespace `kube-system`, service account `aws-load-balancer-controller`. This avoids creating another IAM OIDC identity provider for the EKS issuer. Its AWS permissions are needed when the controller is installed in Phase 4; the association itself creates no ALB. The official v2.14.1 policy is taken from [AWS's documented release](https://docs.aws.amazon.com/eks/latest/userguide/lbc-helm.html); review its service-linked-role allowance and tag conditions. Do not attach it to the GitHub or node role.
+Confirm these service-linked roles already exist, or pre-create them as administrator after authorization:
+- AWSServiceRoleForAmazonEKS, service eks.amazonaws.com.
+- AWSServiceRoleForAmazonEKSForFargate, service eks-fargate.amazonaws.com.
 
-Also return the actual existing same-account **operator IAM role ARN** and a **different application deployment IAM role ARN** approved for this project. The role names seen in the Console (`cloudbatch818-mahmoud-cloudops-deploy-dev`, stage/uat/prod) are observations, not authorization to reuse them. Existing trusts/permissions for those roles were not reviewed. If reuse is unsuitable, an administrator must supply a separate role. Do not give implicit cluster admin to the GitHub bootstrap role: Terraform grants the operator explicit cluster administration and the application deployer edit access only in `banking-dev`.
+The Fargate service-linked role is distinct from the Pod execution role (eks-fargate-pods.amazonaws.com). Terraform and its temporary session do not request general role creation or service-linked-role creation. If absent, preflight stops. An authorized administrator can use IAM -> Roles to inspect each, and AWS CloudShell to run `aws iam create-service-linked-role --aws-service-name eks-fargate.amazonaws.com` only after confirming absence and receiving approval. [AWS documents this service-linked role](https://docs.aws.amazon.com/eks/latest/userguide/using-service-linked-roles-eks-fargate.html).
 
-## Encryption key
+## Key and complete additive policies
 
-Provide an enabled same-account, same-Region symmetric KMS encryption key, with automatic rotation, approved for EKS secret encryption and the two Banking CloudWatch log groups. Prefer an approved existing key if its owner authorizes additive access; preserve its complete current policy. Otherwise a dedicated key costs approximately $1/month plus API usage and needs owner approval before creation. `BankingKeyPolicy.json` is a full template **for a new dedicated key only**, not a replacement for an existing shared key policy.
+Provide the actual ARN of an enabled symmetric ENCRYPT_DECRYPT KMS key in Ohio, approved for EKS secrets and the two Banking log groups, with rotation reviewed. Reusing a key requires its owner's additive approval while preserving every existing policy statement. A new key incurs approximately $1/month plus requests/rotation storage and requires paid-resource approval. The generated BankingKeyPolicy.json is a complete template for a NEW dedicated key only.
 
-## Additive permissions for the existing GitHub bootstrap role
-
-Keep `CloudOpsTrackerBootstrap` and `BankingReleasePlatformState` unchanged. Add a separate inline policy named **BankingReleasePlatformPhase3**, rendered by:
+Generate full JSON locally, using the actual approved key ARN as the scalar argument:
 
 ```powershell
 python scripts/infra/prepare-admin-request.py --account 866934333672 --region us-east-2 --bucket mhachem-banking-tfstate-866934333672 --kms-key-arn ACTUAL_APPROVED_KEY_ARN --output artifacts/phase3-admin
 ```
 
-This produces complete JSON trust files for the four service roles, `BankingFlowLogs.json`, the separate `BankingReleasePlatformPhase3.json`, and a new-key policy template. The script is local only. It does not call AWS. Default role ARNs assume no IAM path; if the administrator uses paths, update the rendered exact ARNs to the returned values before approval. Never guess a KMS key ARN or reuse another project's roles to satisfy a validation check.
+No AWS calls occur. It produces three complete service trust policies, BankingFlowLogs.json, BankingKeyPolicy.json and **BankingReleasePlatformPhase3.json**. This new inline policy is added alongside both existing policies, never in place of either one. Its grants are:
+- PassRole for exactly the cluster, Fargate execution and flow-log roles, each restricted to its own AWS service.
+- Read/write of only platform state and read/write/delete of only its .tflock; no bucket writes or state-object deletion.
+- Exact-key DescribeKey/ListGrants and AWS-resource-conditioned CreateGrant.
+- Create/tag the NEW Ohio EKS OIDC provider only, requiring Banking/dev request tags, plus read of that provider. No GitHub OIDC provider actions, role creation, role-policy edits or trust-policy updates.
 
-The separate inline policy grants only:
+The issuer ID is generated by EKS, so its provider resource ARN must use `oidc.eks.us-east-2.amazonaws.com/id/*` before creation, bounded to this account/Region and Banking tags. The saved-plan guard permits only the provider derived from the new Banking cluster and rejects existing provider mutations. This is an additional IAM permission requiring administrator approval; it is not available merely because GitHub OIDC works.
 
-- `iam:PassRole` on the four exact Banking roles, each restricted to its intended service.
-- Read/write of new platform state `banking-release-platform/dev/platform/terraform.tfstate` and read/write/delete of its separate `.tflock`; no state-object delete or bucket configuration permissions.
-- Prefix-scoped listing for this backend and Terraform's unused workspace discovery path.
-- Describe/list-grants and AWS-resource-conditioned CreateGrant on the exact approved key.
+Keep **CloudOpsTrackerBootstrap**, **BankingReleasePlatformState**, the Retail trust statement and the Banking bootstrap trust unchanged. The original policy's EC2/EKS/ECR/Logs Resource:* grants remain broad even though their statement names mention Retail. We preserve them; we do not claim the reused role is least privilege. A temporary workflow session caps those services to Ohio, PassRole to the three approved roles, and S3 writes to the new platform key. It cannot edit IAM roles/policies or the state bucket. Protected review and strict creation-only plan validation add controls but do not replace an effective permission boundary.
 
-The original inline policy already grants EC2/EKS/ECR/CloudWatch Logs management and IAM reads broadly. Despite Retail statement names, most of those grants are `Resource: *`; they are not limited to Retail resources. This request does not expand those services or claim that role is least privilege. The Phase 3 workflow caps temporary sessions to Ohio EC2/EKS/ECR/log operations, IAM reads/exact PassRole, the exact key and exact platform state path. Some EC2 create/manage actions require wildcard resources; saved-plan scope validation and protected reviews are additional controls, not substitutes for an administrator-approved permission boundary or dedicated role.
+## Controller IRSA after cluster creation
 
-## Console actions after authorization
+The controller role is **cloudbatch818-mahmoud-banking-alb-controller**. It uses sts:AssumeRoleWithWebIdentity, not pods.eks.amazonaws.com or EKS Pod Identity. Its exact subject is `system:serviceaccount:kube-system:aws-load-balancer-controller`, audience sts.amazonaws.com and Principal the actual Banking EKS provider ARN.
 
-1. **IAM → Roles → each new approved service role → Trust relationships → Edit trust policy:** paste its complete rendered trust JSON. On Permissions attach the exact managed policies listed above, or use Add permissions → Create inline policy → JSON for flow logs. These actions are for the administrator after authorization.
-2. **IAM → Policies → Create policy → JSON:** paste the complete checked-in controller policy; attach only to the approved controller role. It is a workload policy, not a GitHub trust policy.
-3. **KMS → Customer managed keys → approved key → Key policy:** review existing policy and approve additive Banking use. For a new dedicated key only, review generated BankingKeyPolicy.json and automatic rotation. Preserve all existing administrators/users for shared keys.
-4. **IAM → Roles → cloudbatch818-mahmoud-cloudops-bootstrap → Permissions → Add permissions → Create inline policy → JSON:** paste generated BankingReleasePlatformPhase3.json; name it exactly. Leave both existing inline policies untouched. Verify policy count/names and exact role/key/state resources before saving.
-5. **GitHub → Settings → Environments → bootstrap:** retain existing dev-only branch, owner review and no admin bypass; retain existing AWS_ROLE_ARN secret. Add non-secret `PLATFORM_INPUTS_JSON` using the full reviewed inputs described in DEPLOYMENT.md. No GitHub trust change is required for this infrastructure workflow because it still uses the verified bootstrap environment.
+Its trust cannot be finalized before the real banking-dev issuer exists. The successful infrastructure workflow exports platform-outputs.json and **controller-irsa-trust.json** in the banking-fargate-verified-interface artifact. Verify that issuer in EKS -> Clusters -> banking-dev -> Overview and the provider in IAM -> Identity providers before the administrator pastes the complete exported JSON into the dedicated controller role. A local regeneration supports `--oidc-issuer ACTUAL_VERIFIED_ISSUER_URL`; never substitute a guessed issuer.
 
-## Effective permission and quota review
+Attach the reviewed versioned policy at iam/phase3/aws-load-balancer-controller-v2.14.1.json only to that workload role. It is the upstream v2.14.1 policy; Chat 2 must pin a matching controller/chart and review compatibility. Its ELB service-linked-role allowance and EC2/ELB resource/tag conditions need administrator review. Prefer administrator pre-creation of AWSServiceRoleForElasticLoadBalancing if service-linked-role creation is restricted. No ALB is created by IRSA or a Fargate profile alone; enabling ingress is a separate paid approval.
 
-Confirm permission to reuse the existing role, add the separate inline policy, pass the exact service roles, create EKS access entries and create KMS grants. Confirm no SCP/permission boundary/resource policy denies the proposed actions, chosen Region, public HTTPS endpoint with narrow CIDRs, NAT/EIP, encryption or service-linked-role operations. Absence of a boundary on the bootstrap role and successful S3 operations do not prove Phase 3 permissions.
+This order avoids requiring a nonexistent controller role or invented issuer to create the cluster. Controller installation remains blocked until the administrator supplies the approved role and exact IRSA trust.
 
-Confirm `AWSServiceRoleForAmazonEKS`, `AWSServiceRoleForAmazonEKSNodegroup`, Auto Scaling and ELB service-linked roles exist or may be created by the services under approved permissions. Do not grant general role creation to the training user. Check Ohio VPC, NAT/EIP, EC2 On-Demand vCPU, EKS cluster, node group and network-interface quotas against the shared account's existing usage. Provide an approved operator/runner IPv4 CIDR (/24 or narrower); do not substitute `0.0.0.0/0`. Ordinary GitHub-hosted runners are not guaranteed to be within that CIDR, so later Helm deployment needs an approved runner network or operator connection.
+## Exact Console actions, after authorization
 
-Return approved ARNs, policy confirmations, effective SCP/quotas findings and endpoint CIDRs together. No AWS deployment can run until these prerequisites and the paid plan are approved.
+1. IAM -> Roles -> Create role -> Custom trust policy: administrator pastes the complete generated trust for each of the three prerequisite roles, uses the exact table name and attaches the indicated managed/inline permission policy. Do not create a node role.
+2. KMS -> Customer managed keys -> approved Ohio key -> Key policy: review additive Banking log/key use. Never replace a shared key policy with the new-key template.
+3. IAM -> Roles -> cloudbatch818-mahmoud-cloudops-bootstrap -> Permissions -> Add permissions -> Create inline policy -> JSON: paste the complete BankingReleasePlatformPhase3.json; name it exactly. Read back all three policy names, preserving the two originals.
+4. IAM -> Identity providers: Terraform will create the cluster-specific provider only after approved apply, with audience sts.amazonaws.com. The existing token.actions.githubusercontent.com provider is preserved.
+5. After verified cluster output: IAM -> Roles -> dedicated controller role -> Trust relationships -> Edit trust policy: paste exported controller-irsa-trust.json. IAM -> Policies -> Create policy -> JSON: paste the complete checked-in matching controller policy; attach only to the controller role. If that role already has authorized trusts/permissions, request its complete policies and prepare additive full JSON before updating.
+6. GitHub -> Settings -> Environments -> bootstrap: retain dev-only branches, required owner review and no admin bypass; retain AWS_ROLE_ARN. Add the reviewed PLATFORM_INPUTS_JSON from DEPLOYMENT.md. Do not add working-branch subjects to AWS trust.
+
+## Effective access / quotas to confirm
+
+Administrator must confirm role reuse and additive-policy authorization; no SCP, boundary, key policy or session-policy denial of Ohio EKS/Fargate, NAT/EIP, provider creation/tagging, exact PassRole or KMS grants. Successful S3 bootstrap does not prove these permissions. Confirm existing service-linked roles and Ohio VPC/EIP/NAT/ENI/cluster/Fargate On-Demand vCPU quotas and available private-subnet IP capacity. Initial system Pods need 0.75 Fargate vCPU; the cost-model release needs 2.25 vCPU before rollout surge/HPA. Approve sufficient quota for the configured maximum and surge, not just steady state.
+
+Return approved operator/deployer ARNs and tightly scoped public API source CIDRs (/24 or narrower). Terraform AWS API calls do not need Kubernetes network access; later Helm needs an approved operator/runner source. No all-Internet exception or self-hosted runner is created here.

@@ -1,37 +1,40 @@
-# Proposed Ohio lab costs — 11 October 2026
+# Ohio Fargate planning costs — 11 October 2026
 
-These are planning estimates, not an actual bill or a deployment authorization. No paid Phase 3 resources were created. Recheck the Ohio AWS Pricing Calculator and the real Terraform plan before approval. Shared-account charges from existing projects are outside this estimate; filter future cost evidence using Project=BankingReleasePlatform and Environment=dev.
+No paid resources were created. These estimates are not a bill, cap or deployment authorization. Recheck the actual plan, resource requests, regional calculator and quota before approval. Costs from other projects are excluded.
 
-## Initial platform baseline
+## Reproducible baseline
 
-Assume 730 running hours/month, two Linux On-Demand t3.medium nodes, one zonal NAT Gateway, one NAT public IPv4, 40 GiB total gp3 and one dedicated administrator-managed KMS key:
+Run `python scripts/infra/cost-estimate.py`. cost-model.json records rates, assumptions, source publication date and SKUs. The public [Ohio AWS price catalog](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/us-east-2/index.json), retrieved 11 October 2026 (publication 11 September), lists Linux/x86 Fargate CPU at $0.04048/vCPU-hour (UGSJ89BUWB7SMJ6A) and memory at $0.004445/GB-hour (HH5EE3ZFWSFKGKWM). EKS uses Fargate pricing; ARM/Windows/Spot rates are not used. [Fargate pricing](https://aws.amazon.com/fargate/pricing/)
 
-| Component | Assumed unit price | Monthly estimate |
+Assume 730 hours, two replicas of each API at equal 250m/512Mi requests/limits, two CoreDNS Pods and one Metrics Server at equal 250m/256Mi, and two controller Pods at equal 250m/256Mi (controller sizing is a handoff assumption, not a deployed setting).
+
+| Component | Billed capacity / assumption | Monthly USD |
 | --- | --- | ---: |
-| EKS standard-support control plane | $0.10/hour | $73.00 |
-| Two t3.medium workers | 2 × $0.0416/hour | $60.74 |
-| One NAT Gateway | $0.045/hour | $32.85 |
-| NAT public IPv4 | $0.005/address-hour | $3.65 |
-| Two encrypted 20 GiB gp3 disks | 40 × $0.08/GiB-month | $3.20 |
-| Dedicated symmetric KMS key, if needed | $1/key-month before rotation storage increments | $1.00 |
-| **Subtotal before usage and telemetry** | | **$174.44/month** |
+| Four API Pods | Each 0.25 vCPU / 1GB | 42.53 |
+| Two CoreDNS Pods | Each 0.25 vCPU / 0.5GB | 18.02 |
+| One Metrics Server Pod | 0.25 vCPU / 0.5GB | 9.01 |
+| Two controller Pods (later operator deployment) | Each 0.25 vCPU / 0.5GB | 18.02 |
+| EKS standard support | $0.10/cluster-hour | 73.00 |
+| One NAT Gateway | $0.045/hour | 32.85 |
+| One NAT public IPv4 | $0.005/address-hour | 3.65 |
+| One dedicated KMS key, if needed | Before requests/rotation increases | 1.00 |
+| **Full release planning subtotal** | Before usage, ALB and telemetry | **198.08** |
 
-Budget approximately **$180–195/month for a small continuously running lab**, with logs/metrics and light traffic. This is not a hard cap. EC2 detailed monitoring is enabled; allow approximately $4.20/month for fourteen custom-priced detailed metrics at $0.30/metric-month, then remeasure actual emitted metric count/free-tier eligibility. Add NAT processing ($0.045/GB), cross-AZ transfer, Internet egress, CloudWatch control-plane/vended flow log ingestion and storage, ECR image storage/scanning, S3 state versions/requests and KMS requests. T3 Unlimited CPU credit surcharges can apply under sustained CPU load. No free tier, training credits, discounts or tax reduction are assumed.
+**Infrastructure alone**, with CoreDNS and Metrics Server but no APIs/controller, is approximately **$137.53/month before usage**. Nine-Pod full release reserves 2.25 Fargate vCPU and 6.5GB. Initial three system Pods need 0.75 vCPU. Budget additional capacity for rollout surge and HPA, and allow approximately $205–225/month for light telemetry/traffic **excluding the later ALB**; this is an allowance, not a measured cost or upper bound.
 
-**Source precision:** AWS's [Ohio NAT example and public IPv4 pricing](https://aws.amazon.com/vpc/pricing/) verify the NAT/IPv4 rates. [EKS pricing](https://aws.amazon.com/eks/pricing/) gives standard $0.10 and extended $0.60 per cluster-hour. [AWS gp3 volume information](https://aws.amazon.com/ebs/volume-types/) lists $0.08/GiB-month. The EC2 $0.0416/hour is an **estimate using AWS's published t3.medium reference rate in us-east-1**, not a claim that Ohio's current SKU price was retrieved; confirm Linux/Shared tenancy/us-east-2 in the [EC2 pricing calculator](https://calculator.aws/) before authorizing costs. [KMS](https://aws.amazon.com/kms/pricing/), [CloudWatch](https://aws.amazon.com/cloudwatch/pricing/) and [ECR](https://aws.amazon.com/ecr/pricing/) usage charges must be added for the final selected options.
+Fargate adds 256MB per Pod for host components and rounds to a supported size. A 512Mi app request therefore bills 1GB, not 0.5GB. Pod CapacityProvisioned, rather than the apparent virtual node size, identifies billed capacity. [AWS sizing rules](https://docs.aws.amazon.com/eks/latest/userguide/fargate-pod-configuration.html) Each further 0.25vCPU/1GB app replica adds about $10.63/month. Default ephemeral storage is encrypted; there are no EC2 node disks or detailed EC2 metrics in this model. Extra ephemeral storage incurs usage charges.
 
-An approximately 40-hour temporary lab followed by approved teardown would cost roughly **$11 plus usage**, under the same compute rates with prorated storage/metrics and one retained monthly KMS key. Leaving EKS/NAT/EIP running while scaling workers down still incurs their hourly charges. EKS does not have a stop button. This estimate assumes approved teardown, not a scheduling mechanism that exists today.
+[EKS pricing](https://aws.amazon.com/eks/pricing/) supplies the standard/extended-support rates. [VPC pricing](https://aws.amazon.com/vpc/pricing/) documents the Ohio $0.045 NAT example and $0.005 public IPv4 rate. [KMS pricing](https://aws.amazon.com/kms/pricing/) covers key and request/rotation costs. AWS catalog date is not a guarantee that a future deployment's rates remain the same.
 
-## Choices and evidence plan
+Add NAT processing, cross-AZ transfer, CloudWatch flow/control log ingestion/storage, ECR image storage/scanning, S3 state versions/requests, KMS usage and Internet egress. App logging is a later Fargate log-router/observability configuration; these log resources do not prove app logs are collected. Controller installation alone does not create ALB, but approved ingress later adds ALB hours/LCUs and public addresses. RDS, messaging, managed observability/security services and paid runners remain excluded.
 
-1. **One NAT instead of two:** avoids a second $32.85/month NAT and $3.65 IPv4 address, about $36.50/month before data transfer. Tradeoff: outbound Internet availability depends on one AZ; the second AZ may incur cross-AZ charges. This is a development lab tradeoff, not a production HA claim.
-2. **Free S3 Gateway Endpoint:** routes S3 and ECR layer downloads around NAT. Measure bytes from flow logs and NAT metrics; 10 GiB avoided saves about $0.45 processing before cross-AZ costs. Private ECR API/auth HTTPS still uses NAT because interface endpoints are not included.
-3. **gp3 instead of gp2:** at illustrative $0.08 versus $0.10/GiB-month, 40 GiB saves about $0.80/month while retaining baseline gp3 performance. Verify the actual selected regional rates and disk metrics.
-4. **Standard-support EKS 1.36:** avoids the $0.50/hour extended-support increment, approximately $365/month. AWS currently lists 1.36 in standard support through 2 August 2027. Revisit before that date; upgrade_policy STANDARD avoids opting into extended support. Checkov 3.3.17 and current 3.3.27 still enumerate only through 1.35, so this exact version check has a documented scoped exception backed by [AWS's current version table](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html), while Terraform restricts the baseline to 1.36.
-5. **Bounded logs and untagged images:** 30-day log retention and seven-day untagged ECR cleanup reduce unused storage; tagged images remain for rollback. Capture inventory/byte counts and before/after billing in Phase 6 instead of claiming measured savings now.
+## Cost choices and evidence still needed
 
-These are modeled savings. The final assignment requires at least three evidence-supported optimizations; collect actual cost/usage measurements in Phase 6. Do not represent this table as achieved cost reductions.
+1. One NAT rather than two saves approximately $36.50/month in gateway/IP fixed cost, trading away independent-AZ outbound availability and potentially adding cross-AZ transfer.
+2. The free S3 gateway endpoint avoids NAT processing for S3/ECR layers. Capture actual avoided bytes and NAT metrics; do not claim savings solely because the endpoint exists.
+3. Fargate removes EC2 idle capacity and node management, but small always-on system Pods still have a minimum charge per Pod. Do not claim Fargate is automatically cheaper than EC2. Measure app utilization and CapacityProvisioned before tuning equal requests/limits.
+4. Standard-support EKS and reviewed version upgrades avoid the $0.50/hour extended-support increment (~$365/month). Terraform requests STANDARD; verify current 1.36 support and future upgrade dates with the [AWS version table](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html).
+5. Thirty-day logs and seven-day untagged ECR cleanup bound storage, preserving tagged releases for rollback. Measure actual bytes/billing.
+6. Approved teardown after a short lab avoids ongoing EKS/NAT costs. EKS cannot be stopped; scaling apps down still leaves cluster/NAT and system Pod charges. A 40-hour full baseline is roughly $10.85 plus usage and retained-key/storage charges, assuming separately approved teardown.
 
-## Later phases excluded
-
-No ALB, RDS/Aurora, SQS/EventBridge, Secrets Manager, managed Prometheus/Grafana, Inspector/GuardDuty/Security Hub expansion or paid CI runner is deployed here. An internet-facing ALB later adds hourly/LCU charges and at least two charged public IPv4 addresses; estimate those separately after the approved HTTPS design. RDS and managed observability can materially increase the bill and need their own reviewed plans. Nothing here deploys separate stage/uat/prod clusters.
+These are modeled decisions. The assignment's three evidence-supported cost optimizations still require actual Phase 6 cost/usage measurements. No discounts, credits, free-tier eligibility or taxes are assumed.

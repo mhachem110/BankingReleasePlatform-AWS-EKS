@@ -35,9 +35,8 @@ variable "vpc_cidr" {
   }
 }
 variable "cluster_role_arn" { type = string }
-variable "node_role_arn" { type = string }
+variable "fargate_execution_role_arn" { type = string }
 variable "flow_log_role_arn" { type = string }
-variable "controller_role_arn" { type = string }
 variable "operator_role_arn" { type = string }
 variable "deployer_role_arn" { type = string }
 variable "kms_key_arn" { type = string }
@@ -50,22 +49,20 @@ variable "kubernetes_version" {
     error_message = "This reviewed baseline uses Kubernetes 1.36; upgrade in a separate PR."
   }
 }
-variable "node_release_version" { type = string }
 variable "addon_versions" { type = map(string) }
 locals { name = "banking-dev" }
 data "aws_caller_identity" "current" {}
 data "aws_iam_role" "cluster" { name = "cloudbatch818-mahmoud-banking-eks-cluster" }
-data "aws_iam_role" "nodes" { name = "cloudbatch818-mahmoud-banking-eks-nodes" }
+data "aws_iam_role" "fargate" { name = "cloudbatch818-mahmoud-banking-fargate-execution" }
 data "aws_iam_role" "flow" { name = "cloudbatch818-mahmoud-banking-flow-logs" }
-data "aws_iam_role" "controller" { name = "cloudbatch818-mahmoud-banking-alb-controller" }
 data "aws_kms_key" "this" { key_id = var.kms_key_arn }
 resource "terraform_data" "prerequisites" {
   lifecycle {
     precondition {
       condition = (var.aws_region == "us-east-2" && data.aws_caller_identity.current.account_id == var.expected_account_id &&
-        data.aws_iam_role.cluster.arn == var.cluster_role_arn && data.aws_iam_role.nodes.arn == var.node_role_arn &&
-        data.aws_iam_role.flow.arn == var.flow_log_role_arn && data.aws_iam_role.controller.arn == var.controller_role_arn &&
-        length(distinct([var.cluster_role_arn, var.node_role_arn, var.flow_log_role_arn, var.controller_role_arn])) == 4 &&
+        data.aws_iam_role.cluster.arn == var.cluster_role_arn && data.aws_iam_role.fargate.arn == var.fargate_execution_role_arn &&
+        data.aws_iam_role.flow.arn == var.flow_log_role_arn &&
+        length(distinct([var.cluster_role_arn, var.fargate_execution_role_arn, var.flow_log_role_arn])) == 3 &&
         var.operator_role_arn != var.deployer_role_arn &&
         !endswith(var.operator_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
         !endswith(var.deployer_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
@@ -91,21 +88,19 @@ module "registry" {
   depends_on = [terraform_data.prerequisites]
 }
 module "eks" {
-  source               = "../../../modules/eks"
-  name                 = local.name
-  vpc_id               = module.network.vpc_id
-  subnet_ids           = module.network.application_subnet_ids
-  cluster_role_arn     = var.cluster_role_arn
-  node_role_arn        = var.node_role_arn
-  controller_role_arn  = var.controller_role_arn
-  kms_key_arn          = var.kms_key_arn
-  kubernetes_version   = var.kubernetes_version
-  node_release_version = var.node_release_version
-  endpoint_cidrs       = var.endpoint_cidrs
-  operator_role_arn    = var.operator_role_arn
-  deployer_role_arn    = var.deployer_role_arn
-  addon_versions       = var.addon_versions
-  # Ensure private outbound routes/NAT are ready before workers bootstrap.
+  source                     = "../../../modules/eks"
+  name                       = local.name
+  vpc_id                     = module.network.vpc_id
+  subnet_ids                 = module.network.application_subnet_ids
+  cluster_role_arn           = var.cluster_role_arn
+  fargate_execution_role_arn = var.fargate_execution_role_arn
+  kms_key_arn                = var.kms_key_arn
+  kubernetes_version         = var.kubernetes_version
+  endpoint_cidrs             = var.endpoint_cidrs
+  operator_role_arn          = var.operator_role_arn
+  deployer_role_arn          = var.deployer_role_arn
+  addon_versions             = var.addon_versions
+  # Ensure private outbound routes/NAT are ready before Fargate profiles launch Pods.
   depends_on = [module.network]
 }
 output "vpc_id" { value = module.network.vpc_id }
@@ -114,6 +109,10 @@ output "application_subnet_ids" { value = module.network.application_subnet_ids 
 output "database_subnet_ids" { value = module.network.database_subnet_ids }
 output "ecr_repositories" { value = module.registry.repositories }
 output "cluster_name" { value = module.eks.cluster_name }
-output "node_group_name" { value = module.eks.node_group_name }
-output "node_security_group_id" { value = module.eks.node_security_group_id }
+output "fargate_profiles" { value = module.eks.fargate_profiles }
+output "cluster_security_group_id" { value = module.eks.cluster_security_group_id }
+output "oidc_issuer_url" { value = module.eks.oidc_issuer_url }
+output "oidc_provider_arn" { value = module.eks.oidc_provider_arn }
+output "cluster_endpoint" { value = module.eks.endpoint }
+output "controller_irsa_service_account" { value = "system:serviceaccount:kube-system:aws-load-balancer-controller" }
 output "dev_platform_state_key" { value = "banking-release-platform/dev/platform/terraform.tfstate" }

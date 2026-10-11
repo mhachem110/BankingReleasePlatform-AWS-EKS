@@ -8,9 +8,8 @@ from pathlib import Path
 STATE_KEY = "banking-release-platform/dev/platform/terraform.tfstate"
 ROLE_NAMES = {
     "cluster_role_arn": "cloudbatch818-mahmoud-banking-eks-cluster",
-    "node_role_arn": "cloudbatch818-mahmoud-banking-eks-nodes",
+    "fargate_execution_role_arn": "cloudbatch818-mahmoud-banking-fargate-execution",
     "flow_log_role_arn": "cloudbatch818-mahmoud-banking-flow-logs",
-    "controller_role_arn": "cloudbatch818-mahmoud-banking-alb-controller",
 }
 
 
@@ -29,9 +28,16 @@ def configuration(env):
     if env["TF_STATE_BUCKET"] != "mhachem-banking-tfstate-" + account:
         raise ValueError("Only the existing dedicated Banking bucket is allowed.")
     inputs = json.loads(env["PLATFORM_INPUTS_JSON"])
+    allowed = set(ROLE_NAMES) | {"operator_role_arn", "deployer_role_arn", "kms_key_arn",
+        "availability_zones", "vpc_cidr", "endpoint_cidrs", "kubernetes_version", "addon_versions"}
+    if set(inputs) - allowed:
+        raise ValueError("Unknown/stale platform fields are not accepted.")
+    inputs.setdefault("kubernetes_version", "1.36")
     for field, name in ROLE_NAMES.items():
         if not re.fullmatch(r"arn:aws:iam::" + account + r":role/(?:[\w+=,.@-]+/)*" + name, inputs[field]):
             raise ValueError("Administrator role ARN does not match " + field)
+    if "/" in inputs["fargate_execution_role_arn"].split(":role/")[1]:
+        raise ValueError("Fargate execution roles cannot have an IAM path.")
     for field in ("operator_role_arn", "deployer_role_arn"):
         if not inputs[field].startswith(f"arn:aws:iam::{account}:role/") or inputs[field].endswith("/cloudbatch818-mahmoud-cloudops-bootstrap"):
             raise ValueError("Access entries must use verified same-account IAM roles.")
@@ -50,10 +56,8 @@ ALLOWED_TYPES = {
     "terraform_data", "aws_vpc", "aws_default_security_group", "aws_subnet", "aws_internet_gateway",
     "aws_eip", "aws_nat_gateway", "aws_route_table", "aws_route", "aws_route_table_association",
     "aws_vpc_endpoint", "aws_cloudwatch_log_group", "aws_flow_log", "aws_ecr_repository",
-    "aws_ecr_lifecycle_policy", "aws_eks_cluster", "aws_security_group",
-    "aws_vpc_security_group_ingress_rule", "aws_vpc_security_group_egress_rule", "aws_launch_template",
-    "aws_eks_node_group", "aws_eks_access_entry", "aws_eks_access_policy_association",
-    "aws_eks_addon", "aws_eks_pod_identity_association",
+    "aws_ecr_lifecycle_policy", "aws_eks_cluster", "aws_eks_fargate_profile", "aws_iam_openid_connect_provider", "aws_eks_access_entry", "aws_eks_access_policy_association",
+    "aws_eks_addon",
 }
 
 
@@ -68,6 +72,15 @@ def verify_plan(plan):
                 item["address"] == "terraform_data.prerequisites" or
                 item["address"].startswith(("module.network.", "module.registry.", "module.eks."))):
             raise ValueError("Resource outside reviewed Banking platform scope: " + item["address"])
+        if item["type"] == "aws_iam_openid_connect_provider":
+            if item["address"] != "module.eks.aws_iam_openid_connect_provider.cluster":
+                raise ValueError("Only the new Banking cluster OIDC provider is allowed.")
+            after = item["change"].get("after") or {}
+            if after.get("client_id_list") != ["sts.amazonaws.com"] or (after.get("tags", {}).get("Project") != "BankingReleasePlatform" or after.get("tags", {}).get("Environment") != "dev"):
+                raise ValueError("Cluster OIDC provider must have the reviewed audience and tags.")
+            issuer = after.get("url")
+            if issuer is not None and not re.fullmatch(r"https://oidc\.eks\.us-east-2\.amazonaws\.com/id/[A-Za-z0-9]+", issuer):
+                raise ValueError("Never manage GitHub or another Region's identity provider.")
         actions = item["change"]["actions"]
         if actions not in (["create"], ["no-op"]):
             raise ValueError("Initial Phase 3 cannot mutate or delete an existing resource: " + item["address"])
@@ -83,13 +96,15 @@ def session_policy(inputs):
     arn = "arn:aws:s3:::" + bucket
     policy = {"Version": "2012-10-17", "Statement": [
         {"Effect": "Allow", "Action": "sts:GetCallerIdentity", "Resource": "*"},
-        {"Effect": "Allow", "Action": ["ec2:*", "eks:*", "ecr:*", "logs:*", "ssm:GetParameter"],
+        {"Effect": "Allow", "Action": ["ec2:*", "eks:*", "ecr:*", "logs:*"],
          "Resource": "*", "Condition": {"StringEquals": {"aws:RequestedRegion": region}}},
         {"Effect": "Allow", "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:GetRolePolicy", "iam:ListRolePolicies"],
          "Resource": "*"},
         {"Effect": "Allow", "Action": "iam:PassRole", "Resource": [inputs[k] for k in ROLE_NAMES],
-         "Condition": {"StringEquals": {"iam:PassedToService": ["eks.amazonaws.com", "ec2.amazonaws.com", "vpc-flow-logs.amazonaws.com", "pods.eks.amazonaws.com"]}}},
-        {"Effect": "Allow", "Action": ["kms:DescribeKey", "kms:CreateGrant", "kms:ListGrants", "kms:RetireGrant"], "Resource": inputs["kms_key_arn"]},
+         "Condition": {"StringEquals": {"iam:PassedToService": ["eks.amazonaws.com", "eks-fargate-pods.amazonaws.com", "vpc-flow-logs.amazonaws.com"]}}},
+        {"Effect": "Allow", "Action": ["iam:CreateOpenIDConnectProvider", "iam:GetOpenIDConnectProvider", "iam:ListOpenIDConnectProviderTags", "iam:TagOpenIDConnectProvider"],
+         "Resource": f"arn:aws:iam::{account}:oidc-provider/oidc.eks.{region}.amazonaws.com/id/*"},
+        {"Effect": "Allow", "Action": ["kms:DescribeKey", "kms:CreateGrant", "kms:ListGrants"], "Resource": inputs["kms_key_arn"]},
         {"Effect": "Allow", "Action": ["s3:ListBucket", "s3:GetBucket*", "s3:GetEncryptionConfiguration", "s3:GetLifecycleConfiguration"], "Resource": arn},
         {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": arn + "/" + STATE_KEY},
         {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": arn + "/" + STATE_KEY + ".tflock"},
