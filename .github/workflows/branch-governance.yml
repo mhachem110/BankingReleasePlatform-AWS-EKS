@@ -1,7 +1,7 @@
 name: Repository governance
 
 on:
-  # Use the destination's reviewed policy, never PR-provided executable code.
+  # Use the base repository's reviewed default-branch policy, never PR code.
   pull_request_target:
     branches: [dev, stage, uat, main]
     types: [opened, synchronize, reopened, edited, ready_for_review]
