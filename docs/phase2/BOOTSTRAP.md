@@ -1,6 +1,8 @@
 # Phase 2 bootstrap execution plan
 
-This prepares Phase 2 only. AWS operations have not run. Use the reusable `bootstrap` branch and existing PR #3 into dev; its legacy source is retained only to preserve the existing PR. PR #1 was merged with explicit owner approval; bootstrap was synchronized normally with dev. No new phase branch is created.
+Phase 2 uses the reusable `bootstrap` branch and PRs into `dev`. Original PRs #1–#4 and the IAM diagnostic fix #5 have merged; their history is preserved. No Phase 3 infrastructure is included.
+
+On 2026-10-11, [connectivity run 38170564614](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38170564614) succeeded using the existing role. The live provider audience, both exact Retail/Banking trust statements, both complete reviewed inline policies, absent boundary and empty managed-policy inventory were verified. The Banking S3 policy had been saved under the original Retail policy name; the authorized correction restored the original JSON and saved Banking separately. No further Retail policy changes are authorized. The owner has authorized creation/initialization of only the dedicated Banking bucket in us-east-2; actual bucket results must be checked in its protected initialization run before declaring completion.
 
 ## Components and state
 
@@ -17,7 +19,7 @@ Each state key has its own `.tflock`. The workspace listing prefix is `banking-r
 
 ## Current proposed configuration
 
-The owner's proposed Region is us-east-2 and the proposed dedicated bucket is mhachem-banking-tfstate-866934333672. Neither availability nor live ownership/settings were inspected. No existing bucket is assumed. Runtime values come from protected GitHub environment settings, not hardcoded provider credentials/account IDs.
+The owner-approved Region is us-east-2 and dedicated bucket is mhachem-banking-tfstate-866934333672. The initialization operation checks availability and ownership; no existing bucket is assumed. Runtime values come from protected GitHub environment settings, not hardcoded provider credentials/account IDs.
 
 Use SSE-S3 AES256 initially; no customer KMS key, IAM role or DynamoDB table is created. A different bucket, shared-bucket adoption or customer KMS key requires a separate review, not a silent variable change.
 
@@ -35,7 +37,7 @@ Repository > Settings > Environments > New environment > `bootstrap`:
 
 Repository > Settings > Secrets and variables > Actions > Variables: keep repository variable `AWS_OPERATIONS_ENABLED=false` initially. It gates all live operations, including read-only connectivity. The old `BOOTSTRAP_STATE_MIGRATED` flag is superseded by `BOOTSTRAP_STATE_READY`; the new initializer does not migrate local state.
 
-No environment, secret or variable was created during preparation. Keep Actions token defaults read-only and do not configure long-lived AWS access keys. The preflight checks fail closed unless the existing environment has the verified reviewer, only dev allowed, and no administrator bypass.
+These environment settings, the role ARN secret and variables are configured and were verified by the successful protected connectivity run. Keep Actions token defaults read-only and do not configure long-lived AWS access keys. The preflight checks fail closed unless the existing environment has the verified reviewer, only dev allowed, and no administrator bypass.
 
 ## Approval and execution sequence
 
@@ -44,11 +46,11 @@ No environment, secret or variable was created during preparation. Keep Actions 
 3. Bucket creation is a DIFFERENT authorization. Before approving it, review the proposed exact name/account/us-east-2, all seven security settings, S3 costs and policy scope. Only after approval set `DEDICATED_BUCKET_MANAGEMENT_APPROVED=true`. Dispatch action `initialize`, resume=false, approval `CREATE-APPROVED-STATE-BUCKET`; approve its environment job.
 4. The initializer checks the expected bucket owner. A 403/ambiguous result stops; a successful existing-bucket check also stops in normal mode. A 404 is not a reservation: CreateBucket must actually succeed, and a race/existing-name error stops without adopting/configuring that bucket.
 5. This deliberate initial seed uses AWS CLI with temporary OIDC credentials to create and secure the bucket BEFORE Terraform uses it. It then verifies owner/Region, versioning, encryption, public blocking, disabled ACLs and TLS. The seven settings match the Terraform module. There is no local AWS credential requirement or local Terraform state transfer between runners.
-6. Terraform initializes the secured S3 backend and imports the seven exact resources directly into the bootstrap state. Each import persists state remotely under Terraform locking. Partial import failure leaves durable remote state; nothing publishes state as a GitHub artifact. Verify the job and recorded resource identities before setting `BOOTSTRAP_STATE_READY=true`.
-7. Separately authorize a `plan`, target `bootstrap`. Review resource changes, output changes and backend settings. Imports may leave output values pending; do not assume a zero-change plan before a real run. Then plan the foundation root separately if approved. Plans can write locks/state metadata and incur S3 request charges; they are not credential-free tests.
+6. Terraform initializes the secured S3 backend and imports the seven exact resources directly into the bootstrap state. Each import persists state remotely under Terraform locking. Partial import failure leaves durable remote state; nothing publishes state as a GitHub artifact. The initializer additionally checks the remote state object's AES256 encryption/version ID and initializes both approved roots. It exercises live lock contention and generates a plan for each root. Both plans must have zero managed resource changes; output-only changes are acceptable and are not applied. Text plans are retained for one day as `phase2-verification`; no state or binary plan is uploaded by initialization. Set `BOOTSTRAP_STATE_READY=true` only after the entire run succeeds.
+7. The live locking test conditionally creates an absent `.tflock` object at the exact approved key and requires Terraform to reject a competing plan with that lock's UUID. It reads the UUID and ETag back, then deletes only its owned lock using an ETag precondition. An existing/replaced/ambiguous lock is never overwritten, blindly deleted or force-unlocked. A normal successful plan afterward proves the lock can be released and reacquired. The foundation path is initialized/planned separately; an output-only plan does not persist its outputs as a new development state object. Plans can write locks and incur S3 request charges; they are not credential-free tests.
 8. Only with a separately approved exact plan, dispatch action `apply` for that target and enter `APPLY-REVIEWED-PLAN`. Review/approve planning first, inspect its `plan.txt`, then review/approve the apply environment job. Apply uses the saved plan/backend from the SAME run and same immutable code commit; it does not recalculate a plan. A changed state invalidates a stale plan. No destroy workflow is provided.
 
-The bootstrap environment is reviewed independently for each eligible job. No step here authorizes automatic AWS operations. The next checkpoint is manual AWS setup plus connectivity-only verification, not bucket creation.
+The bootstrap environment is reviewed independently for each eligible job. The owner's explicit end-to-end Phase 2 authorization covers the dedicated initialization and verification described above; it does not authorize other AWS resources. After the checkpoint set `AWS_OPERATIONS_ENABLED=false`. No VPC, EKS, ECR, RDS or other Phase 3 resource is created.
 
 ## Failure/recovery boundary
 
@@ -60,7 +62,7 @@ A failure to read backend state is not treated as empty state. Credential denial
 
 ## Session permissions and preservation
 
-The supplied existing role has broad permissions for Retail and multiple AWS services. Adding the new exact-bucket policy does not narrow those old grants. Every prepared AWS job therefore requests a restrictive STS session policy: connectivity gets identity/provider reads only; initialization/plan/apply get only the exact Banking bucket (and a separately approved KMS key if applicable). Session policies restrict rather than grant permissions. The shared role itself remains broad, so administrator approval of reuse is required.
+The existing role has broad permissions for Retail and multiple AWS services, now verified against the supplied original JSON. Adding the separate exact-bucket policy does not narrow those old grants. Every AWS job requests a restrictive STS session policy: connectivity gets identity and exact-provider/role inspection reads only; initialization/plan/apply get only the exact Banking bucket (and a separately approved KMS key if applicable). Session policies restrict rather than grant permissions. IAM write permissions and Retail/Phase 3 service access are excluded from these temporary workflow sessions.
 
 The bucket uses `prevent_destroy` and `force_destroy=false`; the Banking addition grants no DeleteBucket or current-state deletion. Current state never expires; noncurrent versions expire after 90 days, incomplete uploads after seven days. Ordinary later infrastructure destruction uses separate state and preserves this bucket. Removing safeguards or decommissioning it requires separate approval.
 

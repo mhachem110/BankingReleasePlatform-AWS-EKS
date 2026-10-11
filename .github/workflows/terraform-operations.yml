@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Connectivity reads identity/provider only; initialize creates a bucket; plan writes locks'
+        description: 'Connectivity reads IAM/identity; initialize creates and verifies the state bucket; plan writes locks'
         type: choice
         options: [connectivity, initialize, plan, apply]
         default: connectivity
@@ -293,4 +293,28 @@ jobs:
           [[ "$(terraform -chdir=infra/bootstrap workspace show)" == default ]]
           python scripts/bootstrap/import-state-bucket.py --bucket "$TF_STATE_BUCKET"
           terraform -chdir=infra/bootstrap validate
-          echo 'Remote import completed. Set BOOTSTRAP_STATE_READY=true only after verifying the imported state and safeguards.'
+      - name: Verify remote state, lock contention and both Phase 2 plans
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3api head-object --bucket "$TF_STATE_BUCKET" --key banking-release-platform/bootstrap/terraform.tfstate --expected-bucket-owner "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION" --query '{Encryption:ServerSideEncryption,VersionId:VersionId}' --output json > "$RUNNER_TEMP/state-metadata.json"
+          python -c 'import json,os; p=json.load(open(os.path.join(os.environ["RUNNER_TEMP"],"state-metadata.json"))); assert p["Encryption"]=="AES256" and p["VersionId"] and p["VersionId"]!="null"; print("Verified remote bootstrap state object: AES256 encryption and a non-null S3 version ID.")'
+          mkdir -p "$RUNNER_TEMP/phase2-verification"
+          for root in infra/bootstrap infra/environments/dev; do
+            if [[ "$root" == infra/bootstrap ]]; then key=banking-release-platform/bootstrap/terraform.tfstate; else key=banking-release-platform/dev/foundation/terraform.tfstate; fi
+            python scripts/bootstrap/write-backend-config.py --key "$key" --output "$RUNNER_TEMP/verification.tfbackend"
+            terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$RUNNER_TEMP/verification.tfbackend"
+            [[ "$(terraform -chdir="$root" workspace show)" == default ]]
+            terraform -chdir="$root" validate
+            python scripts/bootstrap/verify-state-lock.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION" --root "$root"
+            terraform -chdir="$root" plan -input=false -lock-timeout=5m -out="$RUNNER_TEMP/verification.tfplan"
+            python scripts/bootstrap/verify-bootstrap-plan.py "$root" "$RUNNER_TEMP/verification.tfplan"
+            terraform -chdir="$root" show -no-color "$RUNNER_TEMP/verification.tfplan" > "$RUNNER_TEMP/phase2-verification/$(basename "$root")-plan.txt"
+          done
+          echo 'Remote import, encrypted/versioned state, locking and zero-resource-change plans verified. BOOTSTRAP_STATE_READY may now be enabled.'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: phase2-verification
+          path: ${{ runner.temp }}/phase2-verification/
+          retention-days: 1
+          if-no-files-found: error
