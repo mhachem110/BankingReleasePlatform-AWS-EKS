@@ -1,0 +1,68 @@
+name: Repository governance
+
+on:
+  # Use the base repository's reviewed default-branch policy, never PR code.
+  pull_request_target:
+    branches: [dev, stage, uat, main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions: {}
+
+jobs:
+  branch-route:
+    name: Branch promotion policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source and destination branches
+        shell: bash
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" ]]; then
+            echo 'Promotion branches must belong to this repository.'
+            exit 1
+          fi
+          case "$BASE_BRANCH:$HEAD_BRANCH" in
+            dev:feature/app | dev:bootstrap | dev:infra | stage:dev | uat:stage | main:uat)
+              echo "Allowed promotion: $HEAD_BRANCH -> $BASE_BRANCH"
+              ;;
+            *)
+              echo 'Allowed routes into dev: feature/app, bootstrap, infra. Promotions: dev -> stage -> uat -> main.'
+              exit 1
+              ;;
+          esac
+  file-policy:
+    name: File ownership and path validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out only the trusted policy commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate PR metadata without executing PR code
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/governance/validate_pr_paths.py
+  required-policy:
+    name: Repository security policy
+    if: always()
+    needs: [branch-route, file-policy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both metadata policies to succeed
+        env:
+          ROUTE_RESULT: ${{ needs.branch-route.result }}
+          PATH_RESULT: ${{ needs.file-policy.result }}
+        run: |
+          set -euo pipefail
+          [[ "$ROUTE_RESULT" == success && "$PATH_RESULT" == success ]]
