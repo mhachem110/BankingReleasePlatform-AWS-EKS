@@ -1,0 +1,43 @@
+# The only verified owner today. Unknown/shared files default to cloud ownership.
+* @mhachem110
+
+# Application ownership; replace these owners only after real teams are verified.
+/apps/ @mhachem110
+/tests/ @mhachem110
+/Dockerfile* @mhachem110
+/.dockerignore @mhachem110
+/compose.yaml @mhachem110
+/compose.yml @mhachem110
+/docker-compose*.yaml @mhachem110
+/docker-compose*.yml @mhachem110
+/BankingReleasePlatform.sln @mhachem110
+/Directory.Build.props @mhachem110
+/global.json @mhachem110
+/README.md @mhachem110
+/scripts/smoke-test.ps1 @mhachem110
+/scripts/test-local.ps1 @mhachem110
+/docs/application/ @mhachem110
+
+# Sensitive ownership LAST: never overridden by later application patterns.
+/infra/ @mhachem110
+/helm/ @mhachem110
+/.github/ @mhachem110
+/scripts/bootstrap/ @mhachem110
+/scripts/infra/ @mhachem110
+/scripts/deploy/ @mhachem110
+/scripts/governance/ @mhachem110
+/docs/governance/ @mhachem110
+/docs/phase2/ @mhachem110
+/iam/ @mhachem110
+/policies/ @mhachem110
+/config/aws/ @mhachem110
+/config/iam/ @mhachem110
+/AGENTS.md @mhachem110
+/.gitignore @mhachem110
+*.tf @mhachem110
+*.tf.json @mhachem110
+*.hcl @mhachem110
+*.tfvars* @mhachem110
+*.tfbackend* @mhachem110
+CODEOWNERS @mhachem110
+/.github/CODEOWNERS @mhachem110

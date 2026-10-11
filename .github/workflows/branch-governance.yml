@@ -35,3 +35,34 @@ jobs:
               exit 1
               ;;
           esac
+  file-policy:
+    name: File ownership and path validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out only the trusted policy commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate PR metadata without executing PR code
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/governance/validate_pr_paths.py
+  required-policy:
+    name: Repository security policy
+    if: always()
+    needs: [branch-route, file-policy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both metadata policies to succeed
+        env:
+          ROUTE_RESULT: ${{ needs.branch-route.result }}
+          PATH_RESULT: ${{ needs.file-policy.result }}
+        run: |
+          set -euo pipefail
+          [[ "$ROUTE_RESULT" == success && "$PATH_RESULT" == success ]]
