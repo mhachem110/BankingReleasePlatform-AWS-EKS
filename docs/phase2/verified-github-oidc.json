@@ -1,0 +1,9 @@
+{
+  "repository": "mhachem110/BankingReleasePlatform-AWS-EKS",
+  "repository_id": 1413860979,
+  "owner_id": 150286776,
+  "use_default": true,
+  "use_immutable_subject": true,
+  "sub_claim_prefix": "repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979",
+  "source": "GitHub REST repository metadata and actions/oidc/customization/sub; read-only verification"
+}
