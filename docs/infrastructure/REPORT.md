@@ -28,7 +28,7 @@ One NAT is a development availability/cost tradeoff. Fargate does not enforce AW
 Actually executed locally:
 - Terraform fmt check and backend-disabled, read-only-lockfile init/validate for seven configurations: passed.
 - 13 Terraform mock tests: 3 backend, 2 network, 1 registry, 5 Fargate EKS and 2 integrated platform tests: passed.
-- 32 infrastructure Python regressions: passed (gates, exact policies, IRSA subject/audience, profile/selectors/health, schemas/compute compatibility, saved-plan scope and costs).
+- 33 infrastructure Python regressions: passed (gates, exact policies, IRSA subject/audience, profile/selectors/health, schemas/compute compatibility, saved-plan scope and costs).
 - 48 existing bootstrap Python regressions: passed, including the offline AWS 6.68.0 lifecycle representation regression. These tests make no AWS changes.
 - 7 existing Helm tests: passed read-only against the retained chart baseline. They do not verify Chat 2's in-progress chart.
 - 23 existing governance Python tests: passed unchanged.

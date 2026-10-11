@@ -79,6 +79,8 @@ def verify_plan(plan):
             if after.get("client_id_list") != ["sts.amazonaws.com"] or (after.get("tags", {}).get("Project") != "BankingReleasePlatform" or after.get("tags", {}).get("Environment") != "dev"):
                 raise ValueError("Cluster OIDC provider must have the reviewed audience and tags.")
             issuer = after.get("url")
+            if issuer is None and item["change"].get("after_unknown", {}).get("url") is not True:
+                raise ValueError("Cluster issuer must be present or explicitly computed by the new cluster.")
             if issuer is not None and not re.fullmatch(r"https://oidc\.eks\.us-east-2\.amazonaws\.com/id/[A-Za-z0-9]+", issuer):
                 raise ValueError("Never manage GitHub or another Region's identity provider.")
         actions = item["change"]["actions"]
