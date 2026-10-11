@@ -42,7 +42,13 @@ def main():
                and set(s.get("Resource", [])) >= {arn, arn + "/*"}
                and s.get("Condition", {}).get("Bool", {}).get("aws:SecureTransport") in ("false", False) for s in statements):
         raise RuntimeError("Bucket policy must deny insecure transport for bucket and objects.")
-    print("Verified bucket owner, Region, versioning, encryption, public blocking, ACL enforcement and TLS-only policy.")
+    lifecycle = aws("get-bucket-lifecycle-configuration", *common)["Rules"]
+    if len(lifecycle) != 1 or lifecycle[0].get("Status") != "Enabled" or lifecycle[0].get("Filter") != {} \
+            or lifecycle[0].get("NoncurrentVersionExpiration", {}).get("NoncurrentDays") != 90 \
+            or lifecycle[0].get("AbortIncompleteMultipartUpload", {}).get("DaysAfterInitiation") != 7 \
+            or "Expiration" in lifecycle[0]:
+        raise RuntimeError("Lifecycle must preserve current state, retain old versions for 90 days and abort incomplete uploads after seven days.")
+    print("Verified bucket owner, Region, versioning, encryption, public blocking, ACL enforcement, TLS-only policy and lifecycle.")
 
 if __name__ == "__main__":
     main()
