@@ -1,0 +1,37 @@
+name: banking-week4-local
+services:
+  account-api:
+    image: banking-week4/account-api:local
+    build:
+      context: .
+      dockerfile: apps/Account.Api/Dockerfile
+    ports:
+      - "127.0.0.1:5101:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+  payment-api:
+    image: banking-week4/payment-api:local
+    build:
+      context: .
+      dockerfile: apps/Payment.Api/Dockerfile
+    ports:
+      - "127.0.0.1:5102:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      AccountApi__BaseUrl: http://account-api:8080/
+    depends_on:
+      - account-api
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
