@@ -6,13 +6,15 @@ Repository: https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS
 
 ```mermaid
 flowchart LR
-  F["feature/*"] -->|Pull request| D[dev]
+  A["feature/app"] -->|Pull request| D[dev]
+  B[bootstrap] -->|Pull request| D
+  I[infra] -->|Pull request| D
   D -->|Promotion PR| S[stage]
   S -->|Acceptance PR| U[uat]
   U -->|Production approval PR| M[main]
 ```
 
-`main` is the production-approved branch. `dev` is now the repository default so ordinary feature PRs default to development, and the manually dispatched bootstrap workflow can become available after a reviewed merge into dev. Always verify the PR base explicitly. `dev`, `stage`, and `uat` were created at the existing `main` commit `43a9ddba5b965b96fb9a5535cb67604e3b85ff1c`. This empty initial commit is the common baseline. No application code was promoted and no history was rewritten. PR #1 now targets `dev` and remains open. The old Phase 1 publication notes describe the earlier target; this governance checkpoint supersedes that target and the old instruction to start Phase 2 from merged main.
+`main` is the production-approved branch. `dev` is now the repository default so ordinary working-branch PRs default to development, and the manually dispatched bootstrap workflow can become available after a reviewed merge into dev. Always verify the PR base explicitly. `dev`, `stage`, and `uat` were created at the existing `main` commit `43a9ddba5b965b96fb9a5535cb67604e3b85ff1c`. This empty initial commit is the common baseline. No application code was promoted and no history was rewritten. PR #1 now targets `dev` and remains open. The old Phase 1 publication notes describe the earlier target; this governance checkpoint supersedes that target and the old instruction to start Phase 2 from merged main.
 
 Use merge commits for feature and promotion PRs. Squashing or rebasing repeated promotions can disconnect ancestry and make later promotions appear to contain changes already released. Linear-history enforcement is intentionally off. Promotion PRs move all changes since the prior promotion; examine the entire diff and freeze the source branch during a release window. A commit SHA identifies the release; names such as `stage` move over time.
 
@@ -33,7 +35,7 @@ The four `rulesets/*.json` files describe the live branch rulesets applied at th
 
 Zero required approving reviews is deliberate for a single developer: PR authors cannot approve their own PRs. You still review the diff and explicitly merge the PR. There is no independent second-person approval today. Once a second reviewer with write access is available, set at least one approval on each ruleset, retain stale-review dismissal, and enable approval of the most recent push by someone else. Consider two independent reviewers for production when the team can support it. No administrator bypass is configured, although repository administrators can edit settings; this is not separation of duties against the sole administrator.
 
-The route workflow runs on every PR targeting these branches, including retargeted PRs, without path filtering, source checkout, secrets, or an AWS token. It uses `pull_request_target`, which GitHub documents as running in the context of the base repository's default branch (dev); executable code from a feature PR cannot replace its own routing gate. Explicit empty token permissions, no checkout, and no external actions keep this narrow metadata-only job isolated from PR code. It accepts only same-repository `feature/* -> dev`, `dev -> stage`, `stage -> uat`, and `uat -> main` PRs. Native PR protection alone does not restrict the source branch. Until this workflow is merged into default dev and its check is required on each destination, verify the source/base manually. It is not yet an enforceable merge gate.
+The route workflow runs on every PR targeting these branches, including retargeted PRs, without path filtering, source checkout, secrets, or an AWS token. It uses `pull_request_target`, which GitHub documents as running in the context of the base repository's default branch (dev); executable code from a feature PR cannot replace its own routing gate. Explicit empty token permissions, no checkout, and no external actions keep this narrow metadata-only job isolated from PR code. It accepts only same-repository `feature/app -> dev`, `bootstrap -> dev`, `infra -> dev`, `dev -> stage`, `stage -> uat`, and `uat -> main` PRs. Native PR protection alone does not restrict the source branch. Until this workflow is merged into default dev and its check is required on each destination, verify the source/base manually. It is not yet an enforceable merge gate.
 
 No nonexistent checks were added. Phase 1 application CI, container/security scanning, deployment checks, and all AWS environments remain unconfigured. The Phase 2 feature PR supplies credential-free Terraform validation and Checkov, but those checks are not globally required at this checkpoint. An optional check failure does not block GitHub's merge button; do not merge a PR with failing checks.
 
@@ -41,9 +43,9 @@ No nonexistent checks were added. Phase 1 application CI, container/security sca
 
 Open repository **Settings -> Rules -> Rulesets**. There are four branch rulesets named `banking-dev-governance`, `banking-stage-governance`, `banking-uat-governance`, and `banking-main-governance`. To recreate one, use **New ruleset -> Import a ruleset**, select the matching complete JSON under `docs/governance/rulesets/`, confirm **Active**, its exact target branch, and an empty bypass list, then save. Alternatively use **New branch ruleset**, select the exact branch, enable **Restrict deletions**, **Block force pushes**, **Require a pull request before merging**, **Require conversation resolution**, zero approvals and **Merge** as the only allowed merge method. Leave **Restrict updates**, linear history, and required deployments off; Restrict updates with no bypass would prevent PR merges too.
 
-After you manually merge this governance PR into `dev`:
+First follow the approved migration order in [the reusable-branch runbook](reusable-branches.md): original PR #1, original PR #3, this governance PR #2, then the migration PR from infra. No merge is authorized by this document. Installing the strict policy before merging the two legacy-source PRs would cause their routes to fail. After you manually merge governance into `dev`:
 
-1. Synchronize each open feature branch with `dev` using a normal merge if needed, and confirm **Branch promotion policy** ran successfully on a PR targeting `dev`. If needed, close/reopen an unmerged PR to trigger a fresh run. Do not dispatch an AWS workflow.
+1. Synchronize each reusable working branch with `dev` using a normal merge if needed, and confirm **Branch promotion policy** ran successfully on a PR targeting `dev`. If needed, close/reopen an unmerged PR to trigger a fresh run. Do not dispatch an AWS workflow.
 2. In the `dev` ruleset, enable **Require status checks to pass**, choose the observed **Branch promotion policy** check with **GitHub Actions** as its source, and save. Do not invent a check name or require a workflow that has not run. Use up-to-date checking for feature PRs into `dev` when available.
 3. After the trusted policy is merged into default dev, open the first `dev -> stage` PR and verify **Branch promotion policy** actually ran successfully for that PR. Then add that observed check to the stage ruleset before manually merging. Repeat for `stage -> uat` and `uat -> main`. Require the GitHub Actions source, and never add a check before a real run for that destination has been verified. Application CI still needs its executable configuration promoted to each branch as it becomes available; do not assume all CI can run merely because the metadata-only routing policy can.
 4. When application CI and security scanning are implemented in Phase 5, make stable, always-running aggregate jobs report failures from tests/scans and safe success when a check is legitimately inapplicable. Confirm each job has run against each destination before requiring its observed status. Workflows skipped by path or branch filtering can leave required checks pending forever. Do not blanket-require the path-filtered Terraform validation job for application-only PRs.
@@ -53,18 +55,30 @@ For promotion branches, leave strict up-to-date checking off initially: merging 
 
 ## Daily development and promotion
 
-Start from updated `dev`:
+Reuse exactly these working branches; do not create feature/phaseN branches:
+
+| Working branch | Scope |
+| --- | --- |
+| `feature/app` | Account/Payment APIs, Docker, Helm application deployments |
+| `bootstrap` | Terraform backend, state, GitHub OIDC and bootstrap configuration |
+| `infra` | VPC, EKS, ECR, networking, RDS, monitoring and shared repository governance |
+
+A branch is a reusable workstream, not a deployment environment or an access grant. All three may contain the shared repository after synchronization; scope means which files you change, not which files the branch may contain.
+
+With a clean worktree, after a merged PR and before the next change:
 
 ```powershell
 git fetch origin
-git switch dev
-git pull --ff-only origin dev
-git switch -c feature/short-description
-# Make, test, and commit the change.
-git push -u origin feature/short-description
+git switch feature/app # Or bootstrap / infra, matching the work.
+git merge --ff-only origin/feature/app # Use the matching remote branch.
+git merge --no-edit origin/dev
+# Resolve any conflicts, review, and run relevant checks before pushing.
+git push origin feature/app
 ```
 
-In **Pull requests -> New pull request**, explicitly select base `dev` and compare `feature/short-description`. Review and resolve comments, then use **Create a merge commit** after your checkpoint approval. Nobody should push directly to `dev`, `stage`, `uat`, or `main`.
+Stop if any command fails; do not force push, reset away commits, or rebase shared history. Repeat synchronization whenever dev has advanced before starting new changes. Keep automatic branch deletion disabled and do not click Delete branch on these reusable branches.
+
+In **Pull requests -> New pull request**, explicitly select base `dev` and compare `feature/app`, `bootstrap`, or `infra`. Review and resolve comments, then use **Create a merge commit** after your checkpoint approval. No new phase branch is needed. Nobody should push directly to `dev`, `stage`, `uat`, or `main`.
 
 For release promotion open these PRs separately, review the full diff and evidence, and merge only after the previous environment has been validated:
 
@@ -98,10 +112,14 @@ Trust policy determines **who can assume a role**; permission policy determines 
 
 Inspect **Branches**, PR #1's base, and **Settings -> Rules -> Rulesets**. Check exact targets, Active status, no bypasses, zero reviews, resolved conversations, deletion/force-push blocking, and merge-only methods. The baseline and open PRs can be verified through the GitHub REST API. No destructive push tests are needed.
 
-The four effective rulesets were read back from GitHub and matched the checked-in configuration. Actionlint passed for the governance workflow; its actual shell step accepted four valid routes and rejected six invalid routes/repository combinations. The final trusted-default-branch workflow cannot run on the initial governance PR because empty default dev does not yet contain it. Live execution and required-check activation remain pending the reviewed merge and the steps above. Phase 2's credential-free Terraform validation completed successfully on draft PR #3 in GitHub Actions. No AWS deployment or authorization test ran.
+The four effective rulesets were read back from GitHub and matched the checked-in configuration. Actionlint passed for the governance workflow; its actual shell step was revalidated for six valid routes and the rejection of wildcard/phase branches, invalid promotions, and foreign repositories. The final trusted-default-branch workflow cannot run on the initial governance PR because empty default dev does not yet contain it. Live execution and required-check activation remain pending the reviewed merge and the steps above. Phase 2's credential-free Terraform validation completed successfully on draft PR #3 in GitHub Actions. No AWS deployment or authorization test ran.
 
 Open review items: [Phase 1 PR #1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1), [governance PR #2](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/2), and [Phase 2 draft PR #3](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/3). All target dev; none was merged. The Phase 2 draft remains pending IAM/backend inputs.
 
-Review this governance PR first, then Phase 1 PR #1 and the separate Phase 2 preparation PR. Merging them requires your explicit checkpoint approval. Phase 2 has no application code and is based on the same empty `dev` baseline, not on an unapproved Phase 1 merge. Its ignore rules preserve the Phase 1 exclusions. Do not run Terraform operations while reviewing these PRs.
+Review all PRs before any merge. To preserve the original PRs, merge their legacy application/bootstrap work before this strict governance policy, as documented in the migration runbook. Merging them requires your explicit checkpoint approval. Phase 2 has no application code and is based on the same empty `dev` baseline, not on an unapproved Phase 1 merge. Its ignore rules preserve the Phase 1 exclusions. Do not run Terraform operations while reviewing these PRs.
 
 References: [GitHub rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets), [deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments), [trusted PR event context](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_target).
+
+## Reusable-branch migration checkpoint
+
+The former feature wildcard strategy is superseded by exactly three working branches: feature/app, bootstrap and infra. Existing PR heads remain as temporary compatibility references to preserve reviews and commit history; no legacy branch is renamed, deleted, closed or replaced. Their retirement requires a later explicit approval. See the separate infra -> dev migration PR for the exact sequence. The four live environment rulesets are unchanged, and no required checks are removed or invented. Branch bootstrap is separate from the GitHub environment named bootstrap: AWS operations remain manually dispatched from reviewed dev, with environment approvals and OIDC/IAM authorization handled independently.
