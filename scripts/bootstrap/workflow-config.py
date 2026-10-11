@@ -38,6 +38,8 @@ def configuration(values):
     if operation == "connectivity":
         statements.append({"Effect": "Allow", "Action": "iam:GetOpenIDConnectProvider",
                            "Resource": f"arn:aws:iam::{account}:oidc-provider/token.actions.githubusercontent.com"})
+        statements.append({"Effect": "Allow", "Action": ["iam:GetRole", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies"],
+                           "Resource": role})
     else:
         # Session policies only restrict the role. The separate exact-action S3
         # inline policy supplies actual grants; this cap excludes Retail/EC2/EKS/IAM.
