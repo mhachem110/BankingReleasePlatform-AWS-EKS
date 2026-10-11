@@ -27,9 +27,10 @@ Local actual checks:
 
 - Seven Terraform configurations initialized/validated without AWS backends or credentials across preparation; formatting passes.
 - Eight new mock Terraform tests pass: two network, one ECR, three EKS, two integrated platform. They create no AWS resources. Three existing state-module tests remain covered by CI.
-- Twelve infrastructure policy/workflow regression tests, seven Helm rendering/lint/safety tests and 48 existing bootstrap tests pass.
+- Thirteen infrastructure policy/workflow regression tests, seven Helm rendering/lint/safety tests and 48 existing bootstrap tests pass.
 - Twenty-three existing governance tests pass. The branch/path policy is unchanged.
 - actionlint passes both changed workflows.
+- The initial GitHub run exposed missing Linux content checksums in the new Windows-generated provider locks. Terraform retrieved signed Windows/Linux packages to populate both verified platform hashes; a regression test checks all four new locks while CI keeps `-lockfile=readonly`.
 - Checkov 3.3.17: 88 passed, zero failed, eleven explicit scoped exceptions; no parsing errors. Exceptions cover four existing state-bucket deferrals plus ECR customer-KMS deferral, two 30-day log-retention choices, controlled EKS public-access checks and stale scanner version enumeration, counted per module/root scan occurrence. No global check suppression is added.
 
 Offline fixtures are fictional. Their EKS add-on/AMI versions are deliberately test-only and are never deployment defaults. Runtime versions must be obtained from AWS, pinned in approved inputs and checked for compatibility before a live plan.

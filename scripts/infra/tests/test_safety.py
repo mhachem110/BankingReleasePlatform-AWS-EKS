@@ -26,6 +26,17 @@ def fixture():
 
 
 class SafetyTests(unittest.TestCase):
+    def test_provider_locks_cover_windows_and_linux(self):
+        import re
+        reference = (ROOT / "infra/bootstrap/.terraform.lock.hcl").read_text()
+        hashes = set(re.findall(r'"h1:[^"]+"', reference))
+        self.assertGreaterEqual(len(hashes), 2)
+        for path in ["infra/modules/network", "infra/modules/registry", "infra/modules/eks", "infra/environments/dev/platform"]:
+            with self.subTest(path=path):
+                lock = (ROOT / path / ".terraform.lock.hcl").read_text()
+                self.assertIn('version     = "6.68.0"', lock)
+                self.assertTrue(hashes <= set(re.findall(r'"h1:[^"]+"', lock)))
+
     def test_additive_admin_permissions(self):
         values = configuration(fixture())
         files = admin.policies(values["expected_account_id"], values["aws_region"], values["state_bucket_name"], values["kms_key_arn"])
