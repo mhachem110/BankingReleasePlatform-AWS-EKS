@@ -1,0 +1,7 @@
+bucket = "REPLACE_WITH_APPROVED_BUCKET"
+region = "REPLACE_WITH_APPROVED_REGION"
+key = "banking-release-platform/bootstrap/terraform.tfstate"
+encrypt = true
+use_lockfile = true
+workspace_key_prefix = "banking-release-platform/_workspaces"
+allowed_account_ids = ["REPLACE_WITH_VERIFIED_ACCOUNT_ID"]

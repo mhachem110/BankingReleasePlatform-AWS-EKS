@@ -1,0 +1,42 @@
+name: Terraform validation
+on:
+  pull_request:
+    branches: [dev, stage, uat, main]
+    paths:
+      - 'infra/**'
+      - 'scripts/bootstrap/**'
+      - '.github/workflows/terraform-*.yml'
+  push:
+    branches: [dev, stage, uat, main]
+    paths:
+      - 'infra/**'
+      - 'scripts/bootstrap/**'
+      - '.github/workflows/terraform-*.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      AWS_EC2_METADATA_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive infra
+      - name: Validate configurations without backend or AWS credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for root in infra/modules/state-bucket infra/bootstrap infra/environments/dev; do
+            terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
+            terraform -chdir="$root" validate
+          done
+          terraform -chdir=infra/modules/state-bucket test
+          python -m unittest discover -s scripts/bootstrap/tests -v
+      - name: Checkov static scan
+        run: |
+          python -m pip install checkov==3.3.17
+          checkov --directory infra --framework terraform --download-external-modules false
