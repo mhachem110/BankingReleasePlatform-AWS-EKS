@@ -1,0 +1,295 @@
+name: Controlled Terraform operations
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Connectivity reads identity/provider only; initialize creates a bucket; plan writes locks'
+        type: choice
+        options: [connectivity, initialize, plan, apply]
+        default: connectivity
+      target:
+        description: 'bootstrap only for an approved dedicated bucket already bootstrapped and migrated'
+        type: choice
+        options: [foundation, bootstrap]
+        default: foundation
+      approval:
+        description: 'CREATE-APPROVED-STATE-BUCKET, RESUME-APPROVED-INITIALIZATION or APPLY-REVIEWED-PLAN'
+        type: string
+        default: ''
+      resume_initialization:
+        description: 'Explicit recovery of a previously seeded Banking bucket; never adopt an unknown bucket'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: banking-terraform-bootstrap
+  cancel-in-progress: false
+env:
+  AWS_EC2_METADATA_DISABLED: 'true'
+  AWS_PAGER: ''
+jobs:
+  prerequisites:
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify protected environment exists before requesting AWS credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/bootstrap/check-github-environment.py
+  plan:
+    if: inputs.action == 'plan' || inputs.action == 'apply'
+    needs: prerequisites
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      root: ${{ steps.config.outputs.root }}
+      key: ${{ steps.config.outputs.key }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+      TF_VAR_expected_account_id: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_VAR_state_bucket_name: ${{ vars.TF_STATE_BUCKET }}
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate approved configuration
+        id: config
+        env:
+          OPERATION: ${{ inputs.action }}
+          TARGET: ${{ inputs.target }}
+          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          TF_STATE_KMS_KEY_ARN: ${{ vars.TF_STATE_KMS_KEY_ARN }}
+          BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
+          DEDICATED_BUCKET_MANAGEMENT_APPROVED: ${{ vars.DEDICATED_BUCKET_MANAGEMENT_APPROVED }}
+          APPROVAL: ${{ inputs.approval }}
+        run: python scripts/bootstrap/workflow-config.py
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-phase2-plan
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - run: aws sts get-caller-identity
+      - name: Verify the existing backend without making repairs
+        env:
+          BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          ACCOUNT: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          KMS_KEY: ${{ vars.TF_STATE_KMS_KEY_ARN }}
+        run: python scripts/bootstrap/verify-state-bucket.py --bucket "$BUCKET" --account "$ACCOUNT" --region "$AWS_REGION" --kms-key-arn "$KMS_KEY"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Initialize approved backend and save plan
+        env:
+          ROOT: ${{ steps.config.outputs.root }}
+          KEY: ${{ steps.config.outputs.key }}
+          BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          ACCOUNT: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          TF_STATE_KMS_KEY_ARN: ${{ vars.TF_STATE_KMS_KEY_ARN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform fmt -check -recursive infra
+          mkdir -p "$RUNNER_TEMP/reviewed-plan"
+          python scripts/bootstrap/write-backend-config.py --key "$KEY" --output "$RUNNER_TEMP/reviewed-plan/backend.tfbackend"
+          terraform -chdir="$ROOT" init -input=false -lockfile=readonly -backend-config="$RUNNER_TEMP/reviewed-plan/backend.tfbackend"
+          [[ "$(terraform -chdir="$ROOT" workspace show)" == default ]]
+          terraform -chdir="$ROOT" validate
+          terraform -chdir="$ROOT" plan -input=false -lock-timeout=5m -out="$RUNNER_TEMP/reviewed-plan/reviewed.tfplan"
+          terraform -chdir="$ROOT" show -no-color "$RUNNER_TEMP/reviewed-plan/reviewed.tfplan" > "$RUNNER_TEMP/reviewed-plan/plan.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reviewed-plan
+          path: ${{ runner.temp }}/reviewed-plan/
+          retention-days: 1
+          if-no-files-found: error
+  apply:
+    if: inputs.action == 'apply' && inputs.approval == 'APPLY-REVIEWED-PLAN'
+    needs: [prerequisites, plan]
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Revalidate approved inputs and restrict the reused role session
+        id: config
+        env:
+          OPERATION: apply
+          TARGET: ${{ inputs.target }}
+          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          TF_STATE_KMS_KEY_ARN: ${{ vars.TF_STATE_KMS_KEY_ARN }}
+          BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
+          DEDICATED_BUCKET_MANAGEMENT_APPROVED: ${{ vars.DEDICATED_BUCKET_MANAGEMENT_APPROVED }}
+          APPROVAL: ${{ inputs.approval }}
+        run: python scripts/bootstrap/workflow-config.py
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-phase2-apply
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: reviewed-plan
+          path: downloaded-plan
+      - name: Apply the saved plan from this exact run
+        env:
+          ROOT: ${{ needs.plan.outputs.root }}
+          KEY: ${{ needs.plan.outputs.key }}
+          BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          ACCOUNT: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          REGION: ${{ vars.AWS_REGION }}
+          KMS_KEY: ${{ vars.TF_STATE_KMS_KEY_ARN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/bootstrap/verify-state-bucket.py --bucket "$BUCKET" --account "$ACCOUNT" --region "$REGION" --kms-key-arn "$KMS_KEY"
+          terraform -chdir="$ROOT" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/downloaded-plan/backend.tfbackend"
+          [[ "$(terraform -chdir="$ROOT" workspace show)" == default ]]
+          terraform -chdir="$ROOT" apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/downloaded-plan/reviewed.tfplan"
+  connectivity:
+    if: inputs.action == 'connectivity'
+    needs: prerequisites
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate inputs and restrict session to identity/provider reads
+        id: config
+        env:
+          OPERATION: connectivity
+          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: python scripts/bootstrap/workflow-config.py
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-connectivity-${{ github.run_id }}
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - run: aws sts get-caller-identity
+      - name: Verify existing IAM OIDC provider and audience
+        env:
+          AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+        run: python scripts/bootstrap/check-oidc-provider.py
+  initialize:
+    if: inputs.action == 'initialize'
+    needs: prerequisites
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+      TF_VAR_expected_account_id: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_VAR_state_bucket_name: ${{ vars.TF_STATE_BUCKET }}
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require explicit first-time creation or recovery approval
+        id: config
+        env:
+          OPERATION: initialize
+          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          APPROVAL: ${{ inputs.approval }}
+          RESUME: ${{ inputs.resume_initialization }}
+          DEDICATED_BUCKET_MANAGEMENT_APPROVED: ${{ vars.DEDICATED_BUCKET_MANAGEMENT_APPROVED }}
+          TF_STATE_KMS_KEY_ARN: ${{ vars.TF_STATE_KMS_KEY_ARN }}
+        run: python scripts/bootstrap/workflow-config.py
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-initialize-${{ github.run_id }}
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - run: aws sts get-caller-identity
+      - name: Seed and verify only the approved dedicated bucket
+        env:
+          RESUME: ${{ inputs.resume_initialization }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION")
+          if [[ "$RESUME" == true ]]; then args+=(--resume); fi
+          python scripts/bootstrap/initialize-state-bucket.py "${args[@]}"
+          python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Initialize secured S3 backend and import known resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform fmt -check -recursive infra
+          python scripts/bootstrap/write-backend-config.py --key banking-release-platform/bootstrap/terraform.tfstate --output "$RUNNER_TEMP/bootstrap.tfbackend"
+          terraform -chdir=infra/bootstrap init -input=false -lockfile=readonly -backend-config="$RUNNER_TEMP/bootstrap.tfbackend"
+          [[ "$(terraform -chdir=infra/bootstrap workspace show)" == default ]]
+          python scripts/bootstrap/import-state-bucket.py --bucket "$TF_STATE_BUCKET"
+          terraform -chdir=infra/bootstrap validate
+          echo 'Remote import completed. Set BOOTSTRAP_STATE_READY=true only after verifying the imported state and safeguards.'
