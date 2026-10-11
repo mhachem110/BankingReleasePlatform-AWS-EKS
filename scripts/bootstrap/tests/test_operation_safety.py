@@ -4,7 +4,7 @@ import re
 import subprocess
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 def load(name):
@@ -62,7 +62,14 @@ class OperationSafetyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             config.configuration(self.values)
         self.values["APPROVAL"] = "RESUME-APPROVED-INITIALIZATION"
-        config.configuration(self.values)
+        policy = json.loads(config.configuration(self.values)["session_policy"])
+        for statement in policy["Statement"]:
+            actions = statement["Action"] if isinstance(statement["Action"], list) else [statement["Action"]]
+            self.assertNotIn("s3:*", actions)
+            self.assertNotIn("s3:CreateBucket", actions)
+            if "s3:PutObject" in actions or "s3:DeleteObject" in actions:
+                self.assertTrue(all(resource.endswith(".tflock") for resource in statement["Resource"]))
+            self.assertFalse(any(action.startswith("s3:PutBucket") for action in actions))
 
     def test_remote_operations_require_verified_state(self):
         self.values.update(OPERATION="plan")
@@ -126,8 +133,31 @@ class InitializationSafetyTests(unittest.TestCase):
             seed.seed(BUCKET, ACCOUNT, "us-east-2", resume=True, caller=caller)
         self.assertEqual(1, caller.call_count)
 
+    def test_resume_of_known_bucket_is_read_only(self):
+        caller = Mock(side_effect=[{}, {"LocationConstraint": "us-east-2"},
+                      {"TagSet": [{"Key": key, "Value": value} for key, value in seed.TAGS.items()]}])
+        seed.seed(BUCKET, ACCOUNT, "us-east-2", resume=True, caller=caller)
+        self.assertEqual(["head-bucket", "get-bucket-location", "get-bucket-tagging"],
+                         [call.args[0] for call in caller.call_args_list])
+
 
 class ImportAndProviderSafetyTests(unittest.TestCase):
+    def test_complete_recovery_never_imports_or_writes_state(self):
+        state = {"resources": [{"module": "module.state_bucket", "type": kind, "name": "state", "mode": "managed",
+                                "instances": [{"attributes": {"id": BUCKET}}]} for kind in imports.TYPES]}
+        result = subprocess.CompletedProcess([], 0, json.dumps(state), "")
+        with patch("sys.argv", ["import", "--bucket", BUCKET, "--require-complete"]), \
+                patch.object(imports.subprocess, "run", return_value=result) as run:
+            imports.main()
+        self.assertEqual(1, run.call_count)
+        self.assertEqual(["state", "pull"], run.call_args.args[0][-2:])
+
+    def test_incomplete_recovery_fails_without_importing(self):
+        result = subprocess.CompletedProcess([], 0, '{"resources":[]}', "")
+        with patch("sys.argv", ["import", "--bucket", BUCKET, "--require-complete"]), \
+                patch.object(imports.subprocess, "run", return_value=result) as run, self.assertRaises(RuntimeError):
+            imports.main()
+        self.assertEqual(1, run.call_count)
     def test_empty_success_is_first_bootstrap_but_failed_read_is_not(self):
         self.assertEqual({}, imports.state_document(subprocess.CompletedProcess([], 0, "", "")))
         self.assertEqual({"resources": []}, imports.state_document(subprocess.CompletedProcess([], 0, '{"resources":[]}', "")))

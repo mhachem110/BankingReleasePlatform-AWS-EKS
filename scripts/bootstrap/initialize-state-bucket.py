@@ -42,6 +42,8 @@ def seed(bucket, account, region, resume=False, caller=aws):
         tags = {tag["Key"]: tag["Value"] for tag in caller("get-bucket-tagging", *common)["TagSet"]}
         if location != region or tags != TAGS:
             raise RuntimeError("Existing bucket Region/ownership markers differ; stop for administrator review.")
+        print("Verified existing bucket ownership, Region and exact project tags. Resume makes no bucket configuration writes.")
+        return
     else:
         # If this loses a race or its result is ambiguous, stop. Never proceed
         # after BucketAlreadyOwnedByYou/BucketAlreadyExists as though we created it.

@@ -40,6 +40,20 @@ def configuration(values):
                            "Resource": f"arn:aws:iam::{account}:oidc-provider/token.actions.githubusercontent.com"})
         statements.append({"Effect": "Allow", "Action": ["iam:GetRole", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies"],
                            "Resource": role})
+    elif operation == "initialize" and values.get("RESUME") == "true":
+        # This recovery already has seven imports. Allow metadata/state reads
+        # and lock writes only: no bucket repair, state overwrite or IAM access.
+        arn = "arn:aws:s3:::" + bucket
+        keys = ["banking-release-platform/bootstrap/terraform.tfstate",
+                "banking-release-platform/dev/foundation/terraform.tfstate"]
+        statements.extend([
+            {"Effect": "Allow", "Action": ["s3:GetBucket*", "s3:GetEncryptionConfiguration",
+             "s3:GetLifecycleConfiguration", "s3:GetAccelerateConfiguration", "s3:GetReplicationConfiguration",
+             "s3:ListBucket"], "Resource": arn},
+            {"Effect": "Allow", "Action": "s3:GetObject", "Resource": [arn + "/" + k for k in keys]},
+            {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+             "Resource": [arn + "/" + k + ".tflock" for k in keys]},
+        ])
     else:
         # Session policies only restrict the role. The separate exact-action S3
         # inline policy supplies actual grants; this cap excludes Retail/EC2/EKS/IAM.

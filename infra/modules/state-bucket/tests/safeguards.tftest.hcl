@@ -35,6 +35,10 @@ run "retention_controls" {
     condition     = length(one(aws_s3_bucket_lifecycle_configuration.state.rule).expiration) == 0
     error_message = "Current state must never expire."
   }
+  assert {
+    condition     = one(aws_s3_bucket_lifecycle_configuration.state.rule).abort_incomplete_multipart_upload[0].days_after_initiation == 7
+    error_message = "Incomplete uploads must be cleaned up after seven days."
+  }
 }
 run "invalid_bucket_name" {
   command = plan

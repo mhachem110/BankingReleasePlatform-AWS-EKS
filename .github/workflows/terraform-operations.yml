@@ -247,6 +247,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 2 # Includes the pinned failed dev baseline for read-only diagnosis.
           persist-credentials: false
       - name: Require explicit first-time creation or recovery approval
         id: config
@@ -284,6 +285,8 @@ jobs:
           terraform_version: '1.15.8'
           terraform_wrapper: false
       - name: Initialize secured S3 backend and import known resources
+        env:
+          RESUME: ${{ inputs.resume_initialization }}
         shell: bash
         run: |
           set -euo pipefail
@@ -291,8 +294,17 @@ jobs:
           python scripts/bootstrap/write-backend-config.py --key banking-release-platform/bootstrap/terraform.tfstate --output "$RUNNER_TEMP/bootstrap.tfbackend"
           terraform -chdir=infra/bootstrap init -input=false -lockfile=readonly -backend-config="$RUNNER_TEMP/bootstrap.tfbackend"
           [[ "$(terraform -chdir=infra/bootstrap workspace show)" == default ]]
-          python scripts/bootstrap/import-state-bucket.py --bucket "$TF_STATE_BUCKET"
+          args=(--bucket "$TF_STATE_BUCKET")
+          if [[ "$RESUME" == true ]]; then args+=(--require-complete); fi
+          python scripts/bootstrap/import-state-bucket.py "${args[@]}"
           terraform -chdir=infra/bootstrap validate
+      - name: Diagnose the original lifecycle difference using actual API, imported state and plan JSON
+        if: inputs.resume_initialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/phase2-verification"
+          python scripts/bootstrap/inspect-lifecycle.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION" --backend "$RUNNER_TEMP/bootstrap.tfbackend" --output "$RUNNER_TEMP/phase2-verification/lifecycle-diagnosis.json"
       - name: Verify remote state, lock contention and both Phase 2 plans
         shell: bash
         run: |
@@ -310,6 +322,9 @@ jobs:
             terraform -chdir="$root" plan -input=false -lock-timeout=5m -out="$RUNNER_TEMP/verification.tfplan"
             python scripts/bootstrap/verify-bootstrap-plan.py "$root" "$RUNNER_TEMP/verification.tfplan"
             terraform -chdir="$root" show -no-color "$RUNNER_TEMP/verification.tfplan" > "$RUNNER_TEMP/phase2-verification/$(basename "$root")-plan.txt"
+            terraform -chdir="$root" plan -input=false -lock-timeout=5m -out="$RUNNER_TEMP/repeated.tfplan"
+            python scripts/bootstrap/verify-bootstrap-plan.py "$root" "$RUNNER_TEMP/repeated.tfplan"
+            terraform -chdir="$root" show -no-color "$RUNNER_TEMP/repeated.tfplan" > "$RUNNER_TEMP/phase2-verification/$(basename "$root")-repeated-plan.txt"
           done
           echo 'Remote import, encrypted/versioned state, locking and zero-resource-change plans verified. BOOTSTRAP_STATE_READY may now be enabled.'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -33,11 +33,18 @@ def existing_resources(state, bucket):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bucket", required=True)
+    parser.add_argument("--require-complete", action="store_true",
+                        help="Read-only recovery: require all seven existing identities; never import missing ones.")
     args = parser.parse_args()
     command = ["terraform", "-chdir=infra/bootstrap"]
     result = subprocess.run(command + ["state", "pull"], capture_output=True, text=True)
     state = state_document(result)
     existing = existing_resources(state, args.bucket)
+    if args.require_complete:
+        if existing != ADDRESSES:
+            raise RuntimeError("Read-only recovery requires all seven identities already recorded; no imports performed.")
+        print("Verified all seven existing remote state identities. Recovery performs no imports or state writes.")
+        return
     for address in sorted(ADDRESSES - existing):
         subprocess.run(command + ["import", "-input=false", "-lock-timeout=5m", address, args.bucket], check=True)
     final = subprocess.run(command + ["state", "pull"], capture_output=True, text=True, check=True)
