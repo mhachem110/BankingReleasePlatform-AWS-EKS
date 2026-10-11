@@ -1,0 +1,17 @@
+**/bin
+**/obj
+.git
+.vs
+.idea
+TestResults
+artifacts
+docs
+tests
+*.md
+**/.terraform
+**/*.tfstate*
+**/*.tfvars
+.env*
+**/*.pem
+**/*.key
+**/*.pfx
