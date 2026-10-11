@@ -1,4 +1,5 @@
 import importlib.util
+import copy
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ def load(name):
 locks = load("verify-state-lock.py")
 plans = load("verify-bootstrap-plan.py")
 bucket_check = load("verify-state-bucket.py")
+diagnosis = load("inspect-lifecycle.py")
 ACCOUNT = "0" * 12
 BUCKET = "mhachem-banking-tfstate-" + ACCOUNT
 
@@ -108,6 +110,21 @@ class LiveLockSafetyTests(unittest.TestCase):
 
 
 class VerificationPlanTests(unittest.TestCase):
+    def test_lifecycle_diagnosis_accepts_only_the_reproduced_filter_difference(self):
+        before = {"rule": [{"filter": [], "noncurrent_version_expiration": [{"noncurrent_days": 90}],
+                            "abort_incomplete_multipart_upload": [{"days_after_initiation": 7}], "expiration": []}]}
+        after = copy.deepcopy(before)
+        after["rule"][0]["filter"] = [{"and": [], "object_size_greater_than": None,
+                                      "object_size_less_than": None, "prefix": "", "tag": []}]
+        change = {"actions": ["update"], "before": before, "after": after}
+        diagnosis.filter_only_difference(change)
+        for field, value in [("expiration", [{"days": 1}]), ("filter", [{"prefix": "subset/"}]),
+                             ("noncurrent_version_expiration", [{"noncurrent_days": 1}])]:
+            altered = copy.deepcopy(change)
+            altered["after"]["rule"][0][field] = value
+            with self.subTest(field=field), self.assertRaises(RuntimeError):
+                diagnosis.filter_only_difference(altered)
+
     def test_any_managed_resource_mutation_is_rejected(self):
         for actions in [["create"], ["update"], ["delete"], ["delete", "create"]]:
             with self.subTest(actions=actions), self.assertRaises(RuntimeError):

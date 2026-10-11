@@ -72,7 +72,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "state" {
   rule {
     id     = "retain-current-state-and-limit-old-versions"
     status = "Enabled"
-    filter {}
+    # No filter/prefix means all objects. Provider 6.68.0 imports S3 Filter={}
+    # as an absent filter; an HCL filter {} instead plans Filter.Prefix="".
+    # Match the API/import representation without changing retention or scope.
     noncurrent_version_expiration { noncurrent_days = 90 }
     abort_incomplete_multipart_upload { days_after_initiation = 7 }
   }

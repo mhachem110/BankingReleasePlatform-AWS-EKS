@@ -15,4 +15,11 @@ def verify(plan):
 if __name__ == "__main__":
     result = subprocess.run(["terraform", "-chdir=" + sys.argv[1], "show", "-json", sys.argv[2]],
                             check=True, capture_output=True, text=True)
-    verify(json.loads(result.stdout))
+    plan = json.loads(result.stdout)
+    verify(plan)
+    # Publish only known non-secret lifecycle values, never the full plan/state.
+    for change in plan.get("resource_changes", []):
+        if change.get("address") == "module.state_bucket.aws_s3_bucket_lifecycle_configuration.state":
+            print(json.dumps({"lifecycle_actions": change["change"]["actions"],
+                              "before_rule": change["change"]["before"]["rule"],
+                              "after_rule": change["change"]["after"]["rule"]}, indent=2))
