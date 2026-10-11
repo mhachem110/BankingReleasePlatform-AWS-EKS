@@ -2,7 +2,7 @@
 
 ## Current migration progress
 
-PR #1 merged at e0beff1, PR #3 at ab58a7f, and PR #2 at 3db5bcc, each after individual owner approval. PR #4 is synchronized normally with dev and remains unmerged. The trusted governance workflow is now installed in dev; its real PR #4 checks must be observed before requiring the aggregate. Required-status activation will be performed manually by the owner using the instructions below. No AWS operation or GitHub environment configuration ran.
+PR #1 merged at e0beff1, PR #3 at ab58a7f, and PR #2 at 3db5bcc, each after individual owner approval. PR #4 is synchronized normally with dev and remains unmerged. The trusted governance workflow is installed in dev. [Run 38158307904](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38158307904) completed successfully on PR #4 head b67e38e: Branch promotion policy, File ownership and path validation, and Repository security policy all passed. GitHub Actions is the observed source (App ID 15368). Recheck the latest head after any additional commit. Required-status activation is still pending the owner's manual action using the instructions below. No AWS operation or GitHub environment configuration ran.
 
 ## Earlier preparation evidence (historical snapshot)
 

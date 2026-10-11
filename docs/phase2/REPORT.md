@@ -4,7 +4,7 @@
 
 Phase 2 configuration, complete proposed policies and execution instructions are ready for review. Actual AWS connectivity/backend execution remains the next approval checkpoint. No AWS API calls, IAM changes, bucket creation, real Terraform backend initialization, live plans/applies or charge-incurring infrastructure operations ran. Phase 3 has not started.
 
-PR #1 merged with explicit owner approval at e0beff1. feature/app was synchronized with dev. The reusable bootstrap branch merged that dev history normally without conflicts, preserving its original commits. Existing PR #3 retains its legacy source only for review continuity; no additional phase branch was created. Remaining merges require individual approval in order #3, #2, #4.
+PR #1 merged at e0beff1, PR #3 at ab58a7f and PR #2 at 3db5bcc, each with explicit owner approval and a merge commit. The reusable bootstrap branch was synchronized after its approved merge. Existing legacy heads are retained for history; no additional phase branch was created. PR #4 is synchronized with dev and still requires its own approval. Its trusted governance checks passed; required-status activation is a manual owner step before the final migration merge.
 
 ## B. What You Built
 
@@ -29,7 +29,7 @@ The updated trust keeps Retail access and adds only the exact Banking bootstrap 
 - Checkov: 16 passed, zero failed, four explicit scoped exceptions (logging, replication, customer KMS, notifications deferred).
 - Policy JSON parsed; all 18 original statement values and Retail trust were preserved. Compact inline policies total 5,281 characters against the 10,240-character role quota, based on the supplied inventory.
 - PR #1 premerge checks: 48 automated tests, 17 local smoke checks, successful build and Compose configuration validation. The original local smoke ports were occupied, so isolated alternative ports were used; no existing process was stopped.
-- GitHub repository/owner IDs and immutable subject settings were reverified; PR #3's prior remote validation was green. Final head CI must be checked after publishing.
+- GitHub repository/owner IDs and immutable subject settings were reverified. PR #3's Terraform/Checkov validation was green on approved head b043d52 before its merge. PR #4's trusted metadata policy passed after PR #2 installed it in dev; recheck its current head before merging.
 
 Unverified: live role ARN/path/reuse/edit authorization, actual OIDC provider/audience, SCPs/resource policies, bucket name availability, GitHub environment setup, real AWS login, bucket/state initialization, lock contention, live plan/apply. No success is claimed for these.
 
