@@ -1,0 +1,241 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "replicaCount",
+    "replicas",
+    "images",
+    "resources",
+    "autoscaling",
+    "ingress",
+    "demonstration"
+  ],
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "replicas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 10
+        },
+        "payment": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 10
+        }
+      }
+    },
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "account",
+        "payment"
+      ],
+      "properties": {
+        "account": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "digest"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "pattern": "^[0-9]{12}\\.dkr\\.ecr\\.[a-z0-9-]+\\.amazonaws\\.com/banking-dev-(account|payment)$"
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          }
+        },
+        "payment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "digest"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "pattern": "^[0-9]{12}\\.dkr\\.ecr\\.[a-z0-9-]+\\.amazonaws\\.com/banking-dev-(account|payment)$"
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requests",
+        "limits"
+      ],
+      "properties": {
+        "requests": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu",
+            "memory"
+          ],
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "enum": [
+                "250m",
+                "500m",
+                "1",
+                "2",
+                "4"
+              ]
+            },
+            "memory": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*(Mi|Gi)$"
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu",
+            "memory"
+          ],
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "enum": [
+                "250m",
+                "500m",
+                "1",
+                "2",
+                "4"
+              ]
+            },
+            "memory": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*(Mi|Gi)$"
+            }
+          }
+        }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "minReplicas",
+        "maxReplicas",
+        "targetCPUUtilizationPercentage"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "minReplicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "targetCPUUtilizationPercentage": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "approved",
+        "scheme",
+        "certificateArn",
+        "host",
+        "subnets",
+        "securityGroups"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "approved": {
+          "type": "boolean"
+        },
+        "scheme": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "internet-facing"
+          ]
+        },
+        "certificateArn": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "subnets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^subnet-[a-f0-9]+$"
+          }
+        },
+        "securityGroups": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sg-[a-f0-9]+$"
+          }
+        }
+      }
+    },
+    "demonstration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "failPaymentReadiness"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "failPaymentReadiness": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft-07/schema#"
+}

@@ -1,0 +1,36 @@
+{{- if .Values.ingress.enabled }}
+{{- if not .Values.ingress.approved }}
+{{- fail "ALB requires explicit approval (ingress.approved=true)" }}
+{{- end }}
+{{- if or (not .Values.ingress.subnets) (not .Values.ingress.securityGroups) }}
+{{- fail "ALB requires approved subnet and security group IDs" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    alb.ingress.kubernetes.io/scheme: {{ .Values.ingress.scheme }}
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: {{ required "Supply the approved ACM certificate ARN" .Values.ingress.certificateArn | quote }}
+    alb.ingress.kubernetes.io/subnets: {{ join "," .Values.ingress.subnets | quote }}
+    alb.ingress.kubernetes.io/security-groups: {{ join "," .Values.ingress.securityGroups | quote }}
+    alb.ingress.kubernetes.io/manage-backend-security-group-rules: "false"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+spec:
+  ingressClassName: alb
+  rules:
+    - host: {{ required "Supply the approved HTTPS host" .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api/accounts
+            pathType: Prefix
+            backend:
+              service: {name: {{ .Release.Name }}-account, port: {number: 8080}}
+          - path: /api/payments
+            pathType: Prefix
+            backend:
+              service: {name: {{ .Release.Name }}-payment, port: {number: 8080}}
+{{- end }}

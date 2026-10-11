@@ -1,0 +1,14 @@
+name: Application CI
+on:
+  pull_request:
+    branches: [dev, stage, uat, main]
+  push:
+    branches: [feature/app, dev, stage, uat, main]
+permissions:
+  contents: read
+concurrency:
+  group: application-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    uses: ./.github/workflows/app-validation.yml
