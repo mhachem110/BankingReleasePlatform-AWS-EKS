@@ -18,7 +18,7 @@ BUCKET_READ = [
     "s3:GetBucketPolicy", "s3:GetBucketOwnershipControls", "s3:GetLifecycleConfiguration",
 ]
 BUCKET_WRITE = [
-    "s3:CreateBucket", "s3:PutBucketVersioning", "s3:PutEncryptionConfiguration",
+    "s3:PutBucketVersioning", "s3:PutEncryptionConfiguration",
     "s3:PutBucketPublicAccessBlock", "s3:PutBucketOwnershipControls",
     "s3:PutBucketPolicy", "s3:PutBucketTagging", "s3:PutLifecycleConfiguration",
 ]
@@ -54,7 +54,7 @@ def trust_update(current, account, settings):
         result["Statement"].append(statement)
     return result
 
-def s3_addition(bucket, mode, kms_key_arn=""):
+def s3_addition(bucket, mode, kms_key_arn="", region=""):
     arn = f"arn:aws:s3:::{bucket}"
     statements = [
         {"Sid": "BankingBackendBucketRead", "Effect": "Allow", "Action": BUCKET_READ, "Resource": arn},
@@ -67,10 +67,16 @@ def s3_addition(bucket, mode, kms_key_arn=""):
          "Resource": [arn + "/" + key + ".tflock" for key in STATE_KEYS]},
     ]
     if mode == "dedicated":
+        if not re.fullmatch(r"[a-z]{2}(?:-gov)?-[a-z]+-[0-9]+", region):
+            raise ValueError("Dedicated creation requires the reviewed AWS Region.")
         # The dedicated aws_s3_bucket resource refresh uses HeadBucket. Shared
         # buckets stay outside Terraform ownership and retain prefix-only listing.
+        statements = [statement for statement in statements if statement["Sid"] != "BankingBackendPrefixList"]
         statements.append({"Sid": "BankingDedicatedBucketRefresh", "Effect": "Allow",
                            "Action": "s3:ListBucket", "Resource": arn})
+        statements.append({"Sid": "BankingApprovedDedicatedBucketCreation", "Effect": "Allow",
+                           "Action": "s3:CreateBucket", "Resource": arn,
+                           "Condition": {"StringEquals": {"s3:LocationConstraint": region}}})
         statements.append({"Sid": "BankingApprovedDedicatedBucketManagement", "Effect": "Allow",
                            "Action": BUCKET_WRITE, "Resource": arn})
     if kms_key_arn:
@@ -86,6 +92,7 @@ def main():
     p.add_argument("--oidc-settings", required=True)
     p.add_argument("--account", required=True)
     p.add_argument("--bucket", required=True)
+    p.add_argument("--region", required=True)
     p.add_argument("--mode", choices=["reuse", "dedicated"], required=True)
     p.add_argument("--kms-key-arn", default="")
     p.add_argument("--output-dir", required=True)
@@ -103,7 +110,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     for filename, value in {
         "proposed-trust.json": trust_update(trust, a.account, settings),
-        "proposed-additional-s3-policy.json": s3_addition(a.bucket, a.mode, a.kms_key_arn),
+        "proposed-additional-s3-policy.json": s3_addition(a.bucket, a.mode, a.kms_key_arn, a.region),
         "existing-permissions-unchanged.json": permissions,
     }.items():
         (output / filename).write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")

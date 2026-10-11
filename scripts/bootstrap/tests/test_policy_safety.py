@@ -29,11 +29,22 @@ class PolicySafetyTests(unittest.TestCase):
 
     def test_deletion_is_limited_to_lock_files(self):
         for mode in ("reuse", "dedicated"):
-            result = policies.s3_addition("banking-offline-test-fixture", mode)
+            result = policies.s3_addition("banking-offline-test-fixture", mode, region="us-east-2")
             delete = [s for s in result["Statement"] if "s3:DeleteObject" in s["Action"]]
             self.assertEqual(1, len(delete))
             self.assertTrue(all(arn.endswith(".tflock") for arn in delete[0]["Resource"]))
             self.assertFalse(any("iam:" in str(s["Action"]) for s in result["Statement"]))
+
+    def test_creation_is_one_bucket_and_one_region(self):
+        policy = policies.s3_addition("banking-offline-test-fixture", "dedicated", region="us-east-2")
+        create = next(s for s in policy["Statement"] if s["Action"] == "s3:CreateBucket")
+        self.assertEqual("arn:aws:s3:::banking-offline-test-fixture", create["Resource"])
+        self.assertEqual({"StringEquals": {"s3:LocationConstraint": "us-east-2"}}, create["Condition"])
+        self.assertFalse(any("s3:DeleteBucket" in s["Action"] for s in policy["Statement"]))
+
+    def test_creation_without_reviewed_region_is_rejected(self):
+        with self.assertRaises(ValueError):
+            policies.s3_addition("banking-offline-test-fixture", "dedicated")
 
 if __name__ == "__main__":
     unittest.main()

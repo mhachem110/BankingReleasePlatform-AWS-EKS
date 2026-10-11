@@ -1,117 +1,73 @@
-# Phase 2 bootstrap and connectivity runbook
+# Phase 2 bootstrap execution plan
 
-This is offline preparation on `feature/phase2-terraform-bootstrap`, with a PR into `dev` from the common initial baseline. It contains no Phase 1 application changes; the governance checkpoint supersedes the former merged-main prerequisite. Nothing here has been applied to AWS. AWS Region, bucket selection, complete inline permissions and role-reuse authorization are still required inputs.
+This prepares Phase 2 only. AWS operations have not run. Use the reusable `bootstrap` branch and existing PR #3 into dev; its legacy source is retained only to preserve the existing PR. PR #1 was merged with explicit owner approval; bootstrap was synchronized normally with dev. No new phase branch is created.
 
-## What the components do
+## Components and state
 
-Terraform records resource identities and configuration in state. S3 stores that state so authorized operators and CI can use the same record. Versioning retains older state versions for recovery; encryption protects stored objects; public access blocking prevents public access; a TLS-only policy rejects insecure transport. S3 is not inside a VPC.
+Terraform describes seven dedicated-bucket resources under `infra/modules/state-bucket`: the bucket, ownership controls, public-access blocks, versioning, AES256 encryption, TLS-only policy and lifecycle configuration. `infra/bootstrap` manages those resources. `infra/environments/dev` records the development foundation and identity; it contains no VPC/EKS resources.
 
-S3-native locking uses a separate `.tflock` object. It prevents two Terraform operations from changing the same state concurrently. This uses `use_lockfile = true`; no DynamoDB table is needed. See [HashiCorp S3 backend](https://developer.hashicorp.com/terraform/language/backend/s3).
+S3 is not inside a VPC. It stores the shared Terraform record. Versioning retains history, encryption protects stored objects, public-access blocks/disabled ACLs prevent public exposure, and the policy rejects insecure transport. S3-native `.tflock` objects prevent overlapping Terraform writes; no DynamoDB locking table is required. Only the default Terraform workspace is supported.
 
-The GitHub workflow exchanges its signed OIDC identity for short-lived credentials using the existing role. Trust decides who may assume that role; permission policies decide what AWS actions the session may perform.
+| Root | State key |
+| --- | --- |
+| Bootstrap | banking-release-platform/bootstrap/terraform.tfstate |
+| Development foundation | banking-release-platform/dev/foundation/terraform.tfstate |
 
-## Layout
+Each state key has its own `.tflock`. The workspace listing prefix is `banking-release-platform/_workspaces`. Future infrastructure roots require separately approved state paths. State, real inputs, plans and provider downloads remain ignored by Git.
 
-- `infra/modules/state-bucket`: reusable dedicated-bucket safeguards.
-- `infra/bootstrap`: creates/manages ONLY an explicitly approved new dedicated state bucket.
-- `infra/environments/dev`: separate S3-backed foundation root, with identity reads and no VPC/EKS resources. The workflow verifies the bucket using separate read-only metadata requests.
-- `infra/backend/*.example`: partial S3 backend configuration without real resource/account values.
-- `scripts/bootstrap`: read-only verification and local configuration/policy generation.
-- `.github/workflows/terraform-validation.yml`: PR validation without AWS credentials.
-- `.github/workflows/terraform-operations.yml`: disabled-by-default, dev-only, manually dispatched plan/apply.
+## Current proposed configuration
 
-Dedicated bootstrap state: `banking-release-platform/bootstrap/terraform.tfstate`.
-Development foundation state: `banking-release-platform/dev/foundation/terraform.tfstate`.
-Each has its own `.tflock`. Workspace listing is restricted to `banking-release-platform/_workspaces`; only the default workspace is supported. Future networking/platform roots get new project paths after Phase 3 approval.
+The owner's proposed Region is us-east-2 and the proposed dedicated bucket is mhachem-banking-tfstate-866934333672. Neither availability nor live ownership/settings were inspected. No existing bucket is assumed. Runtime values come from protected GitHub environment settings, not hardcoded provider credentials/account IDs.
 
-## Bucket decision
+Use SSE-S3 AES256 initially; no customer KMS key, IAM role or DynamoDB table is created. A different bucket, shared-bucket adoption or customer KMS key requires a separate review, not a silent variable change.
 
-Ask the owner or administrator for the exact approved bucket, owning account, Region, encryption, versioning, public access settings and existing bucket policy.
+## GitHub setup, after authorization
 
-For an approved shared bucket, use the development foundation root. Do not import the shared bucket into the dedicated bootstrap root, change its policy, tags or lifecycle, or place it under a second Terraform owner. Backend access is additive and restricted to this project's state and lock objects.
+Repository > Settings > Environments > New environment > `bootstrap`:
 
-For a new dedicated bucket, the owner must explicitly approve creation, security settings and cost before any live plan/apply. A globally unique approved name must be supplied; no name is assumed. AES256 (SSE-S3) is the initial dedicated-bucket configuration, with no customer KMS key creation. Existing SSE-KMS buckets require the exact approved key ARN and key-policy/IAM review; the backend and verifier support that input.
+- Required reviewer: verified cloud owner `mhachem110` only.
+- Selected branches and tags: one **Branch** rule `dev`; no tag/wildcard rules.
+- Administrator bypass: disabled.
+- Prevent self-review: unchecked for this single-person lab. This is owner approval, not independent second-person approval.
+- Environment secret `AWS_ROLE_ARN`: copy the actual existing role ARN from IAM, including `:role/` and any actual path.
+- Environment variables `AWS_REGION`, `AWS_EXPECTED_ACCOUNT_ID`, `TF_STATE_BUCKET`: the reviewed inputs. Optional `TF_STATE_KMS_KEY_ARN` stays unset for this dedicated AES256 bucket.
+- `DEDICATED_BUCKET_MANAGEMENT_APPROVED=false`, `BOOTSTRAP_STATE_READY=false` initially.
 
-## Offline validation (safe to run now)
+Repository > Settings > Secrets and variables > Actions > Variables: keep repository variable `AWS_OPERATIONS_ENABLED=false` initially. It gates all live operations, including read-only connectivity. The old `BOOTSTRAP_STATE_MIGRATED` flag is superseded by `BOOTSTRAP_STATE_READY`; the new initializer does not migrate local state.
 
-From the repository root on this feature branch:
+No environment, secret or variable was created during preparation. Keep Actions token defaults read-only and do not configure long-lived AWS access keys. The preflight checks fail closed unless the existing environment has the verified reviewer, only dev allowed, and no administrator bypass.
 
-```powershell
-terraform fmt -check -recursive infra
-terraform -chdir=infra/modules/state-bucket init -backend=false -input=false -lockfile=readonly
-terraform -chdir=infra/modules/state-bucket validate
-terraform -chdir=infra/modules/state-bucket test
-terraform -chdir=infra/bootstrap init -backend=false -input=false -lockfile=readonly
-terraform -chdir=infra/bootstrap validate
-terraform -chdir=infra/environments/dev init -backend=false -input=false -lockfile=readonly
-terraform -chdir=infra/environments/dev validate
-python -m unittest discover -s scripts/bootstrap/tests -v
-checkov --directory infra --framework terraform --download-external-modules false --compact
-```
+## Approval and execution sequence
 
-Provider downloads contact the public Terraform registry. These commands do not configure an S3 backend or contact live AWS resources. All Terraform test runs use a mock provider and `command = plan`. Do not change them to real-provider tests without approval.
+1. Review the complete trust and separate Banking state policy, role-reuse authorization, provider/audience and any SCP restrictions. Preserve the existing Retail policy and trust. Approve the manual IAM/GitHub setup separately from code merges.
+2. After the Phase 2 workflow is reviewed and merged into default dev, explicitly authorize a **connectivity-only** test. Enable the repository switch for that approved test. Actions > Controlled Terraform operations > Run workflow > Branch `dev` > action `connectivity`. Approve its bootstrap environment job. The session permits only caller identity and exact-provider reads: no S3 writes, Terraform initialization or bucket creation. Expected result: the correct account/assumed role and existing GitHub provider URL/audience. Stop if authorization/provider verification fails.
+3. Bucket creation is a DIFFERENT authorization. Before approving it, review the proposed exact name/account/us-east-2, all seven security settings, S3 costs and policy scope. Only after approval set `DEDICATED_BUCKET_MANAGEMENT_APPROVED=true`. Dispatch action `initialize`, resume=false, approval `CREATE-APPROVED-STATE-BUCKET`; approve its environment job.
+4. The initializer checks the expected bucket owner. A 403/ambiguous result stops; a successful existing-bucket check also stops in normal mode. A 404 is not a reservation: CreateBucket must actually succeed, and a race/existing-name error stops without adopting/configuring that bucket.
+5. This deliberate initial seed uses AWS CLI with temporary OIDC credentials to create and secure the bucket BEFORE Terraform uses it. It then verifies owner/Region, versioning, encryption, public blocking, disabled ACLs and TLS. The seven settings match the Terraform module. There is no local AWS credential requirement or local Terraform state transfer between runners.
+6. Terraform initializes the secured S3 backend and imports the seven exact resources directly into the bootstrap state. Each import persists state remotely under Terraform locking. Partial import failure leaves durable remote state; nothing publishes state as a GitHub artifact. Verify the job and recorded resource identities before setting `BOOTSTRAP_STATE_READY=true`.
+7. Separately authorize a `plan`, target `bootstrap`. Review resource changes, output changes and backend settings. Imports may leave output values pending; do not assume a zero-change plan before a real run. Then plan the foundation root separately if approved. Plans can write locks/state metadata and incur S3 request charges; they are not credential-free tests.
+8. Only with a separately approved exact plan, dispatch action `apply` for that target and enter `APPLY-REVIEWED-PLAN`. Review/approve planning first, inspect its `plan.txt`, then review/approve the apply environment job. Apply uses the saved plan/backend from the SAME run and same immutable code commit; it does not recalculate a plan. A changed state invalidates a stale plan. No destroy workflow is provided.
 
-## First dedicated bucket bootstrap (future approval required)
+The bootstrap environment is reviewed independently for each eligible job. No step here authorizes automatic AWS operations. The next checkpoint is manual AWS setup plus connectivity-only verification, not bucket creation.
 
-This is a separate, deliberate operation on an authorized operator's machine, not an automatic step in a GitHub plan job.
+## Failure/recovery boundary
 
-1. Confirm role reuse and AWS credentials, approved Region/account/name and permission policy. Use short-lived credentials; do not put keys in files committed to Git.
-2. Copy `terraform.tfvars.example` to ignored `terraform.tfvars` and replace every placeholder with the verified inputs. Confirm the account with `aws sts get-caller-identity`.
-3. Confirm the dedicated name is approved and unused. A denied `HeadBucket` does not prove absence. If the name already exists, stop for ownership/state/import review.
-4. Place this complete temporary file at ignored `infra/bootstrap/backend_override.tf`:
+Never delete/recreate an existing bucket, overwrite foreign Terraform state or force-unlock an active operation. If first creation fails before ownership tags are recorded, stop and ask an administrator to verify the bucket/CloudTrail evidence; do not infer ownership from its name.
 
-```hcl
-# TEMPORARY: first approved dedicated-bucket creation only.
-terraform {
-  backend "local" {
-    path = ".bootstrap-local/terraform.tfstate"
-  }
-}
-```
+For a confirmed previously seeded dedicated bucket, review its Region, exact project tags, configuration and any partial state BEFORE approving recovery. Resume is a distinct request: action initialize, resume=true, approval `RESUME-APPROVED-INITIALIZATION`, required environment approval. It refuses missing/wrong-marker buckets. Resume reapplies the approved seven settings, so review any live drift or added bucket-policy statements first. The importer rejects foreign resource addresses/IDs, skips the known already-imported identities, and imports only missing ones. It does not remove/replace remote state. No recovery was performed here.
 
-5. With explicit permission to perform the live plan, run `terraform -chdir=infra/bootstrap init -input=false`, `validate`, then `plan -input=false -out=bootstrap.tfplan`. Review all seven bucket/safeguard resources and the account/Region/name. This does not create the bucket.
-6. Obtain explicit approval for that exact plan before running `terraform -chdir=infra/bootstrap apply bootstrap.tfplan`. This creates AWS resources and incurs S3 request/storage charges. None of these commands was run in this checkpoint.
-7. Back up the local state securely outside Git. Verify the actual bucket with the read-only verifier using the verified owner and Region.
-8. After migration approval, remove ONLY the temporary override. Supply the approved S3 partial configuration (bootstrap key) and run `terraform -chdir=infra/bootstrap init -migrate-state -backend-config=../backend/bootstrap.s3.tfbackend`. Answer the migration prompt after checking the destination. Do not use `-reconfigure` for migration or force-copy blindly. Migration writes state and locking objects to S3.
-9. Confirm state exists at the bootstrap key, versioning/encryption/public blocking are enabled, and a subsequent plan is a no-op. Retain the secure local backup until migration is verified. Set the GitHub migration flag only after successful verification.
+A failure to read backend state is not treated as empty state. Credential denial, bucket ambiguity or backend drift requires investigation, not weakened gates. Historical-version restoration requires separately authorized operator access; no restoration test ran.
 
-The S3 backend cannot exist before its bucket. This temporary local override solves that ordering deliberately. See [Terraform backend overrides](https://developer.hashicorp.com/terraform/language/files/override).
+## Session permissions and preservation
 
-## GitHub configuration (manual, only after authorization)
+The supplied existing role has broad permissions for Retail and multiple AWS services. Adding the new exact-bucket policy does not narrow those old grants. Every prepared AWS job therefore requests a restrictive STS session policy: connectivity gets identity/provider reads only; initialization/plan/apply get only the exact Banking bucket (and a separately approved KMS key if applicable). Session policies restrict rather than grant permissions. The shared role itself remains broad, so administrator approval of reuse is required.
 
-GitHub repository  ->  Settings  ->  Environments  ->  create or inspect `bootstrap`.
-Add at least one required reviewer; restrict deployment branches to selected branch `dev` only, and disable administrator bypass. The preflight checker fails closed if the environment is absent, unreadable or missing these settings. If GitHub's token/plan cannot read or enforce these settings, stop and request administrator help; do not remove the gate.
+The bucket uses `prevent_destroy` and `force_destroy=false`; the Banking addition grants no DeleteBucket or current-state deletion. Current state never expires; noncurrent versions expire after 90 days, incomplete uploads after seven days. Ordinary later infrastructure destruction uses separate state and preserves this bucket. Removing safeguards or decommissioning it requires separate approval.
 
-GitHub  ->  Settings  ->  Secrets and variables  ->  Actions:
-- Repository variable `AWS_OPERATIONS_ENABLED`: initially `false`; enable only after explicit authorization and all prerequisites.
-- Environment secret `AWS_ROLE_ARN`: copy the verified existing role ARN from IAM (must include `:role/`).
-- Environment variables `AWS_REGION`, `AWS_EXPECTED_ACCOUNT_ID`, `TF_STATE_BUCKET`: verified inputs.
-- Optional `TF_STATE_KMS_KEY_ARN`: exact approved existing customer KMS key for a reused SSE-KMS bucket.
-- `DEDICATED_BUCKET_MANAGEMENT_APPROVED` and `BOOTSTRAP_STATE_MIGRATED`: default absent/false. Set true only for an approved dedicated bucket and verified migration. Never enable them for a shared bucket.
+## Offline validation
 
-The repository default is now dev. After reviewing and merging Phase 2 code manually into dev, GitHub can expose workflow_dispatch because the workflow exists on the default branch. No production promotion is needed to bootstrap the development environment. Only after all AWS prerequisites and explicit AWS operations authorization, Actions  ->  Controlled Terraform operations  ->  Run workflow  ->  branch `dev`.
-A `plan` run authenticates after reviewer approval, verifies the existing bucket, initializes remote state, validates and saves a plan. It makes no bucket repairs. Backend initialization/locking may write S3 objects and incur request charges even for plan; do not run it without connectivity/backend authorization.
+Run Terraform formatting, init with `-backend=false` and validate for all three roots. Run `terraform -chdir=infra/modules/state-bucket test` (mock provider, command=plan only), `python -m unittest discover -s scripts/bootstrap/tests -v`, actionlint for both workflows and Checkov on infra. These do not initialize the real backend or call AWS.
 
-An `apply` run additionally needs `APPLY-REVIEWED-PLAN` and a second environment approval after planning. Review `plan.txt` and the backend before approving the apply job. Apply consumes that run's saved binary plan and exact backend configuration; it does not recalculate a plan. No automatic push/PR applies, no destroy workflow and no application release workflow are included.
+Checkov has four explicit scoped exceptions: audit-log destination, cross-Region replication, customer KMS encryption and notifications are deferred to later approved requirements. Do not treat those exceptions as a production security claim. Credential-free Terraform validation remains path-filtered and must not be globally required on application-only PRs.
 
-Plan artifacts are retained one day. This phase's plans contain only bucket/foundation metadata; review visibility before adding sensitive resources or extending this workflow. State may contain secrets in later phases; never publish it as an artifact.
-
-## Preservation and cleanup
-
-The state bucket uses `prevent_destroy` and `force_destroy = false`. Current state never expires; noncurrent versions expire after 90 days and incomplete uploads after seven days. There is no state-bucket destroy operation. Normal future infrastructure destruction uses its separate root/state and preserves this bucket.
-
-These guards do not prevent manual AWS deletion or deletion after removing Terraform protection. Administrator-approved state recovery/decommissioning remains a separate procedure. Do not delete current state/lock files or force-unlock active operations.
-
-## Checkov exceptions requiring review
-
-Four scoped skips are documented in the resource:
-- S3 access-log destination deferred to approved Phase 6 audit design.
-- Cross-Region replication deferred to an availability/cost decision.
-- Customer KMS encryption deferred; AES256 encryption is enabled now.
-- Bucket notifications deferred; they are not required for S3 backend locking.
-
-These are limitations, not proof of a full security baseline. Reassess during Phase 6.
-
-## Governance integration
-
-The branch promotion workflow and live ruleset definitions are in the separate governance PR. Terraform validation remains path-filtered; do not require its status on application-only PRs. Only activate observed stable checks after their workflows can run for each destination. No GitHub environments or AWS variables/secrets were configured. The bootstrap environment is planned with selected branch dev, reviewers, no admin bypass, and single-person self-review allowed only for the current documented lab setup. Keep AWS_OPERATIONS_ENABLED false until explicit AWS approval.
+References: [S3 backend and locking](https://developer.hashicorp.com/terraform/language/backend/s3), [AWS credential/session action](https://github.com/aws-actions/configure-aws-credentials), [S3 CreateBucket](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html).

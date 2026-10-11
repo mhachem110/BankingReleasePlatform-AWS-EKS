@@ -41,14 +41,14 @@ class BackendSafetyTests(unittest.TestCase):
                 environment.main()
 
     def test_branch_wildcard_cannot_authorize_environment(self):
-        env = {"protection_rules": [{"type": "required_reviewers", "reviewers": [{"type": "User"}]}], "deployment_branch_policy": {"custom_branch_policies": True}, "can_admins_bypass": False}
+        env = {"protection_rules": [{"type": "required_reviewers", "reviewers": [{"type": "User", "reviewer": {"id": 150286776}}]}], "deployment_branch_policy": {"custom_branch_policies": True}, "can_admins_bypass": False}
         policies = {"total_count": 1, "branch_policies": [{"name": "*", "type": "branch"}]}
         with patch.dict(os.environ, {"GITHUB_REPOSITORY": "test/repo"}), patch.object(environment, "get", side_effect=[env, policies]):
             with self.assertRaises(RuntimeError):
                 environment.main()
 
     def test_only_dev_branch_can_authorize_bootstrap_environment(self):
-        env = {"protection_rules": [{"type": "required_reviewers", "reviewers": [{"type": "User"}]}], "deployment_branch_policy": {"custom_branch_policies": True}, "can_admins_bypass": False}
+        env = {"protection_rules": [{"type": "required_reviewers", "reviewers": [{"type": "User", "reviewer": {"id": 150286776}}]}], "deployment_branch_policy": {"custom_branch_policies": True}, "can_admins_bypass": False}
         for name, kind, allowed in [("dev", "branch", True), ("main", "branch", False), ("dev", "tag", False)]:
             with self.subTest(name=name, kind=kind):
                 policies = {"total_count": 1, "branch_policies": [{"name": name, "type": kind}]}

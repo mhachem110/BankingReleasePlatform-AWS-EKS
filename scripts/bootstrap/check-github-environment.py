@@ -20,6 +20,8 @@ def main():
     review = next((r for r in env.get("protection_rules", []) if r["type"] == "required_reviewers"), None)
     if not review or not review.get("reviewers"):
         raise RuntimeError("bootstrap must have a required reviewer before AWS operations.")
+    if any(r.get("type") != "User" or r.get("reviewer", {}).get("id") != 150286776 for r in review["reviewers"]):
+        raise RuntimeError("Only the currently verified cloud owner may approve bootstrap; team changes need review.")
     restrictions = env.get("deployment_branch_policy") or {}
     if not restrictions.get("custom_branch_policies"):
         raise RuntimeError("bootstrap must use a custom dev-only deployment branch policy.")

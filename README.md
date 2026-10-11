@@ -124,3 +124,7 @@ While Account API is stopped, Payment's `/health` stays healthy but payment requ
 ## Feature branch and pull request
 
 The implementation is on `feature/phase1-banking-apis`, tracking `origin/feature/phase1-banking-apis`. The initial `main` commit provides the PR base. Review [PR #1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) before merging. The [Phase 1 report](docs/phase-1-report.md) records the original local checkpoint and subsequent publishing status. No GitHub Actions workflow or AWS secret is needed in this phase.
+
+## Phase 2 preparation
+
+Terraform state and GitHub OIDC preparation use the reusable bootstrap branch and PR into dev. Read [the execution plan](docs/phase2/BOOTSTRAP.md), [IAM review](docs/phase2/IAM.md) and [preparation report](docs/phase2/REPORT.md). No AWS configuration or connection is verified by an ordinary code merge. AWS operations require separate approval.

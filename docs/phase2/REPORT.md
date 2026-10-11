@@ -1,61 +1,48 @@
-# Phase 2 preparation report
+# Phase 2 final preparation report
 
 ## A. Phase Completed
 
-Phase 2 offline preparation is implemented and validated locally. The complete Phase 2 AWS connectivity checkpoint is NOT complete. Preparation is published on a separate feature branch with a PR into dev, following the governance checkpoint. PR #1 remains open; no merge is needed to keep this preparation separate. Final S3 permissions and AWS connectivity require the complete current inline policy, approved bucket/Region, provider confirmation and authorization to reuse/update the role.
+Phase 2 configuration, complete proposed policies and execution instructions are ready for review. Actual AWS connectivity/backend execution remains the next approval checkpoint. No AWS API calls, IAM changes, bucket creation, real Terraform backend initialization, live plans/applies or charge-incurring infrastructure operations ran. Phase 3 has not started.
 
-Source is tracked on `feature/phase2-terraform-bootstrap`, based on the common initial dev baseline and separate from Phase 1 application files. No AWS API calls, live plans/applies, IAM updates or charge-incurring infrastructure operations were run. Phase 3 has not started.
+PR #1 merged with explicit owner approval at e0beff1. feature/app was synchronized with dev. The reusable bootstrap branch merged that dev history normally without conflicts, preserving its original commits. Existing PR #3 retains its legacy source only for review continuity; no additional phase branch was created. Remaining merges require individual approval in order #3, #2, #4.
 
 ## B. What You Built
 
-- Reusable `infra/modules/state-bucket`: AES256 encryption, versioning, all public-access blocks, disabled ACLs, TLS-only policy, old-version retention, incomplete-upload cleanup, prevent_destroy and no force_destroy.
-- `infra/bootstrap`: dedicated-bucket Terraform root with an S3 backend and a documented temporary local backend for the first approved bootstrap/migration.
-- `infra/environments/dev`: separate S3-backed foundation with identity verification and no networking/EKS resources. Shared buckets are not Terraform-managed by this root.
-- Separate state keys for bootstrap and development foundation, project-specific workspace listing prefix and S3-native `.tflock` locking.
-- Credential-free PR validation workflow and disabled-by-default, protected-environment, dev-only plan/apply workflow. Apply uses the same run's reviewed plan and backend configuration; no destroy action or automatic push apply exists.
-- Pinned AWS provider, Windows/Linux provider checksums, and verified full-SHA action pins.
-- Read-only bucket/environment verifiers, backend configuration generator and additive IAM policy draft generator.
-- `BOOTSTRAP.md` runbook, `IAM.md` manual steps and administrator request, plus verified GitHub OIDC metadata.
+The existing reusable seven-resource S3 module and separate bootstrap/development roots remain. They provide AES256 encryption, versioning, public blocking, owner-enforced ACLs, TLS-only access, lifecycle policies, preservation and native .tflock locking.
 
-Complete proposed trust JSON is at `artifacts/phase2-manual/proposed-trust.json`, outside the tracked source tree. It preserves the supplied Retail trust statement and adds the exact Banking/bootstrap subject. Account-specific JSON is not committed.
+Finalized the manual workflow with four actions: connectivity (identity/provider reads only), initialize (explicit dedicated-bucket creation/remote import), plan and reviewed saved-plan apply. Added strict input/session validation, provider verification and recovery safeguards. AWS credentials come only from GitHub OIDC on protected bootstrap jobs, not local access keys. No new IAM role/destroy/EKS/deployment pipeline is included.
+
+Updated BOOTSTRAP.md and IAM.md with exact manual settings, complete-policy artifact paths and administrator requests. Complete proposed JSON for the provided account/bucket stays in ignored artifacts/phase2-manual/updated-trust.json and BankingReleasePlatformState.json. The supplied complete current permission-policy values remain unchanged. Runtime Terraform configuration uses variables, not hardcoded credentials/account IDs.
 
 ## C. How It Works
 
-S3 stores Terraform's shared state. Encryption protects stored objects, public access blocks prevent public exposure, versioning supports recovery, and a `.tflock` object coordinates concurrent operations. The bucket must exist first; an explicitly approved initial local bootstrap creates a dedicated bucket, after which state is migrated to S3. A pre-approved shared bucket can instead be reused without changing its configuration.
+An S3 state bucket must exist before Terraform can use its backend. The explicitly approved GitHub initializer creates and secures only the dedicated proposed bucket, verifies it, then imports seven known resources straight into S3 state. No Terraform state is handed between temporary runners or uploaded as an artifact. Subsequent changes use reviewed Terraform plans and explicit apply approval. Imports may leave output values to record in a later reviewed plan; no zero-change AWS plan is claimed.
 
-GitHub OIDC supplies a signed workflow identity. AWS trust allows only the verified Banking repository's bootstrap environment (and preserves Retail); a separate permission policy limits the actions the assumed role may perform. Validation jobs receive no AWS credentials. Live operations stay disabled until authorization, inputs and required environment reviewers exist. Planning may write S3 lock/state objects and incur request charges; it was not run here.
+The updated trust keeps Retail access and adds only the exact Banking bootstrap environment subject/audience. The separate Banking policy grants bucket configuration and two exact state/lock paths; lock deletion is allowed, current-state/bucket deletion is not added. Creation is restricted to us-east-2. The role's original broad service grants are preserved; restrictive STS session policies cap our workflow runs to their phase-specific reads or exact Banking bucket. Environment approval controls execution, trust controls identity, and permissions/session caps control actions.
 
 ## D. Tests and Results
 
-- Terraform 1.15.8: all three roots initialized with `-backend=false` and validated successfully.
-- Terraform format check: passed.
-- State-bucket mock-provider tests: 3 passed, 0 failed. All use `command = plan`; no provider calls to AWS.
-- Python safety tests: 12 passed. They cover trust preservation/idempotence, wrong OIDC settings, shared-bucket write exclusion, lock-only deletion, state isolation, KMS/account mismatch, missing environment review, wildcard branch rejection and unsafe bucket settings.
-- Actionlint 1.7.12: both workflows passed. All workflow run blocks separately passed Bash syntax validation. Shellcheck was disabled because a configured Shellcheck binary was unavailable.
-- Checkov 3.3.17: 16 passed, 0 failed, 4 documented scoped skips (access logging, replication, customer KMS encryption and bucket notifications).
-- Provider locks generated for Windows AMD64 and Linux AMD64; action release commits verified through GitHub REST.
-- GitHub repository/owner IDs and immutable subject settings were independently verified. No live token exchange or AWS authorization was tested.
+- All three Terraform roots initialized with backend=false and validated.
+- Terraform formatting passed; three mock-provider plan tests passed.
+- 30 Python safety tests passed, covering preserved policies/trust, region/bucket scope, role ARN, explicit approvals, session caps, environment restrictions, bucket ambiguity/races, recovery markers, import identities and OIDC provider requirements.
+- Both workflows passed actionlint. Fourteen operations run blocks passed Bash syntax checking; structure assertions verify dev/disabled switches, protected environments, read-only CI, scoped OIDC sessions and no initialization state artifacts.
+- Checkov: 16 passed, zero failed, four explicit scoped exceptions (logging, replication, customer KMS, notifications deferred).
+- Policy JSON parsed; all 18 original statement values and Retail trust were preserved. Compact inline policies total 5,281 characters against the 10,240-character role quota, based on the supplied inventory.
+- PR #1 premerge checks: 48 automated tests, 17 local smoke checks, successful build and Compose configuration validation. The original local smoke ports were occupied, so isolated alternative ports were used; no existing process was stopped.
+- GitHub repository/owner IDs and immutable subject settings were reverified; PR #3's prior remote validation was green. Final head CI must be checked after publishing.
 
-Unverified: actual backend ownership/settings, real IAM permission effectiveness, Organizations SCPs, role-edit authorization, GitHub environment configuration, real lock contention, migration, live plan/apply and AWS connectivity. No test success is claimed for these.
+Unverified: live role ARN/path/reuse/edit authorization, actual OIDC provider/audience, SCPs/resource policies, bucket name availability, GitHub environment setup, real AWS login, bucket/state initialization, lock contention, live plan/apply. No success is claimed for these.
 
 ## E. What I Must Do
 
-1. Review the separate governance and Phase 2 preparation PRs into dev. No PR is merged automatically. The repository default is dev, so a reviewed merge of the workflow into dev makes manual dispatch available. Execute the lab bootstrap only from dev after explicit AWS authorization; main remains production-approved.
-2. Provide the complete CloudOpsTrackerBootstrap inline JSON, approved Region and exact approved bucket (or confirm none approved), and any existing KMS key/policy details.
-3. Confirm the role ARN in IAM. The supplied ARN omitted `:role/`. Confirm you/your administrator may authorize reuse and modify trust/add an inline policy.
-4. Confirm the GitHub IAM identity provider and audience under IAM  ->  Identity providers. Referencing it in trust does not verify current existence/configuration.
-5. Review the complete proposed trust JSON. Only after authorization, IAM  ->  Roles  ->  existing role  ->  Trust relationships  ->  Edit trust policy. Preserve the original Retail statement and any subsequent additions.
-6. Final permission JSON will be prepared after the missing inputs. Add it as a separate BankingReleasePlatformState inline policy through IAM  ->  Roles  ->  role  ->  Permissions  ->  Add permissions  ->  Create inline policy  ->  JSON. Leave CloudOpsTrackerBootstrap unchanged.
-7. Before live workflow execution, configure GitHub's bootstrap environment with required reviewer(s), dev-only deployment branches and no admin bypass; supply approved environment inputs and AWS_ROLE_ARN. Keep AWS_OPERATIONS_ENABLED=false until explicit approval.
+Review the complete proposed trust and separate Banking policy. Keep CloudOpsTrackerBootstrap unchanged. Correct the supplied malformed role ARN by copying IAM's actual ARN with :role/. Approve remaining code merges individually. Follow IAM.md and BOOTSTRAP.md to configure AWS/GitHub only after the next explicit authorization; leave all AWS switches false now.
 
-The runbook provides complete temporary backend configuration and plan/migration commands; IAM.md gives the exact administrator request for role reuse, SCPs, PassRole, EKS cluster/node roles and the later controller workload role. No new IAM roles are attempted by this code.
+An administrator must confirm role reuse/operator IAM editing authority and effective SCP/resource restrictions. Existing PassRole grants are Retail-role scoped, not Banking-role authorization; distinct EKS cluster/node/controller roles remain later administrator prerequisites. None is created now.
 
 ## F. Checkpoint
 
-Run the offline validation commands in BOOTSTRAP.md from the repository root. Expect three valid roots, three mocked Terraform tests, twelve Python tests and clean workflow lint, with the documented Checkov exceptions. Inspect the two exact state paths, lock-file deletion scope, preserved Retail trust statement and disabled-by-default operations.
-
-Publishing is prepared for review; final IAM policies and AWS connectivity remain gated by the identified inputs. Do not treat this as proven AWS connectivity or permission to run live operations.
+Review PR #3's exact current diff and successful credential-free CI, the complete policies, selected dev-only environment with mhachem110 reviewer/no admin bypass, and separate creation/state flags. After code review and approved setup, the next live test is connectivity only. It must show the expected account/assumed role and correct provider/audience, without creating a bucket or running Terraform. Bucket creation, state import and every later plan/apply are separate approved operations.
 
 ## G. Next Phase
 
-After completing and reviewing this checkpoint, Phase 3 would prepare VPC/ECR/EKS infrastructure using administrator-approved roles. No Phase 3 code or AWS resources were created. STOP at Phase 2; resolve missing inputs and review the preparation PR before considering Phase 3.
+Complete the authorized IAM/GitHub setup and actual connectivity checkpoint first. Phase 3 networking/ECR/EKS preparation is not started or authorized. Stop for review of these policies and the remaining PRs.

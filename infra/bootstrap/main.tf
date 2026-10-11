@@ -3,8 +3,8 @@ terraform {
   required_providers {
     aws = { source = "hashicorp/aws", version = "= 6.68.0" }
   }
-  # An ignored backend_override.tf temporarily replaces this with local state
-  # ONLY for the first approved dedicated-bucket bootstrap. See the runbook.
+  # The explicit GitHub initialize operation seeds the secured bucket first,
+  # then imports these resources directly into S3 state. No local state handoff.
   backend "s3" {
     encrypt              = true
     use_lockfile         = true

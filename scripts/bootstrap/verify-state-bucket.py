@@ -32,7 +32,17 @@ def main():
     expected = "aws:kms" if args.kms_key_arn else "AES256"
     if encryption["SSEAlgorithm"] != expected or (args.kms_key_arn and encryption.get("KMSMasterKeyID") != args.kms_key_arn):
         raise RuntimeError("Encryption does not match the reviewed backend configuration.")
-    print("Verified bucket owner, Region, versioning, encryption and public-access safeguards.")
+    ownership = aws("get-bucket-ownership-controls", *common)["OwnershipControls"]["Rules"]
+    if not any(rule.get("ObjectOwnership") == "BucketOwnerEnforced" for rule in ownership):
+        raise RuntimeError("Bucket owner enforcement must disable ACLs.")
+    policy = json.loads(aws("get-bucket-policy", *common)["Policy"])
+    statements = policy["Statement"] if isinstance(policy["Statement"], list) else [policy["Statement"]]
+    arn = "arn:aws:s3:::" + args.bucket
+    if not any(s.get("Effect") == "Deny" and s.get("Principal") == "*" and s.get("Action") == "s3:*"
+               and set(s.get("Resource", [])) >= {arn, arn + "/*"}
+               and s.get("Condition", {}).get("Bool", {}).get("aws:SecureTransport") in ("false", False) for s in statements):
+        raise RuntimeError("Bucket policy must deny insecure transport for bucket and objects.")
+    print("Verified bucket owner, Region, versioning, encryption, public blocking, ACL enforcement and TLS-only policy.")
 
 if __name__ == "__main__":
     main()
