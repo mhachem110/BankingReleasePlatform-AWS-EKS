@@ -9,6 +9,14 @@ TYPES = ("aws_s3_bucket", "aws_s3_bucket_ownership_controls", "aws_s3_bucket_pub
 ADDRESSES = frozenset("module.state_bucket." + name + ".state" for name in TYPES)
 
 
+def state_document(result):
+    if result.returncode:
+        raise RuntimeError("Cannot safely read bootstrap state; stop before importing.")
+    # Terraform 1.15.8 returns success with no output when state does not exist.
+    # A denied/failed read is never classified as an empty backend.
+    return json.loads(result.stdout) if result.stdout.strip() else {}
+
+
 def existing_resources(state, bucket):
     found = set()
     for resource in state.get("resources", []):
@@ -28,12 +36,7 @@ def main():
     args = parser.parse_args()
     command = ["terraform", "-chdir=infra/bootstrap"]
     result = subprocess.run(command + ["state", "pull"], capture_output=True, text=True)
-    if result.returncode:
-        if "No state file was found" not in result.stderr:
-            raise RuntimeError("Cannot safely read bootstrap state; stop before importing.")
-        state = {}
-    else:
-        state = json.loads(result.stdout)
+    state = state_document(result)
     existing = existing_resources(state, args.bucket)
     for address in sorted(ADDRESSES - existing):
         subprocess.run(command + ["import", "-input=false", "-lock-timeout=5m", address, args.bucket], check=True)

@@ -24,7 +24,7 @@ The updated trust keeps Retail access and adds only the exact Banking bootstrap 
 
 - All three Terraform roots initialized with backend=false and validated.
 - Terraform formatting passed; three mock-provider plan tests passed.
-- 30 Python safety tests passed, covering preserved policies/trust, region/bucket scope, role ARN, explicit approvals, session caps, environment restrictions, bucket ambiguity/races, recovery markers, import identities and OIDC provider requirements.
+- 31 Python safety tests passed, covering preserved policies/trust, region/bucket scope, role ARN, explicit approvals, session caps, environment restrictions, bucket ambiguity/races, recovery markers, import identities and OIDC provider requirements.
 - Both workflows passed actionlint. Fourteen operations run blocks passed Bash syntax checking; structure assertions verify dev/disabled switches, protected environments, read-only CI, scoped OIDC sessions and no initialization state artifacts.
 - Checkov: 16 passed, zero failed, four explicit scoped exceptions (logging, replication, customer KMS, notifications deferred).
 - Policy JSON parsed; all 18 original statement values and Retail trust were preserved. Compact inline policies total 5,281 characters against the 10,240-character role quota, based on the supplied inventory.

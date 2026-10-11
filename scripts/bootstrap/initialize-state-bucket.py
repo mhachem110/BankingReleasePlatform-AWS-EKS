@@ -46,6 +46,7 @@ def seed(bucket, account, region, resume=False, caller=aws):
         # If this loses a race or its result is ambiguous, stop. Never proceed
         # after BucketAlreadyOwnedByYou/BucketAlreadyExists as though we created it.
         caller("create-bucket", "--bucket", bucket, "--region", region,
+               "--object-ownership", "BucketOwnerEnforced",
                "--create-bucket-configuration", json.dumps({"LocationConstraint": region}))
         caller("put-bucket-tagging", *common, "--tagging",
                json.dumps({"TagSet": [{"Key": k, "Value": v} for k, v in TAGS.items()]}))

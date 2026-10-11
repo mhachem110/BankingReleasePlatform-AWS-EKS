@@ -125,6 +125,14 @@ class InitializationSafetyTests(unittest.TestCase):
 
 
 class ImportAndProviderSafetyTests(unittest.TestCase):
+    def test_empty_success_is_first_bootstrap_but_failed_read_is_not(self):
+        self.assertEqual({}, imports.state_document(subprocess.CompletedProcess([], 0, "", "")))
+        self.assertEqual({"resources": []}, imports.state_document(subprocess.CompletedProcess([], 0, '{"resources":[]}', "")))
+        with self.assertRaises(RuntimeError):
+            imports.state_document(subprocess.CompletedProcess([], 1, "", "AccessDenied"))
+        with self.assertRaises(json.JSONDecodeError):
+            imports.state_document(subprocess.CompletedProcess([], 0, "not valid state", ""))
+
     def test_import_addresses_match_the_seven_actual_resources(self):
         source = (Path(__file__).parents[3] / "infra/modules/state-bucket/main.tf").read_text()
         actual = {f"module.state_bucket.{kind}.{name}" for kind, name in re.findall(r'resource "([^"]+)" "([^"]+)"', source)}
