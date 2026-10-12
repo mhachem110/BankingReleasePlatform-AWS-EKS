@@ -29,6 +29,8 @@ def validate():
     out.mkdir(parents=True, exist_ok=True)
     name = "banking-log-routing-"+uuid.uuid4().hex[:12]
     with tempfile.TemporaryDirectory() as directory:
+        destinations = Path(directory)/"destinations"
+        destinations.mkdir()
         config = "[SERVICE]\n    Flush 1\n    Grace 1\n"
         for namespace in ("banking-dev", "banking-prod", "kube-system", "banking-stage"):
             record = json.dumps({"kubernetes":{"namespace_name":namespace}, "proof":namespace})
@@ -39,7 +41,8 @@ def validate():
             group = re.search(r"log_group_name\s+(\S+)", output)[1]
             if group != f"/banking/banking-{env}/application" or "auto_create_group false" not in output:
                 raise ValueError("Unapproved group or implicit paid resource creation")
-            config += f"[OUTPUT]\n    Name stdout\n    Match {match}\n"
+            # Independent files avoid interleaving from concurrent output threads.
+            config += f"[OUTPUT]\n    Name file\n    Match {match}\n    Path /results\n    File {env}.jsonl\n    Format plain\n"
         path = Path(directory)/"routing.conf"
         path.write_text(config,encoding="utf-8")
         # Pull happens before the network-isolated process; no AWS credentials,
@@ -48,6 +51,7 @@ def validate():
         with (out/"fluent-bit.log").open("w",encoding="utf-8") as log:
             process = subprocess.Popen(["docker","run","--rm","--name",name,"--network","none",
                 "--mount",f"type=bind,source={directory},target=/fixtures,readonly",
+                "--mount",f"type=bind,source={destinations},target=/results",
                 "--entrypoint","/fluent-bit/bin/fluent-bit",IMAGE,"-c","/fixtures/routing.conf"],
                 stdout=log,stderr=subprocess.STDOUT,text=True)
             try:
@@ -58,13 +62,13 @@ def validate():
         if process.returncode != 0:
             raise ValueError("Fluent Bit did not exit cleanly; inspect its preserved log")
         result = (out/"fluent-bit.log").read_text(encoding="utf-8")
-        for namespace in ("banking-dev", "banking-prod"):
-            routed = [line for line in result.splitlines() if f"{namespace}.kube.fixture.{namespace}:" in line]
-            if len(routed) != 1 or f'"proof"=>"{namespace}"' not in routed[0]:
+        for env in ("dev", "prod"):
+            namespace = "banking-"+env
+            destination = destinations/(env+".jsonl")
+            routed = [json.loads(line) for line in destination.read_text(encoding="utf-8").splitlines()] if destination.exists() else []
+            if routed != [{"kubernetes":{"namespace_name":namespace}, "proof":namespace}]:
                 raise ValueError("Namespace log was lost, duplicated or sent to the wrong destination: "+namespace)
-        for namespace in ("kube-system", "banking-stage"):
-            if f'"proof"=>"{namespace}"' in result:
-                raise ValueError("Unapproved namespace was routed")
+            (out/(env+".jsonl")).write_bytes(destination.read_bytes())
         if "[error]" in result:
             raise ValueError("Fluent Bit emitted an error; inspect the preserved log")
         (out/"result.json").write_text(json.dumps({"image":IMAGE,"namespaceRouting":"passed",
