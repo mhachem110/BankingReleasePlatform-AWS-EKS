@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.Json;
+using Banking.Platform;
+using Npgsql;
 
 namespace Payment.Api;
 
@@ -48,9 +50,9 @@ public sealed class AccountClient(HttpClient httpClient) : IAccountClient
     }
 }
 
-public sealed class PaymentProcessor(IAccountClient accountClient)
+public sealed class PaymentProcessor(IAccountClient accountClient, IPaymentJournal journal, BankingTelemetry telemetry)
 {
-    public async Task<PaymentOutcome> ProcessAsync(PaymentRequest request, CancellationToken cancellationToken)
+    public async Task<PaymentOutcome> ProcessAsync(PaymentRequest request, CancellationToken cancellationToken, string? idempotencyKey = null)
     {
         if (string.IsNullOrWhiteSpace(request.AccountId) || request.AccountId.Length > 64 ||
             !request.AccountId.All(c => char.IsAsciiLetterOrDigit(c) || c == '-') ||
@@ -62,15 +64,36 @@ public sealed class PaymentProcessor(IAccountClient accountClient)
 
         try
         {
+            if (idempotencyKey is not null && await journal.FindByKeyAsync(idempotencyKey, cancellationToken) is { } previous)
+            {
+                if (previous.AccountId != request.AccountId || previous.Amount != request.Amount || previous.Currency != request.Currency)
+                    throw new IdempotencyConflictException();
+                return new(200, new("simulated", "payment_approved", "Previously recorded simulation. No funds were moved or balances changed.", previous.PaymentId.ToString("N")));
+            }
             var validation = await accountClient.ValidateAsync(request, cancellationToken);
             if (!validation.IsValid)
+            {
+                telemetry.PaymentDecisions.WithLabels(validation.Code).Inc();
                 return new(validation.Code == "account_not_found" ? 404 : 422,
                     new("rejected", validation.Code, validation.Message));
-            return new(200, new("simulated", "payment_approved", "Simulation approved. No funds were moved or balances changed.", Guid.NewGuid().ToString("N")));
+            }
+            var stored = await journal.SaveAsync(request, idempotencyKey ?? Guid.NewGuid().ToString("N"), cancellationToken);
+            telemetry.PaymentDecisions.WithLabels("payment_approved").Inc();
+            return new(200, new("simulated", "payment_approved", "Simulation approved. No funds were moved or balances changed.", stored.PaymentId.ToString("N")));
+        }
+        catch (IdempotencyConflictException)
+        {
+            return new(409, new("rejected", "idempotency_conflict", "This idempotency key was used for a different request."));
+        }
+        catch (Exception exception) when (exception is NpgsqlException or TimeoutException)
+        {
+            telemetry.PaymentDecisions.WithLabels("storage_unavailable").Inc();
+            return new(503, new("unavailable", "storage_unavailable", "Payment storage is temporarily unavailable. Retry with the same idempotency key."));
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or AccountServiceException ||
             (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
+            telemetry.PaymentDecisions.WithLabels("account_service_unavailable").Inc();
             return new(503, new("unavailable", "account_service_unavailable", "Account validation is temporarily unavailable. No payment was approved."));
         }
     }

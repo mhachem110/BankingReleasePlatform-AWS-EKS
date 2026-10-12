@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from common import ROOT, config, helm_values, json_run, run, save_json, validate_manifest
+from common import ROOT, config, helm_values, json_run, run, runtime_values, save_json, validate_manifest
 from provenance import manifest_hash, verify_previous, verify_publication
 from verify import verify
 
@@ -57,6 +57,7 @@ if __name__ == "__main__":
     p.add_argument("--manifest", default="release/release.json")
     args = p.parse_args()
     cfg = config(args.environment)
+    runtime = runtime_values(args.environment)
     manifest = validate_manifest(json.loads(Path(args.manifest).read_text()), cfg["repos"])
     # Recheck provenance immediately before mutation, after the remote security scan.
     verify_publication(manifest)
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         run(["kubectl", "get", "namespace", cfg["namespace"]])
         revision = previous_revision(cfg["namespace"], "banking")
         values = Path(directory) / "images.json"
-        save_json(values, helm_values(manifest))
+        save_json(values, helm_values(manifest) | runtime)
         run(["helm", "lint", ROOT / "helm/banking", "--strict", "-f", values])
         transaction(cfg["namespace"], "banking", values, args.environment, manifest, revision=revision)
         run(["helm", "history", "banking", "-n", cfg["namespace"]])

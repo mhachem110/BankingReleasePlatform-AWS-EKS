@@ -27,3 +27,16 @@ ingress:
 demonstration:
   enabled: false
   failPaymentReadiness: false
+persistence:
+  enabled: false
+  accountSecretName: ""
+  paymentSecretName: ""
+  caConfigMapName: ""
+messaging:
+  enabled: false
+  approved: false
+  roleArn: ""
+  queueUrl: ""
+  deadLetterQueueUrl: ""
+monitoring:
+  scrape: false

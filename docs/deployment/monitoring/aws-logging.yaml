@@ -1,0 +1,28 @@
+# Proposal only: shared cluster configuration, applied by an approved operator after log/IAM/cost review.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-logging
+  namespace: aws-observability
+data:
+  flb_log_cw: "false"
+  filters.conf: |
+    [FILTER]
+        Name kubernetes
+        Match kube.*
+        Merge_Log On
+        Keep_Log Off
+        Buffer_Size 0
+        Kube_Meta_Cache_TTL 300s
+    [FILTER]
+        Name grep
+        Match kube.*
+        Regex $kubernetes['namespace_name'] ^banking-dev$
+  output.conf: |
+    [OUTPUT]
+        Name cloudwatch_logs
+        Match kube.*
+        region us-east-2
+        log_group_name /banking/banking-dev/application
+        log_stream_prefix banking-
+        auto_create_group false

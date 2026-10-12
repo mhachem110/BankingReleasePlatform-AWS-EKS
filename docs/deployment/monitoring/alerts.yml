@@ -1,0 +1,33 @@
+groups:
+  - name: banking-application
+    rules:
+      - alert: BankingMetricsMissing
+        expr: up{job=~"banking-account|banking-payment"} == 0 or absent(up{job="banking-account"}) or absent(up{job="banking-payment"})
+        for: 2m
+        labels: {severity: warning, owner: MahmoudHachem}
+        annotations: {summary: "Banking metrics endpoint unavailable", runbook: "docs/deployment/INCIDENTS.md"}
+      - alert: BankingStorageUnavailable
+        expr: min by(job) (banking_storage_ready) == 0
+        for: 30s
+        labels: {severity: critical, owner: MahmoudHachem}
+        annotations: {summary: "A Banking API reports unavailable storage", runbook: "docs/deployment/INCIDENTS.md"}
+      - alert: BankingHttpErrors
+        expr: sum(rate(banking_http_requests_total{status=~"5..",route=~"/api/.*"}[5m])) / clamp_min(sum(rate(banking_http_requests_total{route=~"/api/.*"}[5m])),0.001) > 0.05
+        for: 2m
+        labels: {severity: critical, owner: MahmoudHachem}
+        annotations: {summary: "Banking API error ratio exceeds 5 percent", runbook: "docs/deployment/INCIDENTS.md"}
+      - alert: BankingLatency
+        expr: histogram_quantile(0.95,sum by(le,job) (rate(banking_http_request_duration_seconds_bucket{route=~"/api/.*"}[5m]))) > 1
+        for: 5m
+        labels: {severity: warning, owner: MahmoudHachem}
+        annotations: {summary: "Banking API p95 latency exceeds one second", runbook: "docs/deployment/INCIDENTS.md"}
+      - alert: BankingOutboxDead
+        expr: max(banking_outbox_dead) > 0
+        for: 30s
+        labels: {severity: critical, owner: MahmoudHachem}
+        annotations: {summary: "Retained outbox events require operator recovery", runbook: "docs/deployment/INCIDENTS.md"}
+      - alert: BankingOutboxAge
+        expr: max(banking_outbox_oldest_seconds) > 120
+        for: 2m
+        labels: {severity: warning, owner: MahmoudHachem}
+        annotations: {summary: "Payment event delivery is delayed", runbook: "docs/deployment/INCIDENTS.md"}

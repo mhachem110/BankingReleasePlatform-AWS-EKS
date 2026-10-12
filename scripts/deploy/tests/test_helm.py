@@ -22,6 +22,40 @@ def render(*extra):
 
 
 class HelmTests(unittest.TestCase):
+    def test_persistence_requires_existing_secret_references(self):
+        with self.assertRaises(ValueError):
+            render("--set", "persistence.enabled=true")
+        items = render("--set", "persistence.enabled=true", "--set", "persistence.accountSecretName=banking-dev-account-db",
+            "--set", "persistence.paymentSecretName=banking-dev-payment-db", "--set", "persistence.caConfigMapName=banking-dev-db-ca")
+        for workload in (i for i in items if i["kind"] == "Deployment"):
+            pod = workload["spec"]["template"]["spec"]
+            self.assertFalse(pod["automountServiceAccountToken"])
+            container = pod["containers"][0]
+            self.assertEqual(container["readinessProbe"]["httpGet"]["path"], "/ready")
+            self.assertEqual(container["livenessProbe"]["httpGet"]["path"], "/health")
+            self.assertTrue(next(v for v in container["volumeMounts"] if v["name"] == "database")["readOnly"])
+            self.assertEqual(next(v for v in pod["volumes"] if v["name"] == "database")["secret"]["defaultMode"], 0o440)
+        self.assertFalse(any(i["kind"] == "Secret" for i in items))
+
+    def test_messaging_is_guarded_and_irsa_is_payment_only(self):
+        with self.assertRaises(ValueError):
+            render("--set", "messaging.enabled=true")
+        args = ["--set", "persistence.enabled=true", "--set", "persistence.accountSecretName=banking-dev-account-db",
+            "--set", "persistence.paymentSecretName=banking-dev-payment-db", "--set", "persistence.caConfigMapName=banking-dev-db-ca",
+            "--set", "messaging.enabled=true", "--set", "messaging.approved=true",
+            "--set", "messaging.roleArn=arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-payment-runtime-dev",
+            "--set", "messaging.queueUrl=https://sqs.us-east-2.amazonaws.com/866934333672/banking-dev-payments",
+            "--set", "messaging.deadLetterQueueUrl=https://sqs.us-east-2.amazonaws.com/866934333672/banking-dev-dead"]
+        items = render(*args)
+        for item in (i for i in items if i["kind"] == "ServiceAccount"):
+            payment = item["metadata"]["name"].endswith("payment")
+            self.assertEqual(item["automountServiceAccountToken"], payment)
+            self.assertEqual("eks.amazonaws.com/role-arn" in item["metadata"]["annotations"], payment)
+        with self.assertRaises(ValueError):
+            render(*args, "--set", "messaging.roleArn=arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap")
+        with self.assertRaises(ValueError):
+            render(*args, "--set", "messaging.deadLetterQueueUrl=https://sqs.us-east-2.amazonaws.com/866934333672/banking-dev-payments")
+
     def test_metadata_tracks_environment_owner_component_and_digest(self):
         for item in render():
             meta = item["metadata"]

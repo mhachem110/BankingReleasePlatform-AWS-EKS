@@ -42,6 +42,8 @@ jobs:
       DEPLOY_ENV: ${{ inputs.environment }}
       PUBLISH_RUN_ID: ${{ inputs.publish_run_id }}
       APP_DEPLOYMENTS_ENABLED: ${{ vars.APP_DEPLOYMENTS_ENABLED }}
+      APP_DATA_OPERATIONS_ENABLED: ${{ vars.APP_DATA_OPERATIONS_ENABLED }}
+      APP_RUNTIME_VALUES_JSON: ${{ vars.APP_RUNTIME_VALUES_JSON }}
       APP_DEPLOY_ROLE_ARN: ${{ vars.APP_DEPLOY_ROLE_ARN }}
       INFRA_ROLE_ARN: ${{ vars.INFRA_ROLE_ARN }}
       BOOTSTRAP_ROLE_ARN: ${{ vars.BOOTSTRAP_ROLE_ARN }}

@@ -7,6 +7,15 @@
 {{- if and .Values.demonstration.failPaymentReadiness (or (not .Values.demonstration.enabled) (ne .Release.Namespace "banking-dev")) }}
 {{- fail "Fault injection requires demonstration.enabled and banking-dev" }}
 {{- end }}
+{{- if and .Values.persistence.enabled (or (not .Values.persistence.accountSecretName) (not .Values.persistence.paymentSecretName) (not .Values.persistence.caConfigMapName)) }}
+{{- fail "Persistence requires existing operator-managed account/payment Secrets and CA ConfigMap" }}
+{{- end }}
+{{- if and .Values.messaging.enabled (or (not .Values.messaging.approved) (not .Values.persistence.enabled) (not .Values.messaging.roleArn) (not .Values.messaging.queueUrl) (not .Values.messaging.deadLetterQueueUrl) (ne .Release.Namespace "banking-dev")) }}
+{{- fail "Messaging requires approved dev runtime IRSA, durable persistence and two existing queues" }}
+{{- end }}
+{{- if and .Values.messaging.enabled (eq .Values.messaging.queueUrl .Values.messaging.deadLetterQueueUrl) }}
+{{- fail "Messaging source and dead-letter queues must be distinct" }}
+{{- end }}
 {{- range $service := list "account" "payment" }}
 {{- $image := index $.Values.images $service }}
 {{- $metadata := dict "root" $ "service" $service "digest" $image.digest }}
@@ -21,7 +30,10 @@ metadata:
     {{- include "banking.labels" $metadata | nindent 4 }}
   annotations:
     {{- include "banking.annotations" $metadata | nindent 4 }}
-automountServiceAccountToken: false
+    {{- if and (eq $service "payment") $.Values.messaging.enabled }}
+    eks.amazonaws.com/role-arn: {{ $.Values.messaging.roleArn | quote }}
+    {{- end }}
+automountServiceAccountToken: {{ and (eq $service "payment") $.Values.messaging.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -51,9 +63,14 @@ spec:
         {{- include "banking.labels" $metadata | nindent 8 }}
       annotations:
         {{- include "banking.annotations" $metadata | nindent 8 }}
+        {{- if $.Values.monitoring.scrape }}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+        {{- end }}
     spec:
       serviceAccountName: {{ $.Release.Name }}-{{ $service }}
-      automountServiceAccountToken: false
+      automountServiceAccountToken: {{ and (eq $service "payment") $.Values.messaging.enabled }}
       dnsPolicy: ClusterFirst
       terminationGracePeriodSeconds: 30
       securityContext:
@@ -74,8 +91,18 @@ spec:
           env:
             - {name: ASPNETCORE_HTTP_PORTS, value: "8080"}
             - {name: ASPNETCORE_ENVIRONMENT, value: "Production"}
+            {{- if $.Values.persistence.enabled }}
+            - {name: Persistence__Mode, value: Postgres}
+            - {name: Persistence__ConnectionStringFile, value: /etc/banking/database/connectionString}
+            {{- end }}
             {{- if eq $service "payment" }}
             - {name: AccountApi__BaseUrl, value: "http://{{ $.Release.Name }}-account.{{ $.Release.Namespace }}.svc.cluster.local:8080/"}
+            {{- if $.Values.messaging.enabled }}
+            - {name: Messaging__Enabled, value: "true"}
+            - {name: Messaging__ExpectedAccountId, value: "866934333672"}
+            - {name: Messaging__QueueUrl, value: {{ $.Values.messaging.queueUrl | quote }}}
+            - {name: Messaging__DeadLetterQueueUrl, value: {{ $.Values.messaging.deadLetterQueueUrl | quote }}}
+            {{- end }}
             {{- end }}
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}
@@ -86,7 +113,7 @@ spec:
             failureThreshold: 60
           readinessProbe:
             httpGet:
-              path: {{ if and (eq $service "payment") $.Values.demonstration.failPaymentReadiness }}/demonstration-not-found{{ else }}/health{{ end }}
+              path: {{ if and (eq $service "payment") $.Values.demonstration.failPaymentReadiness }}/demonstration-not-found{{ else if $.Values.persistence.enabled }}/ready{{ else }}/health{{ end }}
               port: http
             timeoutSeconds: 2
             periodSeconds: 5
@@ -96,8 +123,25 @@ spec:
             timeoutSeconds: 2
             periodSeconds: 10
             failureThreshold: 3
-          volumeMounts: [{name: temporary, mountPath: /tmp}]
-      volumes: [{name: temporary, emptyDir: {sizeLimit: 64Mi}}]
+          volumeMounts:
+            - {name: temporary, mountPath: /tmp}
+            {{- if $.Values.persistence.enabled }}
+            - {name: database, mountPath: /etc/banking/database, readOnly: true}
+            - {name: database-ca, mountPath: /etc/banking/ca, readOnly: true}
+            {{- end }}
+      volumes:
+        - {name: temporary, emptyDir: {sizeLimit: 64Mi}}
+        {{- if $.Values.persistence.enabled }}
+        - name: database
+          secret:
+            secretName: {{ if eq $service "account" }}{{ $.Values.persistence.accountSecretName }}{{ else }}{{ $.Values.persistence.paymentSecretName }}{{ end }}
+            defaultMode: 0440
+            items: [{key: connectionString, path: connectionString}]
+        - name: database-ca
+          configMap:
+            name: {{ $.Values.persistence.caConfigMapName }}
+            items: [{key: root-ca.pem, path: root-ca.pem}]
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

@@ -2,6 +2,7 @@ import copy
 import importlib.util
 import json
 import os
+import socket
 import sys
 import unittest
 from pathlib import Path
@@ -27,6 +28,31 @@ def environment():
             "EKS_CLUSTER_NAME":"banking-dev","K8S_NAMESPACE":"banking-dev"}
 
 class GuardTests(unittest.TestCase):
+    def test_occupied_forward_port_never_calls_kubectl_or_uses_other_server(self):
+        spec = importlib.util.spec_from_file_location("kube_smoke", DEPLOY / "kube-smoke.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with socket.socket() as occupied:
+            occupied.bind(("127.0.0.1", 18081))
+            with patch.object(module.subprocess, "Popen") as launch, self.assertRaises(OSError):
+                with module.forwards("banking-dev", "banking"):
+                    self.fail("Occupied port was accepted")
+            launch.assert_not_called()
+
+    def test_runtime_data_requires_separate_dev_authorization_and_rejects_secrets(self):
+        runtime = {"persistence":{"enabled":True,"accountSecretName":"banking-dev-account-db"}}
+        with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":json.dumps(runtime)}, clear=True), self.assertRaises(ValueError):
+            common.runtime_values("dev")
+        with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":json.dumps(runtime),"APP_DATA_OPERATIONS_ENABLED":"true"}, clear=True):
+            self.assertEqual(common.runtime_values("dev"), runtime)
+            with self.assertRaises(ValueError):
+                common.runtime_values("stage")
+        for values in [{"images":{}},{"persistence":{"password":"never-accepted"}},{"messaging":{"accessKey":"never-accepted"}}]:
+            with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":json.dumps(values),"APP_DATA_OPERATIONS_ENABLED":"true"}, clear=True), self.assertRaises(ValueError):
+                common.runtime_values("dev")
+        with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":'{"monitoring":{},"monitoring":{}}'}, clear=True), self.assertRaises(ValueError):
+            common.runtime_values("dev")
+
     def test_disabled_missing_wrong_account_or_infrastructure_role(self):
         bad = [
             {"APP_DEPLOYMENTS_ENABLED":""},{"APP_DEPLOYMENTS_ENABLED":"false"},

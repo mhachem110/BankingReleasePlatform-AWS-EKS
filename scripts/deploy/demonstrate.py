@@ -1,12 +1,27 @@
 """Explicitly approved dev-only restart, scaling and failed-upgrade demonstration."""
 import argparse
+import importlib.util
 import json
+import os
 import sys
 import tempfile
 import time
 from pathlib import Path
 from common import ROOT, config, json_run, run, save_json
 from verify import verify
+import durable_demo
+
+# The hyphenated command file is also the shared port-forward context manager.
+spec = importlib.util.spec_from_file_location("kube_smoke", ROOT / "scripts/deploy/kube-smoke.py")
+kube_smoke = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(kube_smoke)
+
+def durable_check(namespace, proof=None):
+    with kube_smoke.forwards(namespace, "banking") as (_, payment):
+        if proof is None:
+            proof = durable_demo.create(payment)
+        durable_demo.verify(payment, proof)
+    return proof
 
 def smoke(namespace):
     run([sys.executable, ROOT / "scripts/deploy/kube-smoke.py", "--namespace", namespace])
@@ -32,6 +47,9 @@ if __name__ == "__main__":
     values = json_run(["helm", "get", "values", "banking", "-n", namespace, "-a", "-o", "json"])
     if values["autoscaling"]["enabled"] or values["demonstration"]["enabled"]:
         raise ValueError("Demonstration requires normal fixed-replica deployment")
+    persistent = values.get("persistence", {}).get("enabled", False)
+    if persistent and os.environ.get("APP_DATA_OPERATIONS_ENABLED") != "true":
+        raise ValueError("Persistent demonstration requires separate explicit data-test authorization")
     manifest = {"images": values["images"]}
     verify(namespace, "banking", manifest)
     evidence = ROOT / "artifacts/application/demonstration"
@@ -44,6 +62,7 @@ if __name__ == "__main__":
             save_json(evidence / "pods-before.json", json_run(["kubectl", "-n", namespace, "get", "pods", "-o", "json"]))
             save_json(evidence / "services.json", json_run(["kubectl", "-n", namespace, "get", "services", "-o", "json"]))
             smoke(namespace)
+            proof = durable_check(namespace) if persistent else None
             before = json_run(["kubectl", "-n", namespace, "get", "pods", "-l", "app=banking-payment", "-o", "json"])
             old_uids = {p["metadata"]["uid"] for p in before["items"]}
             mutated = True
@@ -54,10 +73,14 @@ if __name__ == "__main__":
             if old_uids & new_uids:
                 raise AssertionError("Restart did not replace every Payment Pod")
             smoke(namespace)
+            if proof:
+                durable_check(namespace, proof)
             if upgrade(namespace, snapshot, "--set", "replicas.account=3", "--set", "replicas.payment=3"):
                 raise RuntimeError("Scaling upgrade failed")
             verify(namespace, "banking", manifest)
             smoke(namespace)
+            if proof:
+                durable_check(namespace, proof)
             save_json(evidence / "pods-scaled.json", json_run(["kubectl", "-n", namespace, "get", "pods", "-o", "json"]))
             if upgrade(namespace, snapshot):
                 raise RuntimeError("Could not restore replicas")
@@ -72,11 +95,14 @@ if __name__ == "__main__":
             if restored["images"] != values["images"] or restored["demonstration"] != values["demonstration"]:
                 raise AssertionError("Rollback did not restore images and healthy readiness")
             smoke(namespace)
+            if proof:
+                durable_check(namespace, proof)
             save_json(evidence / "helm-history.json", json_run(["helm", "history", "banking", "-n", namespace, "-o", "json"]))
             for service in ("account", "payment"):
                 logs = run(["kubectl", "-n", namespace, "logs", "deployment/banking-" + service, "--tail=100"], capture=True)
                 (evidence / (service + ".log")).write_text(logs)
             save_json(evidence / "result.json", {"status": "passed", "failedFromRevision": before_fault,
+                "durablePaymentVerified": bool(proof), "persistentPaymentRecovery": "passed" if proof else "pending",
                 "checks": ["ready-fargate-pods", "services", "payment-account-dns", "restart-recovery",
                            "scale-to-three", "replica-restoration", "failed-readiness-rollback", "history", "logs"]})
         finally:

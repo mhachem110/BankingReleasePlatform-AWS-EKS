@@ -249,6 +249,63 @@
           "maxLength": 128
         }
       }
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "accountSecretName": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 63
+        },
+        "paymentSecretName": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 63
+        },
+        "caConfigMapName": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 63
+        }
+      }
+    },
+    "messaging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "approved": {
+          "type": "boolean"
+        },
+        "roleArn": {
+          "type": "string",
+          "pattern": "^$|^arn:aws:iam::866934333672:role/([A-Za-z0-9_+=,.@-]+/)*cloudbatch818-mahmoud-banking-payment-runtime-dev$"
+        },
+        "queueUrl": {
+          "type": "string",
+          "pattern": "^$|^https://sqs\\.us-east-2\\.amazonaws\\.com/866934333672/banking-dev-[a-z0-9-]+$"
+        },
+        "deadLetterQueueUrl": {
+          "type": "string",
+          "pattern": "^$|^https://sqs\\.us-east-2\\.amazonaws\\.com/866934333672/banking-dev-[a-z0-9-]+$"
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scrape": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "$schema": "https://json-schema.org/draft-07/schema#"

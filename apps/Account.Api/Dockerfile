@@ -1,9 +1,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY Directory.Build.props global.json ./
+COPY apps/Banking.Platform/Banking.Platform.csproj apps/Banking.Platform/packages.lock.json apps/Banking.Platform/
 COPY apps/Account.Api/Account.Api.csproj apps/Account.Api/packages.lock.json apps/Account.Api/
 RUN dotnet restore apps/Account.Api/Account.Api.csproj --locked-mode
 COPY apps/Account.Api/ apps/Account.Api/
+COPY apps/Banking.Platform/ apps/Banking.Platform/
 RUN dotnet publish apps/Account.Api/Account.Api.csproj -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final

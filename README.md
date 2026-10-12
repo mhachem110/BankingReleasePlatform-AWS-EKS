@@ -2,7 +2,7 @@
 
 AWS Week 4 Financial Services CI/CD and Kubernetes Release Platform, by Mahmoud Hachem. Phase 1 implements two ASP.NET Core APIs using .NET 10 LTS and local Docker containers. All customers and payments are fictional.
 
-The existing repository is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS), with `dev` as its development default. PRs #1–#11 are merged, including the EKS Fargate infrastructure, Helm/application pipelines, scoped governance and final deployment preparation. The earlier CloudOpsTracker repository remains a read-only reference.
+The existing repository is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS), with `dev` as its development default. PRs #1–#12 are merged, including the EKS Fargate infrastructure, Helm/application pipelines, scoped governance and verified project reconciliation. The earlier CloudOpsTracker repository remains a read-only reference.
 
 Phases 1 and 2 have implementation and execution evidence. Phase 3 infrastructure and Phase 4/5 Helm/CI/CD code are merged and offline validated; live EKS deployment, ECR publication and Helm releases remain pending administrator prerequisites and specific owner authorization. Phase 6 persistence, messaging and operational monitoring, and Phase 7 live recovery/final demonstration remain incomplete. Read the [12 October reconciliation](docs/infrastructure/RECONCILIATION.md) for verified GitHub state, evidence limits and the single administrator handoff. The [requirements mapping](docs/infrastructure/ASSIGNMENT-MAPPING.md) retains the complete assignment scope.
 
@@ -79,7 +79,7 @@ $request = @{ accountId = 'ACC1001'; amount = 25; currency = 'USD' } | ConvertTo
 Invoke-RestMethod -Method Post -Uri http://localhost:5102/api/payments -ContentType application/json -Body $request
 ```
 
-Expected result: HTTP 200, `status: simulated`, `code: payment_approved`, and a generated `paymentId`. No funds move, no balances change, and no payment is stored. Repeated requests are independent simulations; there is no durable ledger or idempotency guarantee in this phase.
+Expected result: HTTP 200, `status: simulated`, `code: payment_approved`, and a generated `paymentId`. No funds move and no balances change. Default memory mode retains a bounded payment journal until the API restarts. Send the same `Idempotency-Key` header and body to replay one payment; a changed body with that key returns 409. Explicit PostgreSQL mode persists the journal and transactional outbox across restarts. This remains a simulation, not a financial ledger.
 
 | Sample account | Fictional customer | Balance | Active |
 | --- | --- | ---: | --- |
@@ -94,7 +94,10 @@ Expected result: HTTP 200, `status: simulated`, `code: payment_approved`, and a 
 | Account | `GET /api/accounts/{id}` | Account with balance/activity; 404 if missing |
 | Account | `POST /api/accounts/{id}/validate` | Body: `{"amount":25,"currency":"USD"}`; validation decision |
 | Both | `GET /health` | Process health, HTTP 200 `Healthy` |
+| Both | `GET /ready` | Storage/migration readiness; 503 during a PostgreSQL outage |
+| Both | `GET /metrics` | Private Prometheus endpoint with bounded route labels |
 | Payment | `POST /api/payments` | Body: `{"accountId":"ACC1001","amount":25,"currency":"USD"}`; simulation decision |
+| Payment | `GET /api/payments/{id}` | Stored payment, using the returned compact UUID; 404 if missing |
 
 Validation decisions from Account use HTTP 200 for known accounts, including negative business decisions. A missing account uses 404. Payment maps negative business decisions to 422, missing accounts to 404, invalid inputs to 400, and dependency failure to 503. Invalid JSON also returns 400. Amounts must be positive, at most 1,000,000, and have at most two decimal places; use three uppercase currency letters. Payment IDs allow at most 64 ASCII letters/digits/hyphens. The sample accounts support USD.
 
@@ -106,7 +109,13 @@ Payment reads `AccountApi:BaseUrl`, with `http://localhost:5101/` as the local d
 
 Each Dockerfile builds with the SDK in one stage and copies only published output into an ASP.NET runtime stage. The runtime runs as the image's unprivileged application user. Compose uses a read-only filesystem, temporary `/tmp`, no Linux capabilities, and no privilege escalation. Compose tags remain local development tags. The merged publication/deployment workflows prepare immutable SHA/run tags and verified ECR digests; no cloud publication has run.
 
-`IAccountRepository` isolates data access so an RDS-backed implementation can replace `SampleAccountRepository` later. `IAccountClient` isolates Payment's HTTP dependency. Authentication, durable storage, ledger operations, secrets integration and cloud telemetry remain later phase work. Release scanning is implemented in CI; live publication/deployment is pending. Local HTTP endpoints are intended for a fictional lab demonstration.
+`IAccountRepository` selects sample memory data or explicit PostgreSQL storage. `IAccountClient` isolates Payment's HTTP dependency. PostgreSQL uses verified TLS in production, mounted connection files, explicit checksum-verified forward migrations and separate runtime/migration database privileges. Messaging is disabled by default; enabling it requires a durable outbox and approved SQS/IRSA references. Authentication and ledger operations remain outside this synthetic lab. Actual cloud secrets, telemetry, publication and deployment acceptance are pending.
+
+## Phase 6 offline data and operational preparation
+
+Run `python scripts/deploy/offline.py --skip-install` with the pinned tools already installed, or omit `--skip-install` for setup. The command runs API, Helm/Kubernetes, monitoring, container, PostgreSQL/SQS recovery and vulnerability checks without an AWS session. Run `python scripts/deploy/data-integration.py` for the isolated data suite; it starts only owned loopback Docker fixtures and cleans them up.
+
+[Data and event operations](docs/deployment/DATA-AND-EVENTS.md), [incident recovery](docs/deployment/INCIDENTS.md), [monitoring configuration](docs/deployment/monitoring/README.md), [architecture](docs/deployment/ARCHITECTURE.md) and [the 15-minute demonstration](docs/deployment/DEMO-PRESENTATION.md) cover the prepared implementation and remaining evidence. The gated Kubernetes demonstration also checks one durable payment after restart, scaling and failed-upgrade rollback when persistent storage is explicitly authorized. Live EKS, application, database, messaging, monitoring and rollback acceptance remain incomplete; the project is not finished.
 
 ## Local dependency failure demonstration
 
