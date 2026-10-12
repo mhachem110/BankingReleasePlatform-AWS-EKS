@@ -63,6 +63,9 @@ def verify(values, outputs, call=aws):
         entries = call("eks", "list-associated-access-policies", "--cluster-name", "banking-dev", "--principal-arn", values[field])["associatedAccessPolicies"]
         if len(entries) != 1 or not entries[0]["policyArn"].endswith("/" + policy) or {k:v for k,v in entries[0]["accessScope"].items() if v != []} != scope:
             raise RuntimeError("Approved operator/deployer access scope mismatch.")
+    deployer_entry = call("eks", "describe-access-entry", "--cluster-name", "banking-dev", "--principal-arn", values["deployer_role_arn"])["accessEntry"]
+    if deployer_entry.get("kubernetesGroups") != ["banking-release-verifier"]:
+        raise RuntimeError("Deployer verification group mismatch.")
     for name in ["/aws/eks/banking-dev/cluster", "/banking/banking-dev/vpc-flow"]:
         logs = [g for g in call("logs", "describe-log-groups", "--log-group-name-prefix", name)["logGroups"] if g["logGroupName"] == name]
         if len(logs) != 1 or logs[0].get("kmsKeyId") != values["kms_key_arn"] or logs[0].get("retentionInDays") != 30:

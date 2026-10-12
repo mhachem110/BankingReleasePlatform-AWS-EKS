@@ -53,6 +53,26 @@ class ScopeTests(unittest.TestCase):
         with self.assertRaises(policy.PolicyError):
             policy.validate(pull_request(), [file(".github/CODEOWNERS", "removed")], REPO)
 
+    def test_exact_owner_authored_release_paths(self):
+        for path in ["helm/banking/values.yaml", "scripts/deploy/deploy.py", "docs/deployment/RUNBOOK.md",
+                     *sorted(policy.APP_RELEASE_FILES)]:
+            with self.subTest(path=path):
+                policy.validate(pull_request(cloud=True), [file(path)], REPO)
+                with self.assertRaises(policy.PolicyError):
+                    policy.validate(pull_request(), [file(path)], REPO)
+
+    def test_release_exceptions_cannot_smuggle_infrastructure_or_governance(self):
+        for path in ["helm/other/values.yaml", "scripts/deploy/main.tf", "helm/banking/backend.tf.json",
+                     "docs/deployment/CODEOWNERS", "scripts/deploy/policy.hcl", "helm/banking/x.tfvars.example",
+                     ".github/workflows/app-anything.yml", ".github/workflows/branch-governance.yml",
+                     "scripts/infra/guard.py", "docs/infrastructure/ADMIN-REQUEST.md", "iam/phase3/trust.json"]:
+            with self.subTest(path=path), self.assertRaises(policy.PolicyError):
+                policy.validate(pull_request(cloud=True), [file(path)], REPO)
+
+    def test_release_rename_cannot_hide_sensitive_origin(self):
+        with self.assertRaises(policy.PolicyError):
+            policy.validate(pull_request(cloud=True), [file("scripts/deploy/copied.py", "renamed", "scripts/governance/validate_pr_paths.py")], REPO)
+
     def test_bootstrap_scope(self):
         for path in ["infra/bootstrap/main.tf", "infra/modules/state-bucket/main.tf",
                      "infra/backend/dev.s3.tfbackend.example", "scripts/bootstrap/helper.py",
