@@ -9,8 +9,9 @@ import uuid
 import yaml
 from common import ROOT
 
-# Ohio-independent public AWS image; resolved stable Linux/amd64 digest 12 Oct 2026.
-IMAGE = "public.ecr.aws/aws-observability/aws-for-fluent-bit@sha256:32b8cbb1996d7f651d74d8970a0f7a74ddc207ac5d9ca902a4160de65fa38819"
+# Official AWS Docker Hub mirror, with the identical ECR Public manifest digest.
+# Resolved stable Linux/amd64 digest 12 Oct 2026; avoids ECR Public's shared-IP limit.
+IMAGE = "amazon/aws-for-fluent-bit@sha256:32b8cbb1996d7f651d74d8970a0f7a74ddc207ac5d9ca902a4160de65fa38819"
 
 
 def validate():
