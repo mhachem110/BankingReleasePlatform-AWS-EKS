@@ -120,9 +120,10 @@ resource "aws_eks_access_policy_association" "operator" {
   access_scope { type = "cluster" }
 }
 resource "aws_eks_access_entry" "deployer" {
-  cluster_name  = aws_eks_cluster.this.name
-  principal_arn = var.deployer_role_arn
-  type          = "STANDARD"
+  cluster_name      = aws_eks_cluster.this.name
+  principal_arn     = var.deployer_role_arn
+  kubernetes_groups = ["banking-release-verifier"]
+  type              = "STANDARD"
 }
 resource "aws_eks_access_policy_association" "deployer" {
   cluster_name  = aws_eks_cluster.this.name
