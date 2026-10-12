@@ -1,29 +1,29 @@
 # Assignment requirements and phase mapping
 
-The entire attached assignment was read before implementation: `Week4_Project_1_CI-CD_Engineering_Mahmoud_Hachem 1.docx`, including its mandatory coverage table, all twelve sections, presentation timing and footer. It is the requirements source. The project now has merged Phase 1–5 preparation and historical live Phase 2 completion. The current checkpoint is Phase 3 deployment preparation; live execution still needs specific approval. See [the current reconciliation](infrastructure/RECONCILIATION.md). This mapping records mandatory future acceptance without authorizing another phase.
+The entire attached assignment was read before implementation: `Week4_Project_1_CI-CD_Engineering_Mahmoud_Hachem 1.docx`, including its mandatory coverage table, all twelve sections, presentation timing and footer. It is the requirements source. The user's master instructions authorize only Phase 1 now and govern approvals. This document records future requirements without implementing them.
 
 The assignment describes an enterprise CI/CD platform. Our learning baseline starts with fictional services and grows into the required demonstration; Phase 1 alone does not meet final acceptance and carries no production-readiness claim.
 
 | Assignment requirement | Phase(s) | Current disposition / required evidence |
 | --- | --- | --- |
-| Safe, repeatable account/payment releases; deeper CI/CD specialty | 1, 5, 7 | Local services/tests complete; release gates/rollback code merged, live demonstration pending |
-| Docker and working container implementation | 1 | Separate Dockerfiles, Compose and local HTTP smoke checks |
+| Safe, repeatable account/payment releases; deeper CI/CD specialty | 1, 5, 7 | Local services now; final PR-to-release, gates and rollback demonstration later |
+| Docker and working container implementation | 1 | Separate Dockerfiles, Compose and live smoke checks |
 | ECR, EKS and operational evidence | 3–5, 7 | Pending approved infrastructure and running workload evidence |
-| Helm, workloads, probes, resource controls and scaling | 4, 6 | Fargate chart/probes/replicas/HPA code merged; actual rollout/scaling evidence pending |
-| GitHub Actions PR test, lint/build, scan, IaC and Helm validation | 5 | Merged CI tests, Trivy, Checkov and Helm/schema validation pass; live release remains disabled |
-| Immutable SHA/version container images and ECR publishing | 5 | Immutable publication tags/digest provenance implemented; no ECR publication run |
-| GitHub OIDC and short-lived AWS credentials | 2, 5 | Phase 2 live OIDC verified historically; immutable GitHub subject settings reconfirmed at intake |
-| Helm deploy to EKS with protected environment approval | 4, 5 | Protected deployment code prepared; app role/environment/runner and live deployment pending |
+| Helm, workloads, probes, resource controls and scaling | 4, 6 | Deployments/Services, readiness/liveness, replica scaling and autoscaling evidence |
+| GitHub Actions PR test, lint/build, scan, IaC and Helm validation | 5 | Pending; a failing required check must block release |
+| Immutable SHA/version container images and ECR publishing | 5 | Pending; local tags are only for Phase 1 |
+| GitHub OIDC and short-lived AWS credentials | 2, 5 | Pending inspection of actual existing role and OIDC subject configuration |
+| Helm deploy to EKS with protected environment approval | 4, 5 | Pending GitHub capability/protection check and authorized deployment |
 | Staged promotion | 5–7 | Development first; stage/production promotion must be implemented or an explicit assignment exception obtained before final acceptance |
 | Smoke/health tests and documented rollback | 1, 5, 7 | Local health/smoke checks now; EKS rollout and rollback evidence later |
-| Terraform/IaC and repeatable infrastructure deployment | 2, 3, 7 | Phase 2 backend verified; Phase 3 Fargate infrastructure code merged, live platform deployment pending |
+| Terraform/IaC and repeatable infrastructure deployment | 2, 3, 7 | Pending; no infrastructure code or AWS application in Phase 1 |
 | ALB | 4 | Pending controller IAM roles and externally routed traffic |
 | RDS or Aurora | 6 | Required stack entry; add durable sample data through repository abstraction |
 | SQS or EventBridge | 6 | Required stack entry; plan a concrete simulated payment-completed event and demonstrate delivery |
 | Least-privilege IAM and Kubernetes RBAC | 2–6 | Pending additive scoped policies and RBAC evidence |
 | No hardcoded credentials or long-lived CI AWS keys | All | No application secrets or AWS credentials added in Phase 1 |
 | Secrets Manager and KMS | 6 | Pending sensitive configuration and encryption evidence |
-| Trivy container/dependency and Checkov/IaC scanning | 5, 6 | Trivy and Checkov execute in merged CI; exact-baseline successful runs linked in reconciliation |
+| Trivy container/dependency and Checkov/IaC scanning | 5, 6 | Pending integrated scans and gate evidence |
 | CloudTrail and CloudWatch logging | 6 | Pending approved setup and audit/application log evidence |
 | GuardDuty, Inspector and Security Hub where applicable | 6 | Assess availability/permissions/cost; evidence findings or document justified applicability limitations |
 | Critical/high finding ownership and remediation | 6, 7 | Required security report with finding, owner, remediation, status and validation |
