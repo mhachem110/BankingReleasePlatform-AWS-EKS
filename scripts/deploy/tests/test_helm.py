@@ -22,6 +22,17 @@ def render(*extra):
 
 
 class HelmTests(unittest.TestCase):
+    def test_metadata_tracks_environment_owner_component_and_digest(self):
+        for item in render():
+            meta = item["metadata"]
+            self.assertEqual(meta["labels"]["banking.example/environment"], "dev")
+            self.assertEqual(meta["annotations"]["banking.example/owner"], "MahmoudHachem")
+            self.assertIn(meta["labels"]["app.kubernetes.io/component"], ["account", "payment"])
+            self.assertEqual(len(meta["labels"]["app.kubernetes.io/version"]), 12)
+            self.assertTrue(meta["annotations"]["banking.example/image-digest"].startswith("sha256:"))
+            if item["kind"] == "Deployment":
+                self.assertEqual(item["spec"]["template"]["metadata"]["labels"]["banking.example/environment"], "dev")
+
     def test_lint(self):
         subprocess.run([HELM, "lint", str(ROOT / "helm/banking"), "--strict", *FIXTURE], check=True, capture_output=True)
 

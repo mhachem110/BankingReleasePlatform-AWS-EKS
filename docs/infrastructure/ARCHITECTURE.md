@@ -1,10 +1,10 @@
 # Phase 3 EKS Fargate architecture
 
-Prepared source only. PR #8 remains infra -> dev; no paid deployment or IAM modification has run for this redesign.
+PRs #8/#9/#10 are integrated in dev. Final preparation changes remain a reviewed infra PR; no paid deployment or IAM modification has run.
 
 ```mermaid
 flowchart TD
-  PR["infra PR #8 into dev"] --> CI["Credential-free Terraform tests and Checkov"]
+  PR["Reviewed infra PR into dev"] --> CI["Credential-free Terraform tests and Checkov"]
   DEV["Reviewed dev commit"] --> GATE["Protected bootstrap approval"]
   GATE --> GH["GitHub OIDC temporary session"]
   GH --> PLAN["Collision checks and saved platform plan"]
@@ -32,7 +32,7 @@ flowchart TD
   EKS --> BANK
   EKS --> ISSUER["Cluster OIDC provider / sts.amazonaws.com"]
   ISSUER -. "Administrator-approved exact IRSA trust" .-> ROLE["Controller workload role"]
-  ROLE -. "Chat 2 controller installation" .-> SYSTEM
+  ROLE -. "Approved operator installation" .-> SYSTEM
   EKS --> LOG["KMS-encrypted control-plane and VPC flow logs"]
   ECR -. "Later approved digest release" .-> BANK
   BANK -.-> PAYMENT["Payment API / port 8080"]
@@ -49,6 +49,8 @@ Fargate supplies its host CNI and kube-proxy. Terraform does not install VPC CNI
 
 The EKS-managed cluster security group attaches to Fargate ENIs and control-plane interfaces. Its self-traffic rule supports DNS, API 443, application 8080, kubelet 10250, Metrics Server 10251 and controller webhook 9443. Its AWS defaults include broad outbound access; private routes and NAT constrain reachability but do not provide workload-level egress isolation. The new VPC's unused default security group explicitly denies ingress/egress. No unrelated security group is adopted or modified. Additional Pod security groups or workload isolation require a reviewed later design.
 
-One NAT in the first AZ is a lab cost/availability tradeoff. Fargate does not guarantee even Pod placement across selected subnets; two replicas alone do not prove multi-AZ availability. An even-spread requirement needs per-AZ profiles and corresponding workload deployment changes reviewed with Chat 2. Database subnets have no Internet/NAT route. No RDS or ALB exists from this preparation, and the state bucket is outside the VPC.
+One NAT in the first AZ is a lab cost/availability tradeoff. Fargate does not guarantee even Pod placement across selected subnets; two replicas alone do not prove multi-AZ availability. An even-spread requirement needs per-AZ profiles and corresponding workload deployment changes reviewed with the application workstream. Database subnets have no Internet/NAT route. No RDS or ALB exists from this preparation, and the state bucket is outside the VPC.
 
 Read-only earlier Ohio inventory found four VPC primary ranges (10.20/16, 10.50/16, 10.60/16 and 172.31/16), two other EKS clusters and no proposed Banking ECR names. Proposed 10.70.0.0/16 avoids those observed primary ranges; the protected runtime preflight checks all primary/secondary associations again. Those observations do not authorize reuse, establish quotas or prove SCP permissions.
+
+Centralized approved tags and limitations: TAGGING.md. Exact source inventory: RESOURCE-INVENTORY.md. EKS deletion protection is enabled; approved teardown is documented in CLEANUP.md.

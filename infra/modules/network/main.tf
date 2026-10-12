@@ -4,6 +4,8 @@ terraform {
   }
 }
 variable "name" { type = string }
+variable "tags" { type = map(string) }
+variable "aws_region" { type = string }
 variable "cidr" { type = string }
 variable "availability_zones" {
   type = list(string)
@@ -21,11 +23,11 @@ resource "aws_vpc" "this" {
   cidr_block           = var.cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags                 = { Name = "${var.name}-vpc" }
+  tags                 = merge(var.tags, { Component = "network" }, { Name = "${var.name}-vpc" })
 }
 resource "aws_default_security_group" "closed" {
   vpc_id  = aws_vpc.this.id
-  tags    = { Name = "${var.name}-default-deny" }
+  tags    = merge(var.tags, { Component = "security" }, { Name = "${var.name}-default-deny" })
   ingress = []
   egress  = []
   # Empty rules deliberately close only this newly created VPC's default group.
@@ -36,10 +38,10 @@ resource "aws_subnet" "public" {
   availability_zone       = each.value
   cidr_block              = cidrsubnet(var.cidr, 8, tonumber(each.key))
   map_public_ip_on_launch = false
-  tags = {
+  tags = merge(var.tags, { Component = "network" }, {
     Name                     = "${var.name}-public-${each.key}"
     "kubernetes.io/role/elb" = "1"
-  }
+  })
 }
 resource "aws_subnet" "application" {
   for_each                = local.zones
@@ -47,10 +49,10 @@ resource "aws_subnet" "application" {
   availability_zone       = each.value
   cidr_block              = cidrsubnet(var.cidr, 4, 2 + tonumber(each.key))
   map_public_ip_on_launch = false
-  tags = {
+  tags = merge(var.tags, { Component = "network" }, {
     Name                              = "${var.name}-application-${each.key}"
     "kubernetes.io/role/internal-elb" = "1"
-  }
+  })
 }
 resource "aws_subnet" "database" {
   for_each                = local.zones
@@ -58,25 +60,25 @@ resource "aws_subnet" "database" {
   availability_zone       = each.value
   cidr_block              = cidrsubnet(var.cidr, 8, 64 + tonumber(each.key))
   map_public_ip_on_launch = false
-  tags                    = { Name = "${var.name}-database-${each.key}" }
+  tags                    = merge(var.tags, { Component = "network" }, { Name = "${var.name}-database-${each.key}" })
 }
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "${var.name}-igw" }
+  tags   = merge(var.tags, { Component = "network" }, { Name = "${var.name}-igw" })
 }
 resource "aws_eip" "nat" {
   domain = "vpc"
-  tags   = { Name = "${var.name}-nat" }
+  tags   = merge(var.tags, { Component = "network" }, { Name = "${var.name}-nat-eip" })
 }
 resource "aws_nat_gateway" "this" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public["0"].id
   depends_on    = [aws_internet_gateway.this]
-  tags          = { Name = "${var.name}-nat" }
+  tags          = merge(var.tags, { Component = "network" }, { Name = "${var.name}-nat" })
 }
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "${var.name}-public" }
+  tags   = merge(var.tags, { Component = "network" }, { Name = "${var.name}-public" })
 }
 resource "aws_route" "internet" {
   route_table_id         = aws_route_table.public.id
@@ -91,7 +93,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_route_table" "application" {
   for_each = local.zones
   vpc_id   = aws_vpc.this.id
-  tags     = { Name = "${var.name}-application-${each.key}" }
+  tags     = merge(var.tags, { Component = "network" }, { Name = "${var.name}-application-${each.key}" })
 }
 resource "aws_route" "nat" {
   for_each               = local.zones
@@ -107,7 +109,7 @@ resource "aws_route_table_association" "application" {
 resource "aws_route_table" "database" {
   for_each = local.zones
   vpc_id   = aws_vpc.this.id
-  tags     = { Name = "${var.name}-isolated-database-${each.key}" }
+  tags     = merge(var.tags, { Component = "network" }, { Name = "${var.name}-isolated-database-${each.key}" })
   route    = []
   # Local VPC route only: no Internet Gateway or NAT default route.
 }
@@ -116,21 +118,26 @@ resource "aws_route_table_association" "database" {
   subnet_id      = aws_subnet.database[each.key].id
   route_table_id = aws_route_table.database[each.key].id
 }
-data "aws_region" "current" {}
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.this.id
-  service_name      = "com.amazonaws.${data.aws_region.current.region}.s3"
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = [for table in aws_route_table.application : table.id]
-  tags              = { Name = "${var.name}-s3" }
+  policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Sid    = "RegionalECRLayersOnly", Effect = "Allow", Principal = "*",
+    Action = ["s3:GetObject"], Resource = ["arn:aws:s3:::prod-${var.aws_region}-starport-layer-bucket/*"]
+  }] })
+  tags = merge(var.tags, { Component = "network" }, { Name = "${var.name}-s3" })
 }
 resource "aws_cloudwatch_log_group" "flow" {
+  tags = merge(var.tags, { Component = "logging", Name = "${var.name}-flow-logs" })
   # checkov:skip=CKV_AWS_338:Development flow logs retain 30 days; annual retention is reviewed in Phase 6.
   name              = "/banking/${var.name}/vpc-flow"
   retention_in_days = 30
   kms_key_id        = var.logs_kms_key_arn
 }
 resource "aws_flow_log" "this" {
+  tags                 = merge(var.tags, { Component = "logging", Name = "${var.name}-vpc-flow" })
   vpc_id               = aws_vpc.this.id
   traffic_type         = "ALL"
   iam_role_arn         = var.flow_log_role_arn

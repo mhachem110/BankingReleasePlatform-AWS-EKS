@@ -1,6 +1,6 @@
-# Chat 1 / Chat 2 Fargate interface
+# Integrated Fargate application/infrastructure interface
 
-Chat 1 owns infra, IAM, infrastructure docs/scripts, infra-operations.yml and Terraform validation. Chat 2 owns Helm, apps, deployment scripts and application CI/CD. Parallel work uses isolated checkouts; no branch rewrite or shared-index commits. PR #8 remains infra -> dev. This document records requirements, not permission to deploy or change another workstream.
+PRs #8, #9 and #10 are merged in dev. One coordinator now owns integration. Reusable infra and feature/app branches remain separate workstreams with ordinary merges; no branch rewrite or shared-index commits. This document records interfaces, not AWS deployment authorization.
 
 | Interface | Value |
 | --- | --- |
@@ -21,7 +21,7 @@ Chat 1 owns infra, IAM, infrastructure docs/scripts, infra-operations.yml and Te
 | ALB | IP targets; approved public subnets for internet-facing ALB; disabled until separately approved |
 | Kubernetes access | Approved operator has cluster admin; separate application deployer edits banking-dev only |
 
-## Helm and release requirements (Chat 2)
+## Helm and release requirements
 
 - Linux amd64 images; equal CPU/memory requests and limits on every container. App planning baseline is 250m/512Mi; Fargate allocates 0.25 vCPU/1GB after system memory overhead.
 - Avoid DaemonSets, hostNetwork, hostPort, privileged containers, EC2 node selectors, topologySpreadConstraints and affinity-based availability claims. Fargate does not guarantee even placement across the two selected subnets.
@@ -32,4 +32,4 @@ Chat 1 owns infra, IAM, infrastructure docs/scripts, infra-operations.yml and Te
 - The infrastructure workflow does not install the controller or applications. The live controller rollout and sts:AssumeRoleWithWebIdentity verification are a separate authorized operator deployment.
 - GitHub OIDC/environment approval is distinct from Kubernetes IRSA. No AWS credentials in PR validation. Workflows execute paid changes only from reviewed environment branches and approved environments.
 
-The installed governance policy currently classifies Helm/deploy workflows as infrastructure-owned and can block feature/app changes under the user's new split. Document that blocker in the application PR and request a scoped policy change; do not bypass or disable existing checks. README and application docs must be reconciled by Chat 2 after both PRs are reviewed.
+Approved PR #10 permits only the required owner-authored application release paths on feature/app while preserving infrastructure/IAM/governance ownership, CODEOWNERS, required security checks and the six branch routes. No bypass or missing-check requirement is introduced. Reviewed infrastructure preparation can update shared Helm metadata through infra.

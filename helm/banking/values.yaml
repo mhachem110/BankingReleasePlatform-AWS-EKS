@@ -1,4 +1,6 @@
 replicaCount: 2
+ownership:
+  owner: MahmoudHachem
 replicas:
   account: null
   payment: null

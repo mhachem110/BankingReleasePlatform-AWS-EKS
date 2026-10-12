@@ -26,6 +26,14 @@ def fixture():
 
 
 class SafetyTests(unittest.TestCase):
+    def test_access_role_cannot_be_an_eks_service_identity(self):
+        env = fixture()
+        values = json.loads(env["PLATFORM_INPUTS_JSON"])
+        values["operator_role_arn"] = values["cluster_role_arn"]
+        env["PLATFORM_INPUTS_JSON"] = json.dumps(values)
+        with self.assertRaises(ValueError):
+            configuration(env)
+
     def test_provider_locks_cover_windows_and_linux(self):
         import re
         reference = (ROOT / "infra/bootstrap/.terraform.lock.hcl").read_text()

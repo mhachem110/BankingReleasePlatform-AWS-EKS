@@ -9,13 +9,18 @@
 {{- end }}
 {{- range $service := list "account" "payment" }}
 {{- $image := index $.Values.images $service }}
+{{- $metadata := dict "root" $ "service" $service "digest" $image.digest }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
   namespace: {{ $.Release.Namespace }}
-  labels: {app: {{ $.Release.Name }}-{{ $service }}, app.kubernetes.io/instance: {{ $.Release.Name }}}
+  labels:
+    app: {{ $.Release.Name }}-{{ $service }}
+    {{- include "banking.labels" $metadata | nindent 4 }}
+  annotations:
+    {{- include "banking.annotations" $metadata | nindent 4 }}
 automountServiceAccountToken: false
 ---
 apiVersion: apps/v1
@@ -23,7 +28,11 @@ kind: Deployment
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
   namespace: {{ $.Release.Namespace }}
-  labels: {app: {{ $.Release.Name }}-{{ $service }}, app.kubernetes.io/instance: {{ $.Release.Name }}}
+  labels:
+    app: {{ $.Release.Name }}-{{ $service }}
+    {{- include "banking.labels" $metadata | nindent 4 }}
+  annotations:
+    {{- include "banking.annotations" $metadata | nindent 4 }}
 spec:
   {{- if not $.Values.autoscaling.enabled }}
   replicas: {{ default $.Values.replicaCount (index $.Values.replicas $service) }}
@@ -39,8 +48,9 @@ spec:
     metadata:
       labels:
         app: {{ $.Release.Name }}-{{ $service }}
-        app.kubernetes.io/instance: {{ $.Release.Name }}
-        app.kubernetes.io/part-of: banking
+        {{- include "banking.labels" $metadata | nindent 8 }}
+      annotations:
+        {{- include "banking.annotations" $metadata | nindent 8 }}
     spec:
       serviceAccountName: {{ $.Release.Name }}-{{ $service }}
       automountServiceAccountToken: false
@@ -94,7 +104,11 @@ kind: Service
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
   namespace: {{ $.Release.Namespace }}
-  labels: {app: {{ $.Release.Name }}-{{ $service }}, app.kubernetes.io/instance: {{ $.Release.Name }}}
+  labels:
+    app: {{ $.Release.Name }}-{{ $service }}
+    {{- include "banking.labels" $metadata | nindent 4 }}
+  annotations:
+    {{- include "banking.annotations" $metadata | nindent 4 }}
 spec:
   type: ClusterIP
   selector: {app: {{ $.Release.Name }}-{{ $service }}}
@@ -105,6 +119,10 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
   namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "banking.labels" $metadata | nindent 4 }}
+  annotations:
+    {{- include "banking.annotations" $metadata | nindent 4 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -116,6 +134,10 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
   namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "banking.labels" $metadata | nindent 4 }}
+  annotations:
+    {{- include "banking.annotations" $metadata | nindent 4 }}
 spec:
   scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ $.Release.Name }}-{{ $service }}}
   minReplicas: {{ $.Values.autoscaling.minReplicas }}

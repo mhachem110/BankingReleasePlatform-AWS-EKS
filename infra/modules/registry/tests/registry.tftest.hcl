@@ -1,5 +1,8 @@
 mock_provider "aws" {}
-variables { name = "banking-dev" }
+variables {
+  name = "banking-dev"
+  tags = { Project = "BankingReleasePlatform", Environment = "dev", ManagedBy = "Terraform", Owner = "TestOwner", Purpose = "CloudEngineerTraining" }
+}
 run "release_retention" {
   command = plan
   assert {

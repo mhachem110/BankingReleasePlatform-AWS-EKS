@@ -5,5 +5,10 @@ metadata:
   name: banking-dev
   labels:
     app.kubernetes.io/part-of: banking
+    app.kubernetes.io/name: banking
+    app.kubernetes.io/component: namespace
+    banking.example/environment: dev
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/enforce-version: latest
+  annotations:
+    banking.example/owner: MahmoudHachem

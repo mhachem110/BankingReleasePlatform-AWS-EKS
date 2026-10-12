@@ -1,0 +1,106 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "eks.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "eks-fargate-pods.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "banking-release-platform/dev/platform/terraform.tfstate",
+            "banking-release-platform/dev/platform/terraform.tfstate.tflock",
+            "banking-release-platform/_workspaces/*"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/platform/terraform.tfstate"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/platform/terraform.tfstate.tflock"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:ListGrants"
+      ],
+      "Resource": "REPLACE_WITH_ACTUAL_APPROVED_OHIO_KMS_KEY_ARN"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "kms:CreateGrant",
+      "Resource": "REPLACE_WITH_ACTUAL_APPROVED_OHIO_KMS_KEY_ARN",
+      "Condition": {
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateOpenIDConnectProvider",
+        "iam:TagOpenIDConnectProvider"
+      ],
+      "Resource": "arn:aws:iam::866934333672:oidc-provider/oidc.eks.us-east-2.amazonaws.com/id/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetOpenIDConnectProvider",
+        "iam:ListOpenIDConnectProviderTags"
+      ],
+      "Resource": "arn:aws:iam::866934333672:oidc-provider/oidc.eks.us-east-2.amazonaws.com/id/*"
+    }
+  ]
+}

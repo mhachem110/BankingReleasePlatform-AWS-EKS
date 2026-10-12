@@ -49,6 +49,7 @@ jobs:
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
       PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+      CAPACITY_REVIEW_JSON: ${{ vars.CAPACITY_REVIEW_JSON }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
     outputs:
@@ -103,6 +104,7 @@ jobs:
             platform.tfvars.json
             plan-review.json
             plan.txt
+            capacity-review.json
           retention-days: 1
           if-no-files-found: error
       - name: Publish review instructions
@@ -127,6 +129,7 @@ jobs:
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
       REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
+      CAPACITY_REVIEW_JSON: ${{ vars.CAPACITY_REVIEW_JSON }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -161,6 +164,7 @@ jobs:
       - name: Apply only the reviewed saved plan, then verify
         run: |
           set -euo pipefail
+          python scripts/infra/preflight.py
           root=infra/environments/dev/platform
           terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/reviewed/platform.tfbackend.json"
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]

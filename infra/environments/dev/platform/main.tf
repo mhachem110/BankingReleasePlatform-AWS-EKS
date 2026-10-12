@@ -13,7 +13,7 @@ provider "aws" {
   region              = var.aws_region
   allowed_account_ids = [var.expected_account_id]
   default_tags {
-    tags = { Project = "BankingReleasePlatform", Environment = "dev", ManagedBy = "Terraform" }
+    tags = local.common_tags
   }
 }
 variable "aws_region" { type = string }
@@ -50,7 +50,30 @@ variable "kubernetes_version" {
   }
 }
 variable "addon_versions" { type = map(string) }
-locals { name = "banking-dev" }
+variable "owner" {
+  type    = string
+  default = "MahmoudHachem"
+  validation {
+    condition     = length(trimspace(var.owner)) > 0 && length(var.owner) <= 128
+    error_message = "Use the approved non-sensitive project owner tag."
+  }
+}
+variable "cost_center" {
+  type     = string
+  default  = null
+  nullable = true
+  validation {
+    condition     = var.cost_center == null ? true : length(trimspace(var.cost_center)) > 0 && length(var.cost_center) <= 128
+    error_message = "Omit CostCenter until an actual approved value is assigned."
+  }
+}
+locals {
+  name = "banking-dev"
+  common_tags = merge({
+    Project = "BankingReleasePlatform", Environment = "dev", ManagedBy = "Terraform",
+    Owner   = var.owner, Purpose = "CloudEngineerTraining"
+  }, var.cost_center == null ? {} : { CostCenter = var.cost_center })
+}
 data "aws_caller_identity" "current" {}
 data "aws_iam_role" "cluster" { name = "cloudbatch818-mahmoud-banking-eks-cluster" }
 data "aws_iam_role" "fargate" { name = "cloudbatch818-mahmoud-banking-fargate-execution" }
@@ -62,7 +85,7 @@ resource "terraform_data" "prerequisites" {
       condition = (var.aws_region == "us-east-2" && data.aws_caller_identity.current.account_id == var.expected_account_id &&
         data.aws_iam_role.cluster.arn == var.cluster_role_arn && data.aws_iam_role.fargate.arn == var.fargate_execution_role_arn &&
         data.aws_iam_role.flow.arn == var.flow_log_role_arn &&
-        length(distinct([var.cluster_role_arn, var.fargate_execution_role_arn, var.flow_log_role_arn])) == 3 &&
+        length(distinct([var.cluster_role_arn, var.fargate_execution_role_arn, var.flow_log_role_arn, var.operator_role_arn, var.deployer_role_arn])) == 5 &&
         var.operator_role_arn != var.deployer_role_arn &&
         !endswith(var.operator_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
         !endswith(var.deployer_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
@@ -74,6 +97,8 @@ resource "terraform_data" "prerequisites" {
   }
 }
 module "network" {
+  aws_region         = var.aws_region
+  tags               = local.common_tags
   source             = "../../../modules/network"
   name               = local.name
   cidr               = var.vpc_cidr
@@ -83,11 +108,13 @@ module "network" {
   depends_on         = [terraform_data.prerequisites]
 }
 module "registry" {
+  tags       = local.common_tags
   source     = "../../../modules/registry"
   name       = local.name
   depends_on = [terraform_data.prerequisites]
 }
 module "eks" {
+  tags                       = local.common_tags
   source                     = "../../../modules/eks"
   name                       = local.name
   vpc_id                     = module.network.vpc_id
@@ -116,3 +143,5 @@ output "oidc_provider_arn" { value = module.eks.oidc_provider_arn }
 output "cluster_endpoint" { value = module.eks.endpoint }
 output "controller_irsa_service_account" { value = "system:serviceaccount:kube-system:aws-load-balancer-controller" }
 output "dev_platform_state_key" { value = "banking-release-platform/dev/platform/terraform.tfstate" }
+
+output "common_resource_tags" { value = local.common_tags }

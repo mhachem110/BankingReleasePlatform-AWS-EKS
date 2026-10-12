@@ -3,6 +3,8 @@ import ipaddress
 import json
 from jsonschema import validators
 import subprocess
+import os
+import importlib.util
 from pathlib import Path
 
 
@@ -39,6 +41,11 @@ def verify_service_role(field, role, values):
                    s.get("Condition", {}).get("StringEquals", {}).get("aws:SourceAccount") == values["expected_account_id"]
                    for s in matches):
             raise ValueError("Fargate trust must be scoped to this account and Banking profiles.")
+    if field == "flow_log_role_arn":
+        expected = f"arn:aws:ec2:us-east-2:{values['expected_account_id']}:vpc-flow-log/*"
+        if not all(s.get("Condition", {}).get("ArnLike", {}).get("aws:SourceArn") == expected and
+                   s.get("Condition", {}).get("StringEquals", {}).get("aws:SourceAccount") == values["expected_account_id"] for s in matches):
+            raise ValueError("Flow-log trust must be restricted to Banking account/Region.")
 
 
 def verify_addon_version(addon, pinned, version, available):
@@ -57,6 +64,11 @@ def verify_addon_schema(config, schema):
 
 def main():
     values = json.loads(Path("platform.tfvars.json").read_text())
+    spec = importlib.util.spec_from_file_location("capacity_review", Path(__file__).with_name("capacity-review.py"))
+    capacity = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(capacity)
+    evidence = capacity.verify(json.loads(os.environ["CAPACITY_REVIEW_JSON"]), values["expected_account_id"])
+    Path("capacity-review.json").write_text(json.dumps(evidence, indent=2))
     identity = aws("sts", "get-caller-identity")
     if identity["Account"] != values["expected_account_id"]:
         raise ValueError("Wrong account.")
@@ -80,6 +92,13 @@ def main():
             attached = {policy["PolicyName"] for policy in aws("iam", "list-attached-role-policies", "--role-name", name)["AttachedPolicies"]}
             if not required[field] <= attached:
                 raise ValueError("Required managed role policy is absent: " + field)
+        else:
+            policy = aws("iam", "get-role-policy", "--role-name", name, "--policy-name", "BankingFlowLogs")["PolicyDocument"]
+            expected = {"logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"}
+            target = f"arn:aws:logs:us-east-2:{values['expected_account_id']}:log-group:/banking/banking-dev/vpc-flow:*"
+            if not any(s.get("Effect") == "Allow" and s.get("Resource") == target and
+                expected <= set(s.get("Action", [])) for s in policy["Statement"]):
+                raise ValueError("Dedicated BankingFlowLogs delivery permissions are missing.")
     for name, service in [("AWSServiceRoleForAmazonEKS", "eks.amazonaws.com"),
                           ("AWSServiceRoleForAmazonEKSForFargate", "eks-fargate.amazonaws.com")]:
         role = aws("iam", "get-role", "--role-name", name)["Role"]
@@ -89,8 +108,15 @@ def main():
         role = aws("iam", "get-role", "--role-name", values[field].split("/")[-1])["Role"]
         if role["Arn"] != values[field]:
             raise ValueError("Access role ARN mismatch.")
+        if field == "deployer_role_arn":
+            expected = "repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:dev"
+            trust = role["AssumeRolePolicyDocument"]["Statement"]
+            if not any(s.get("Effect") == "Allow" and s.get("Action") == "sts:AssumeRoleWithWebIdentity" and
+                s.get("Principal", {}).get("Federated") == f"arn:aws:iam::{values['expected_account_id']}:oidc-provider/token.actions.githubusercontent.com" and
+                s.get("Condition", {}).get("StringEquals", {}) == {"token.actions.githubusercontent.com:aud":"sts.amazonaws.com", "token.actions.githubusercontent.com:sub":expected} for s in trust):
+                raise ValueError("Application role must authorize the verified Banking/dev OIDC relationship.")
     key = aws("kms", "describe-key", "--key-id", values["kms_key_arn"])["KeyMetadata"]
-    if key["KeyState"] != "Enabled" or key["KeySpec"] != "SYMMETRIC_DEFAULT" or key["KeyUsage"] != "ENCRYPT_DECRYPT":
+    if key.get("Arn") != values["kms_key_arn"] or key["KeyState"] != "Enabled" or key["KeySpec"] != "SYMMETRIC_DEFAULT" or key["KeyUsage"] != "ENCRYPT_DECRYPT":
         raise ValueError("An enabled symmetric encryption KMS key is required.")
     version = values.get("kubernetes_version", "1.36")
     versions = aws("eks", "describe-cluster-versions", "--cluster-versions", version)
