@@ -35,7 +35,7 @@ def runtime_values(environment):
     return values
 
 def run(args, *, capture=False, check=True, **kwargs):
-    result = subprocess.run([str(a) for a in args], check=check, text=True,
+    result = subprocess.run([str(a) for a in args], check=check, text=True, encoding="utf-8",
                             capture_output=capture, **kwargs)
     return result.stdout.strip() if capture else result
 

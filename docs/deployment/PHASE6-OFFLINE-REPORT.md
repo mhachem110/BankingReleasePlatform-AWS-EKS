@@ -3,6 +3,11 @@
 This is code and local execution evidence. No AWS publication, deployment, plan,
 resource creation, IAM update or live acceptance is claimed. Reconciliation PR #12
 was merged with explicit owner approval; feature/app synchronized normally with dev.
+During final integration, infra PR #13 was merged first and its data root preserved
+by an ordinary merge into feature/app. A Windows CP1252/UTF-8 Docker metadata
+decoding failure was preserved and corrected with explicit UTF-8 subprocess I/O;
+the PostgreSQL/SQS recovery suite then passed. PR #14 remains subject to final
+current-head checks and the owner's approved normal integration sequence.
 
 ## Implemented behavior
 

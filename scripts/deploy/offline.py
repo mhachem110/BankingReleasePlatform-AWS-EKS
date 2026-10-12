@@ -44,7 +44,8 @@ if __name__ == "__main__":
     for name, command in commands:
         print("RUN: " + name, flush=True)
         start=time.monotonic()
-        result=subprocess.run([str(c) for c in command], cwd=ROOT, text=True,
+        result=subprocess.run([str(c) for c in command], cwd=ROOT, text=True, encoding="utf-8",
+                              env={**os.environ, "PYTHONIOENCODING":"utf-8"},
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (output / (name + ".log")).write_text(result.stdout, encoding="utf-8")
         results.append({"check":name,"exitCode":result.returncode,

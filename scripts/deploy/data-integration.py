@@ -17,7 +17,8 @@ SQS = 'localstack/localstack@sha256:a65ee2a9d45a7a34a1f1faae515d2e577ce11210312c
 
 
 def run(args, *, env=None, required=True):
-    result = subprocess.run([str(a) for a in args], cwd=ROOT, env=env, text=True, capture_output=True)
+    result = subprocess.run([str(a) for a in args], cwd=ROOT, env=env, text=True,
+                            encoding="utf-8", capture_output=True)
     if required and result.returncode:
         # Never print command arguments/environment containing local fixture credentials.
         raise RuntimeError(result.stdout[-3000:] + result.stderr[-3000:])
