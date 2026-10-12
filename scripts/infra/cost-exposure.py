@@ -12,16 +12,18 @@ spec.loader.exec_module(cost)
 
 def scenarios(model):
     result = {}
-    for name in ("initial_system", "four_apis", "four_apis_and_controller", "hpa_max", "hpa_max_all_rollouts"):
+    for name in ("initial_system", "dev_only", "two_namespaces", "two_namespaces_and_controller", "hpa_max", "hpa_max_all_rollouts"):
         scenario = copy.deepcopy(model)
         if name == "initial_system":
             scenario["pods"] = [p for p in model["pods"] if p["component"] in ("CoreDNS", "Metrics Server")]
-        elif name == "four_apis":
-            scenario["pods"] = model["pods"][:3]
+        elif name in {"dev_only", "two_namespaces"}:
+            scenario["pods"] = scenario["pods"][:3]
+            if name == "dev_only":
+                scenario["pods"][0]["replicas"] = 4
         if name.startswith("hpa_max"):
-            scenario["pods"][0]["replicas"] = 8
+            scenario["pods"][0]["replicas"] = 16
         if name == "hpa_max_all_rollouts":
-            scenario["pods"][0]["replicas"] += 2
+            scenario["pods"][0]["replicas"] += 4
             for pod in scenario["pods"][1:]:
                 pod["replicas"] += 1
         hourly = sum(Decimal(str(value)) / Decimal(str(model["hours_per_month"])) for value in model["fixed_monthly_usd"].values())

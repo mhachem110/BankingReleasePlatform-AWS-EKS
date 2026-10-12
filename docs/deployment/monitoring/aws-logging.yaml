@@ -8,6 +8,11 @@ data:
   flb_log_cw: "false"
   filters.conf: |
     [FILTER]
+        Name parser
+        Match kube.*
+        Key_name log
+        Parser crio
+    [FILTER]
         Name kubernetes
         Match kube.*
         Merge_Log On
@@ -17,12 +22,30 @@ data:
     [FILTER]
         Name grep
         Match kube.*
-        Regex $kubernetes['namespace_name'] ^banking-dev$
+        Regex $kubernetes['namespace_name'] ^banking-(dev|prod)$
+    [FILTER]
+        Name rewrite_tag
+        Match kube.*
+        Rule $kubernetes['namespace_name'] ^(banking-dev|banking-prod)$ $1.$TAG false
   output.conf: |
     [OUTPUT]
         Name cloudwatch_logs
-        Match kube.*
+        Match banking-dev.*
         region us-east-2
         log_group_name /banking/banking-dev/application
         log_stream_prefix banking-
         auto_create_group false
+    [OUTPUT]
+        Name cloudwatch_logs
+        Match banking-prod.*
+        region us-east-2
+        log_group_name /banking/banking-prod/application
+        log_stream_prefix banking-
+        auto_create_group false
+  parsers.conf: |
+    [PARSER]
+        Name crio
+        Format Regex
+        Regex ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>P|F) (?<log>.*)$
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L%z

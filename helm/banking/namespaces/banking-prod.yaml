@@ -1,0 +1,28 @@
+# Applied once by the infrastructure owner, outside the application Helm release.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: banking-prod
+  labels:
+    app.kubernetes.io/part-of: banking
+    app.kubernetes.io/name: banking
+    app.kubernetes.io/component: namespace
+    banking.example/environment: prod
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+  annotations:
+    banking.example/owner: MahmoudHachem
+---
+# Operator-managed limits; changing these requires capacity/cost approval.
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: banking-release-capacity, namespace: banking-prod}
+spec:
+  hard:
+    pods: '10'
+    requests.cpu: '2500m'
+    limits.cpu: '2500m'
+    requests.memory: 5Gi
+    limits.memory: 5Gi
+    services.loadbalancers: '0'
+    services.nodeports: '0'

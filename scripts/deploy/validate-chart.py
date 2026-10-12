@@ -26,4 +26,5 @@ if __name__ == "__main__":
         run(["kubeconform", "-strict", "-summary", "-kubernetes-version", "1.36.0",
              "-cache", cache, rendered])
     run(["kubeconform", "-strict", "-summary", "-kubernetes-version", "1.36.0",
-         "-cache", cache, ROOT / "helm/banking/namespaces/banking-dev.yaml"])
+         "-cache", cache, *sorted((ROOT / "helm/banking/namespaces").glob("*.yaml")), ROOT / "iam/phase3/deployer-verification-rbac.yaml",
+         *sorted((ROOT / "docs/deployment/monitoring").glob("*rbac.yaml")), ROOT / "docs/deployment/monitoring/aws-logging.yaml"])

@@ -23,12 +23,12 @@ def configuration(env):
     if env["OPERATION"] == "apply" and env.get("APPROVAL") != "APPLY-REVIEWED-PHASE3-PLAN":
         raise ValueError("Apply requires the exact Phase 3 approval phrase and environment review.")
     account = env["AWS_EXPECTED_ACCOUNT_ID"]
-    if not re.fullmatch(r"[0-9]{12}", account) or env["AWS_REGION"] != "us-east-2":
+    if account != "866934333672" or env["AWS_REGION"] != "us-east-2":
         raise ValueError("Verify account and approved Ohio Region.")
     if env["TF_STATE_BUCKET"] != "mhachem-banking-tfstate-" + account:
         raise ValueError("Only the existing dedicated Banking bucket is allowed.")
     inputs = json.loads(env["PLATFORM_INPUTS_JSON"])
-    allowed = set(ROLE_NAMES) | {"operator_role_arn", "deployer_role_arn", "kms_key_arn",
+    allowed = set(ROLE_NAMES) | {"operator_role_arn", "deployer_role_arn", "prod_deployer_role_arn", "kms_key_arn",
         "availability_zones", "vpc_cidr", "endpoint_cidrs", "kubernetes_version", "addon_versions", "owner", "cost_center"}
     if set(inputs) - allowed:
         raise ValueError("Unknown/stale platform fields are not accepted.")
@@ -43,12 +43,12 @@ def configuration(env):
             raise ValueError("Administrator role ARN does not match " + field)
     if "/" in inputs["fargate_execution_role_arn"].split(":role/")[1]:
         raise ValueError("Fargate execution roles cannot have an IAM path.")
-    for field in ("operator_role_arn", "deployer_role_arn"):
+    for field in ("operator_role_arn", "deployer_role_arn", "prod_deployer_role_arn"):
         if not inputs[field].startswith(f"arn:aws:iam::{account}:role/") or inputs[field].endswith("/cloudbatch818-mahmoud-cloudops-bootstrap"):
             raise ValueError("Access entries must use verified same-account IAM roles.")
     if inputs["operator_role_arn"] == inputs["deployer_role_arn"]:
         raise ValueError("Operator and namespace deployer must be distinct.")
-    if len(set(inputs[k] for k in [*ROLE_NAMES, "operator_role_arn", "deployer_role_arn"])) != 5:
+    if len(set(inputs[k] for k in [*ROLE_NAMES, "operator_role_arn", "deployer_role_arn", "prod_deployer_role_arn"])) != 6:
         raise ValueError("Service roles, operator and application identities must all be distinct.")
     if not re.fullmatch(r"arn:aws:kms:us-east-2:" + account + r":key/[a-f0-9-]{36}", inputs["kms_key_arn"]):
         raise ValueError("Use the administrator-approved symmetric KMS key.")

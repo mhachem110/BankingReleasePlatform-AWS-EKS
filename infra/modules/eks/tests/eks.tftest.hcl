@@ -10,6 +10,7 @@ variables {
   fargate_execution_role_arn = "arn:aws:iam::123456789012:role/test-fargate"
   operator_role_arn          = "arn:aws:iam::123456789012:role/test-operator"
   deployer_role_arn          = "arn:aws:iam::123456789012:role/test-deployer"
+  prod_deployer_role_arn     = "arn:aws:iam::123456789012:role/test-prod-deployer"
   kms_key_arn                = "arn:aws:kms:us-east-2:123456789012:key/00000000-0000-0000-0000-000000000000"
   kubernetes_version         = "1.36"
   endpoint_cidrs             = ["203.0.113.10/32"]
@@ -25,11 +26,11 @@ run "cluster_security" {
     error_message = "Access must be explicit; creator must not receive implicit cluster admin."
   }
   assert {
-    condition     = aws_eks_access_policy_association.deployer.access_scope[0].type == "namespace" && aws_eks_access_policy_association.deployer.access_scope[0].namespaces == toset(["banking-dev"])
+    condition     = aws_eks_access_entry.deployer.kubernetes_groups == toset(["banking-release-dev"]) && aws_eks_access_entry.prod_deployer.kubernetes_groups == toset(["banking-release-prod"])
     error_message = "Application deployer must not receive cluster-wide rights."
   }
   assert {
-    condition     = aws_eks_access_entry.deployer.kubernetes_groups == toset(["banking-release-verifier"])
+    condition     = aws_eks_access_entry.deployer.kubernetes_groups == toset(["banking-release-dev"])
     error_message = "Release verification must use the explicit read-only RBAC group."
   }
   assert {
@@ -43,6 +44,10 @@ run "cluster_security" {
   assert {
     condition     = one(aws_eks_fargate_profile.banking.selector).namespace == "banking-dev" && try(length(one(aws_eks_fargate_profile.banking.selector).labels), 0) == 0
     error_message = "Every banking-dev Pod must match the application profile."
+  }
+  assert {
+    condition     = one(aws_eks_fargate_profile.production.selector).namespace == "banking-prod" && aws_eks_access_entry.prod_deployer.kubernetes_groups == toset(["banking-release-prod"]) && aws_eks_access_entry.deployer.kubernetes_groups == toset(["banking-release-dev"])
+    error_message = "Production compute and deployment groups must remain distinct."
   }
   assert {
     condition     = one(aws_eks_fargate_profile.coredns.selector).labels["k8s-app"] == "kube-dns" && length(aws_eks_fargate_profile.controller.selector) == 2

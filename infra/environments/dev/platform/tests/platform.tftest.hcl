@@ -25,6 +25,7 @@ variables {
   flow_log_role_arn          = "arn:aws:iam::123456789012:role/cloudbatch818-mahmoud-banking-flow-logs"
   operator_role_arn          = "arn:aws:iam::123456789012:role/test-operator"
   deployer_role_arn          = "arn:aws:iam::123456789012:role/test-deployer"
+  prod_deployer_role_arn     = "arn:aws:iam::123456789012:role/test-prod-deployer"
   kms_key_arn                = "arn:aws:kms:us-east-2:123456789012:key/11111111-2222-4333-8444-555555555555"
   endpoint_cidrs             = ["203.0.113.10/32"]
   addon_versions = {
@@ -58,4 +59,10 @@ run "blank_cost_center_rejected" {
   command = plan
   variables { cost_center = " " }
   expect_failures = [var.cost_center]
+}
+
+run "shared_application_principal_rejected" {
+  command = plan
+  variables { prod_deployer_role_arn = "arn:aws:iam::123456789012:role/test-deployer" }
+  expect_failures = [terraform_data.prerequisites]
 }

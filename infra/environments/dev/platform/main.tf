@@ -39,6 +39,7 @@ variable "fargate_execution_role_arn" { type = string }
 variable "flow_log_role_arn" { type = string }
 variable "operator_role_arn" { type = string }
 variable "deployer_role_arn" { type = string }
+variable "prod_deployer_role_arn" { type = string }
 variable "kms_key_arn" { type = string }
 variable "endpoint_cidrs" { type = list(string) }
 variable "kubernetes_version" {
@@ -85,11 +86,12 @@ resource "terraform_data" "prerequisites" {
       condition = (var.aws_region == "us-east-2" && data.aws_caller_identity.current.account_id == var.expected_account_id &&
         data.aws_iam_role.cluster.arn == var.cluster_role_arn && data.aws_iam_role.fargate.arn == var.fargate_execution_role_arn &&
         data.aws_iam_role.flow.arn == var.flow_log_role_arn &&
-        length(distinct([var.cluster_role_arn, var.fargate_execution_role_arn, var.flow_log_role_arn, var.operator_role_arn, var.deployer_role_arn])) == 5 &&
+        length(distinct([var.cluster_role_arn, var.fargate_execution_role_arn, var.flow_log_role_arn, var.operator_role_arn, var.deployer_role_arn, var.prod_deployer_role_arn])) == 6 &&
         var.operator_role_arn != var.deployer_role_arn &&
         !endswith(var.operator_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
         !endswith(var.deployer_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
-        alltrue([for arn in [var.operator_role_arn, var.deployer_role_arn] : startswith(arn, "arn:aws:iam::${var.expected_account_id}:role/")]) &&
+        !endswith(var.prod_deployer_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
+        alltrue([for arn in [var.operator_role_arn, var.deployer_role_arn, var.prod_deployer_role_arn] : startswith(arn, "arn:aws:iam::${var.expected_account_id}:role/")]) &&
         startswith(var.kms_key_arn, "arn:aws:kms:${var.aws_region}:${var.expected_account_id}:key/") &&
       data.aws_kms_key.this.key_state == "Enabled")
       error_message = "Administrator-provided distinct roles, enabled key and account must match verified inputs."
@@ -126,6 +128,7 @@ module "eks" {
   endpoint_cidrs             = var.endpoint_cidrs
   operator_role_arn          = var.operator_role_arn
   deployer_role_arn          = var.deployer_role_arn
+  prod_deployer_role_arn     = var.prod_deployer_role_arn
   addon_versions             = var.addon_versions
   # Ensure private outbound routes/NAT are ready before Fargate profiles launch Pods.
   depends_on = [module.network]
@@ -144,4 +147,5 @@ output "cluster_endpoint" { value = module.eks.endpoint }
 output "controller_irsa_service_account" { value = "system:serviceaccount:kube-system:aws-load-balancer-controller" }
 output "dev_platform_state_key" { value = "banking-release-platform/dev/platform/terraform.tfstate" }
 
+output "application_namespaces" { value = ["banking-dev", "banking-prod"] }
 output "common_resource_tags" { value = local.common_tags }

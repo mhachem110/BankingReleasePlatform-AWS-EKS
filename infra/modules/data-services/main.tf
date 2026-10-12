@@ -150,7 +150,7 @@ resource "aws_cloudwatch_log_metric_filter" "http_errors" {
   pattern        = "{ $.State.Status >= 500 }"
   metric_transformation {
     name          = "Http5xx"
-    namespace     = "BankingReleasePlatform/dev"
+    namespace     = "BankingReleasePlatform/${var.tags.Environment}"
     value         = "1"
     default_value = 0
     unit          = "Count"
@@ -162,7 +162,7 @@ locals {
     database_storage = { namespace = "AWS/RDS", metric = "FreeStorageSpace", threshold = 5368709120, comparison = "LessThanThreshold", statistic = "Minimum", period = 300, dimensions = { DBInstanceIdentifier = aws_db_instance.this.identifier }, severity = "critical" }
     queue_age        = { namespace = "AWS/SQS", metric = "ApproximateAgeOfOldestMessage", threshold = 120, comparison = "GreaterThanThreshold", statistic = "Maximum", period = 60, dimensions = { QueueName = aws_sqs_queue.payments.name }, severity = "warning" }
     dead_letters     = { namespace = "AWS/SQS", metric = "ApproximateNumberOfMessagesVisible", threshold = 0, comparison = "GreaterThanThreshold", statistic = "Maximum", period = 60, dimensions = { QueueName = aws_sqs_queue.dead.name }, severity = "critical" }
-    http_errors      = { namespace = "BankingReleasePlatform/dev", metric = "Http5xx", threshold = 5, comparison = "GreaterThanOrEqualToThreshold", statistic = "Sum", period = 60, dimensions = {}, severity = "critical" }
+    http_errors      = { namespace = "BankingReleasePlatform/${var.tags.Environment}", metric = "Http5xx", threshold = 5, comparison = "GreaterThanOrEqualToThreshold", statistic = "Sum", period = 60, dimensions = {}, severity = "critical" }
   }
 }
 resource "aws_cloudwatch_metric_alarm" "this" {
@@ -189,3 +189,6 @@ output "payment_queue_url" { value = aws_sqs_queue.payments.id }
 output "dead_letter_queue_url" { value = aws_sqs_queue.dead.id }
 output "queue_arns" { value = [aws_sqs_queue.payments.arn, aws_sqs_queue.dead.arn] }
 output "application_log_group" { value = aws_cloudwatch_log_group.application.name }
+
+output "database_identifier" { value = aws_db_instance.this.identifier }
+output "payment_queue_name" { value = aws_sqs_queue.payments.name }

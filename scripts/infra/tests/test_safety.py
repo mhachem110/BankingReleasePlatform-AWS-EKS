@@ -15,10 +15,11 @@ spec.loader.exec_module(admin)
 
 
 def fixture():
-    account = "123456789012"
+    account = "866934333672"
     inputs = {field: f"arn:aws:iam::{account}:role/{name}" for field, name in ROLE_NAMES.items()}
     inputs.update(operator_role_arn=f"arn:aws:iam::{account}:role/operator",
                   deployer_role_arn=f"arn:aws:iam::{account}:role/deployer",
+                  prod_deployer_role_arn=f"arn:aws:iam::{account}:role/prod-deployer",
                   kms_key_arn=f"arn:aws:kms:us-east-2:{account}:key/00000000-0000-0000-0000-000000000000")
     return dict(GITHUB_REF="refs/heads/dev", AWS_OPERATIONS_ENABLED="true", BOOTSTRAP_STATE_READY="true",
                 OPERATION="plan", AWS_EXPECTED_ACCOUNT_ID=account, AWS_REGION="us-east-2",
@@ -86,7 +87,7 @@ class SafetyTests(unittest.TestCase):
         trust = admin.controller_trust(values["expected_account_id"], "us-east-2", issuer)["Statement"][0]
         self.assertEqual(trust["Action"], "sts:AssumeRoleWithWebIdentity")
         self.assertNotIn("Service", trust["Principal"])
-        self.assertEqual(trust["Principal"]["Federated"], "arn:aws:iam::123456789012:oidc-provider/" + issuer[8:])
+        self.assertEqual(trust["Principal"]["Federated"], "arn:aws:iam::866934333672:oidc-provider/" + issuer[8:])
         self.assertEqual(trust["Condition"]["StringEquals"][issuer[8:] + ":sub"], "system:serviceaccount:kube-system:aws-load-balancer-controller")
         self.assertEqual(trust["Condition"]["StringEquals"][issuer[8:] + ":aud"], "sts.amazonaws.com")
 
@@ -230,7 +231,7 @@ class SafetyTests(unittest.TestCase):
         cost = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cost)
         result = cost.estimate(json.loads((ROOT / "docs/infrastructure/cost-model.json").read_text()))
-        self.assertEqual(result["subtotal_monthly_usd"], "198.08")
+        self.assertEqual(result["subtotal_monthly_usd"], "240.61")
         self.assertIn("ALB/LCU/public IPv4 charges", result["excluded"])
 
     def test_cluster_provider_permissions_do_not_modify_github(self):

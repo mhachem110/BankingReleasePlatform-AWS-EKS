@@ -33,7 +33,8 @@ class MockPlanGuardTests(unittest.TestCase):
         from guard import ROLE_NAMES
         cls.inputs = {field: f"arn:aws:iam::{account}:role/{name}" for field, name in ROLE_NAMES.items()}
         cls.inputs.update(operator_role_arn=f"arn:aws:iam::{account}:role/test-operator",
-            deployer_role_arn=f"arn:aws:iam::{account}:role/test-deployer", owner="MahmoudHachem",
+            deployer_role_arn=f"arn:aws:iam::{account}:role/test-deployer",
+            prod_deployer_role_arn=f"arn:aws:iam::{account}:role/test-prod-deployer", owner="MahmoudHachem",
             kms_key_arn=f"arn:aws:kms:us-east-2:{account}:key/11111111-2222-4333-8444-555555555555",
             endpoint_cidrs=["203.0.113.10/32"], availability_zones=["us-east-2a", "us-east-2b"],
             kubernetes_version="1.36", addon_versions={n:"v1.0.0-eksbuild.1" for n in ("coredns", "metrics-server")})
@@ -42,7 +43,7 @@ class MockPlanGuardTests(unittest.TestCase):
         plan = self.plan
         report = verify_plan(plan)
         kinds = [r["type"] for r in report["resources"]]
-        self.assertEqual(kinds.count("aws_eks_fargate_profile"), 3)
+        self.assertEqual(kinds.count("aws_eks_fargate_profile"), 4)
         self.assertEqual(kinds.count("aws_iam_openid_connect_provider"), 1)
         self.assertEqual(kinds.count("aws_eks_addon"), 2)
         self.assertNotIn("aws_eks_node_group", kinds)
@@ -50,7 +51,7 @@ class MockPlanGuardTests(unittest.TestCase):
         self.assertEqual(report["managed_updates"], 0)
         self.assertEqual(report["managed_deletes"], 0)
         report = audit.audit(plan, self.inputs, require_effective_tags=False)
-        self.assertEqual(report["taggable_resources"], 31)
+        self.assertEqual(report["taggable_resources"], 33)
         self.assertFalse(report["effective_tags_verified"])
 
     def test_live_guard_requires_resolved_effective_tags(self):
@@ -93,6 +94,20 @@ class MockPlanGuardTests(unittest.TestCase):
     def test_cost_center_is_optional_not_fabricated(self):
         self.assertNotIn("CostCenter", audit.common_tags(self.inputs))
         self.assertEqual(audit.common_tags(dict(self.inputs, cost_center="approved-test"))["CostCenter"], "approved-test")
+
+    def test_production_compute_and_namespace_groups_cannot_be_removed_or_elevated(self):
+        mutations = [
+            ("module.eks.aws_eks_fargate_profile.production", "selector", [{"namespace":"banking-dev"}]),
+            ("module.eks.aws_eks_access_entry.prod_deployer", "kubernetes_groups", ["system:masters"]),
+            ("module.eks.aws_eks_access_entry.prod_deployer", "principal_arn", self.inputs["deployer_role_arn"]),
+            ("module.eks.aws_eks_access_entry.deployer", "kubernetes_groups", ["banking-release-prod"]),
+        ]
+        for address, field, value in mutations:
+            with self.subTest(address=address, field=field):
+                plan = copy.deepcopy(self.plan)
+                next(r for r in plan["resource_changes"] if r["address"] == address)["change"]["after"][field] = value
+                with self.assertRaises(ValueError):
+                    audit.audit(plan, self.inputs, require_effective_tags=False)
 
 
 if __name__ == "__main__":

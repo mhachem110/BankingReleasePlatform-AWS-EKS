@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BankingDevRelease",
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::866934333672:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:prod"
+        }
+      }
+    }
+  ]
+}

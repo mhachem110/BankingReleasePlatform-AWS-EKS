@@ -19,7 +19,7 @@ PRs #8, #9 and #10 are merged in dev. One coordinator now owns integration. Reus
 | Controller role | cloudbatch818-mahmoud-banking-alb-controller; administrator-created, not execution role |
 | Networking outputs | vpc_id, application_subnet_ids, public_subnet_ids, cluster_security_group_id |
 | ALB | IP targets; approved public subnets for internet-facing ALB; disabled until separately approved |
-| Kubernetes access | Approved operator has cluster admin; separate application deployer edits banking-dev only |
+| Kubernetes access | Approved operator has cluster admin; separate dev/prod application groups have only their namespace release RBAC |
 
 ## Helm and release requirements
 
@@ -33,3 +33,13 @@ PRs #8, #9 and #10 are merged in dev. One coordinator now owns integration. Reus
 - GitHub OIDC/environment approval is distinct from Kubernetes IRSA. No AWS credentials in PR validation. Workflows execute paid changes only from reviewed environment branches and approved environments.
 
 Approved PR #10 permits only the required owner-authored application release paths on feature/app while preserving infrastructure/IAM/governance ownership, CODEOWNERS, required security checks and the six branch routes. No bypass or missing-check requirement is introduced. Reviewed infrastructure preparation can update shared Helm metadata through infra.
+
+## Approved shared-cluster demonstration update
+
+PR #15 is integrated at d101fb7. The current reviewed target is one banking-dev
+control plane and two application profiles/namespaces (banking-dev and banking-prod),
+with distinct release identity groups and operator-installed namespace RBAC/quotas.
+Apply both helm/banking/namespaces manifests and iam/phase3/deployer-verification-rbac.yaml
+only after approved EKS creation. No application identity may install these controls.
+The exact current platform inventory is 46 managed entries, 33 taggable.
+See SHARED-CLUSTER.md and ADMIN-REQUEST.md for current architecture/access limits.

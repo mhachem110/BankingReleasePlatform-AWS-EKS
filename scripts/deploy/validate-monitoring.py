@@ -14,6 +14,7 @@ if __name__ == '__main__':
     assert len({p['id'] for p in dashboard['panels']}) == 9
     for arguments in [
         ['check','config','/etc/prometheus/prometheus.yml'],
+        ['check','config','/etc/prometheus/prod-prometheus.yml'],
         ['check','rules','/etc/prometheus/alerts.yml'],
         ['test','rules','/etc/prometheus/alerts-test.yml']
     ]:
@@ -24,4 +25,5 @@ if __name__ == '__main__':
         if result.returncode:
             print(result.stderr)
             sys.exit(result.returncode)
+    subprocess.run([sys.executable, ROOT/'scripts/deploy/validate-log-routing.py'],check=True)
     print('Monitoring configuration and sample alert evaluation passed; live dashboards/delivery remain pending.')

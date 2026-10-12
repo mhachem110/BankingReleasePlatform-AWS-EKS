@@ -20,3 +20,6 @@ addon_versions = {
 
 owner = "MahmoudHachem"
 # cost_center = "ACTUAL_APPROVED_VALUE" # optional; omit until assigned
+
+# Full shared-role audit is required before approving reuse.
+prod_deployer_role_arn = "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-deploy-prod"

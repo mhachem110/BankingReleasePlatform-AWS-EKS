@@ -17,9 +17,9 @@ def inventory_addresses():
             "aws_vpc_endpoint": ["s3"], "aws_cloudwatch_log_group": ["flow"], "aws_flow_log": ["this"]},
         "eks": {"aws_cloudwatch_log_group": ["cluster"], "aws_eks_cluster": ["this"],
                 "aws_iam_openid_connect_provider": ["cluster"],
-                "aws_eks_fargate_profile": ["coredns", "controller", "banking"],
-                "aws_eks_access_entry": ["operator", "deployer"],
-                "aws_eks_access_policy_association": ["operator", "deployer"]},
+                "aws_eks_fargate_profile": ["coredns", "controller", "banking", "production"],
+                "aws_eks_access_entry": ["operator", "deployer", "prod_deployer"],
+                "aws_eks_access_policy_association": ["operator"]},
     }
     for module, kinds in resources.items():
         for kind, names in kinds.items():
@@ -63,7 +63,7 @@ def audit(plan, inputs, *, require_effective_tags=True):
                          "registry" if address.startswith("module.registry.") else "eks")
             for field in (["tags", "tags_all"] if require_effective_tags else ["tags"]):
                 tags = after.get(field) or {}
-                if any(tags.get(k) != v for k, v in dict(common, Component=component).items()):
+                if any(tags.get(k) != v for k, v in dict(common, Component=component, Environment="prod" if address in {"module.eks.aws_eks_fargate_profile.production", "module.eks.aws_eks_access_entry.prod_deployer"} else "dev").items()):
                     raise ValueError("Missing/incorrect/unknown " + field + ": " + address)
                 if not tags.get("Name", "").startswith("banking-dev"):
                     raise ValueError("Meaningful Banking Name tag required: " + address)
@@ -114,21 +114,23 @@ def audit(plan, inputs, *, require_effective_tags=True):
     require(cluster["encryption_config"][0]["provider"][0]["key_arn"] == inputs["kms_key_arn"] and cluster["encryption_config"][0]["resources"] == ["secrets"], "Cluster KMS mismatch")
     selectors = {"coredns": [{"namespace": "kube-system", "labels": {"k8s-app": "kube-dns"}}],
         "controller": [{"namespace": "kube-system", "labels": {"app.kubernetes.io/name": "aws-load-balancer-controller"}}, {"namespace": "kube-system", "labels": {"k8s-app": "metrics-server"}}],
-        "banking": [{"namespace": "banking-dev"}]}
+        "banking": [{"namespace": "banking-dev"}], "production": [{"namespace": "banking-prod"}]}
     for name, desired in selectors.items():
         profile = resource("module.eks.aws_eks_fargate_profile." + name)
         normalized = [{"namespace": s["namespace"], **({"labels": s["labels"]} if s.get("labels") else {})} for s in profile["selector"]]
-        require(sorted(normalized, key=str) == sorted(desired, key=str) and profile["cluster_name"] == "banking-dev" and profile["fargate_profile_name"] == "banking-dev-" + ("app" if name == "banking" else name) and profile["pod_execution_role_arn"] == inputs["fargate_execution_role_arn"] and len(profile["subnet_ids"]) == 2, "Fargate profile mismatch")
+        require(sorted(normalized, key=str) == sorted(desired, key=str) and profile["cluster_name"] == "banking-dev" and profile["fargate_profile_name"] == "banking-dev-" + ("app" if name == "banking" else "prod-app" if name == "production" else name) and profile["pod_execution_role_arn"] == inputs["fargate_execution_role_arn"] and len(profile["subnet_ids"]) == 2, "Fargate profile mismatch")
     configs = json.loads(Path("infra/modules/eks/addon-configuration.json").read_text())
     for name, config in configs.items():
         addon = resource(f'module.eks.aws_eks_addon.this["{name}"]')
         require(addon["addon_version"] == inputs["addon_versions"][name] and json.loads(addon["configuration_values"]) == config and addon["resolve_conflicts_on_create"] == "NONE", "Add-on pin/configuration mismatch")
-    for name, namespace, policy in [("operator", False, "AmazonEKSClusterAdminPolicy"), ("deployer", True, "AmazonEKSEditPolicy")]:
+    operator = resource("module.eks.aws_eks_access_entry.operator")
+    association = resource("module.eks.aws_eks_access_policy_association.operator")
+    require(operator["principal_arn"] == inputs["operator_role_arn"] and operator["type"] == "STANDARD" and not operator.get("kubernetes_groups"), "Operator identity/groups mismatch")
+    require(association["principal_arn"] == inputs["operator_role_arn"] and association["policy_arn"] == "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" and association["access_scope"][0]["type"] == "cluster", "Operator policy/scope mismatch")
+    for name, field, group in [("deployer", "deployer_role_arn", "banking-release-dev"), ("prod_deployer", "prod_deployer_role_arn", "banking-release-prod")]:
         entry = resource("module.eks.aws_eks_access_entry." + name)
-        association = resource("module.eks.aws_eks_access_policy_association." + name)
-        require(entry["principal_arn"] == inputs[name + "_role_arn"] and association["policy_arn"] == "arn:aws:eks::aws:cluster-access-policy/" + policy, "Access identity/policy mismatch")
-        scope = association["access_scope"][0]
-        require(scope["type"] == ("namespace" if namespace else "cluster") and (not namespace or scope["namespaces"] == ["banking-dev"]), "Application access must stay namespace scoped")
+        require(entry["principal_arn"] == inputs[field] and entry["type"] == "STANDARD" and entry["kubernetes_groups"] == [group], "Application identity/group mismatch")
+    require(len({inputs[k] for k in ["operator_role_arn", "deployer_role_arn", "prod_deployer_role_arn"]}) == 3, "Access principals must be distinct")
     for address in ("module.eks.aws_cloudwatch_log_group.cluster", "module.network.aws_cloudwatch_log_group.flow"):
         log = resource(address)
         require(log["retention_in_days"] == 30 and log["kms_key_id"] == inputs["kms_key_arn"], "Encrypted log retention mismatch")

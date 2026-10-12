@@ -11,14 +11,18 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def export(output):
     paths = [ROOT / "docs/infrastructure" / name for name in
-             ("ADMIN-REQUEST.md", "DEPLOYMENT.md", "DATA-DEPLOYMENT.md", "TAGGING.md", "COSTS.md", "PHASE6-OFFLINE.md")]
+             ("ADMIN-REQUEST.md", "DEPLOYMENT.md", "DATA-DEPLOYMENT.md", "TAGGING.md", "COSTS.md", "PHASE6-OFFLINE.md", "SHARED-CLUSTER.md", "RESOURCE-INVENTORY.md", "cost-model.json", "shared-demo-prices.json")]
     paths += sorted((ROOT / "iam/phase3").rglob("*.json"))
     paths += sorted((ROOT / "iam/phase3").rglob("*.md"))
     paths += [ROOT / "scripts/infra" / name for name in
-              ("prepare-admin-request.py", "guard.py", "data_iam.py", "data_guard.py", "data_preflight.py", "data_verify.py", "export-irsa-request.py")]
-    paths += [ROOT / ".github/workflows/data-operations.yml"]
+              ("prepare-admin-request.py", "guard.py", "data_iam.py", "data_guard.py", "data_preflight.py", "data_verify.py", "export-irsa-request.py", "audit-deployment-roles.py", "inspect-prerequisites.py", "shared-demo-cost.py", "capacity-review.py")]
+    paths += [ROOT / ".github/workflows/data-operations.yml", ROOT / ".github/workflows/verify-prerequisites.yml"]
+    paths += [ROOT / "helm/banking/namespaces" / (name + ".yaml") for name in ("banking-dev", "banking-prod")]
+    paths += sorted((ROOT / "infra/environments/prod/data").glob("*.tf"))
+    paths += [ROOT / "docs/infrastructure/ACCEPTANCE.md"]
     paths += [ROOT / "iam/phase3/deployer-verification-rbac.yaml", ROOT / "docs/deployment/DATA-AND-EVENTS.md",
-              ROOT / "docs/deployment/monitoring/aws-logging.yaml", ROOT / "docs/deployment/monitoring/prometheus-rbac.yaml"]
+              ROOT / "docs/deployment/monitoring/aws-logging.yaml", ROOT / "docs/deployment/monitoring/prometheus-rbac.yaml",
+              ROOT / "docs/deployment/monitoring/prod-prometheus-rbac.yaml", ROOT / "docs/deployment/monitoring/prod-prometheus.yml"]
     paths = sorted(set(paths))
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
     output = Path(output).resolve()

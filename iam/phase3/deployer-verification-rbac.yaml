@@ -1,26 +1,105 @@
-# Operator applies only after approved cluster deployment. No mutation rights.
+# Operator installs after approved EKS apply; app jobs cannot change RBAC.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: banking-release, namespace: banking-dev}
+rules:
+  - apiGroups: [apps]
+    resources: [deployments, deployments/scale, replicasets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [services, serviceaccounts, secrets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods, events]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods/portforward]
+    verbs: [create]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: banking-release, namespace: banking-dev}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: banking-release}
+subjects:
+  - {kind: Group, apiGroup: rbac.authorization.k8s.io, name: banking-release-dev}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
-metadata:
-  name: banking-release-verifier
+metadata: {name: banking-release-verifier-dev}
 rules:
   - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get"]
+    resources: [nodes]
+    verbs: [get]
   - apiGroups: [""]
-    resources: ["namespaces"]
-    resourceNames: ["banking-dev"]
-    verbs: ["get"]
+    resources: [namespaces]
+    resourceNames: [banking-dev]
+    verbs: [get]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
-metadata:
-  name: banking-release-verifier
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: banking-release-verifier
+metadata: {name: banking-release-verifier-dev}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: banking-release-verifier-dev}
 subjects:
-  - kind: Group
-    apiGroup: rbac.authorization.k8s.io
-    name: banking-release-verifier
+  - {kind: Group, apiGroup: rbac.authorization.k8s.io, name: banking-release-dev}
+---
+# Operator installs after approved EKS apply; app jobs cannot change RBAC.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: banking-release, namespace: banking-prod}
+rules:
+  - apiGroups: [apps]
+    resources: [deployments, deployments/scale, replicasets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [services, serviceaccounts, secrets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods, events]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods/portforward]
+    verbs: [create]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: banking-release, namespace: banking-prod}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: banking-release}
+subjects:
+  - {kind: Group, apiGroup: rbac.authorization.k8s.io, name: banking-release-prod}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: {name: banking-release-verifier-prod}
+rules:
+  - apiGroups: [""]
+    resources: [nodes]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [namespaces]
+    resourceNames: [banking-prod]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: {name: banking-release-verifier-prod}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: banking-release-verifier-prod}
+subjects:
+  - {kind: Group, apiGroup: rbac.authorization.k8s.io, name: banking-release-prod}

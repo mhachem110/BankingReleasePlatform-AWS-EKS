@@ -11,7 +11,7 @@ ACCOUNT = "866934333672"
 REGION = "us-east-2"
 STATE_KEY = "banking-release-platform/dev/data/terraform.tfstate"
 ROOT = "infra/environments/dev/data"
-MODULE_SHA256 = "e44fb9fec1269c197561583114cef0e417ac12e3cf5e372c1353b9830cbbaa03"
+MODULE_SHA256 = "709be704536ebfd2e0a3a065ae3db96c7cae15e47df43ad0b0200dc137de045d"
 MODULE = "module.data_services."
 COMPONENTS = {"rds", "gp3_max_storage", "backups_snapshots", "cpu_credits", "secrets",
               "sqs", "kms", "logs", "metrics_alarms", "monitoring_pods", "data_transfer", "migration_surge"}

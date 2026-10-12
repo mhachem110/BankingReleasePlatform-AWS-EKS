@@ -2,9 +2,9 @@
 from datetime import datetime, timezone, timedelta
 import math
 
-# HPA max: 8 APIs + 3 system Pods + 2 controllers = 3.25 vCPU.
-# Both API surges + one surge for each system/controller deployment = 1.25.
-RECOMMENDED_HEADROOM_VCPU = 4.5
+# Both namespaces: 16 APIs + 3 system Pods + 2 controllers = 5.25 vCPU.
+# Four API surges + one surge per system/controller deployment = 1.75.
+RECOMMENDED_HEADROOM_VCPU = 7.0
 
 
 def verify(review, account, now=None):
