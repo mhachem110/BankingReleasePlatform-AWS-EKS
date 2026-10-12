@@ -35,7 +35,7 @@ Fargate profile-to-Pod tag propagation. Kubernetes metadata is separate.
 - EKS deletion protection: enabled; cleanup documents the separate reviewed
   disabling update required before destroy.
 - Service/access identities could overlap: all five must be distinct; flow trust/
-  delivery permissions, app's exact Banking/dev trust and KMS ARN are checked.
+  delivery permissions, exact AWS-managed policy ARNs, app's exact Banking/dev trust and KMS ARN are checked.
 - Quota inspection was unavailable: protected recent administrator evidence is
   now required, never treated as an automated quota measurement. Configured
   maximum/simultaneous rollout envelope reserves 4.5 available vCPU.
@@ -49,7 +49,7 @@ IAM role creation, bucket initialization or change to Phase 2 is introduced.
 ## D. Actual validation
 
 Passed locally: fmt; seven offline Terraform root validations; **16 mock Terraform
-tests**; **48 bootstrap**, **26 governance**, **43 infrastructure** and
+tests**; **48 bootstrap**, **26 governance**, **44 infrastructure** and
 **24 Helm/deployment** Python tests; actionlint on eight workflows using the
 existing approved custom runner-label configuration. Checkov 3.3.17: **43 passed,
 0 failed, 11 documented exceptions, 0 parsing errors**. Source/resource/tag mutations

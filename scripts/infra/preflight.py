@@ -62,6 +62,12 @@ def verify_addon_schema(config, schema):
     validator.check_schema(schema)
     validator(schema).validate(config)
 
+
+def verify_managed_policies(attached, names):
+    arns = {p.get("PolicyArn") for p in attached}
+    if not {"arn:aws:iam::aws:policy/" + name for name in names} <= arns:
+        raise ValueError("Required AWS-managed policy ARN is absent; a same-named customer policy is insufficient.")
+
 def main():
     values = json.loads(Path("platform.tfvars.json").read_text())
     spec = importlib.util.spec_from_file_location("capacity_review", Path(__file__).with_name("capacity-review.py"))
@@ -89,9 +95,8 @@ def main():
         required = {"cluster_role_arn": {"AmazonEKSClusterPolicy"},
                     "fargate_execution_role_arn": {"AmazonEKSFargatePodExecutionRolePolicy"}}
         if field in required:
-            attached = {policy["PolicyName"] for policy in aws("iam", "list-attached-role-policies", "--role-name", name)["AttachedPolicies"]}
-            if not required[field] <= attached:
-                raise ValueError("Required managed role policy is absent: " + field)
+            attached = aws("iam", "list-attached-role-policies", "--role-name", name)["AttachedPolicies"]
+            verify_managed_policies(attached, required[field])
         else:
             policy = aws("iam", "get-role-policy", "--role-name", name, "--policy-name", "BankingFlowLogs")["PolicyDocument"]
             expected = {"logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"}

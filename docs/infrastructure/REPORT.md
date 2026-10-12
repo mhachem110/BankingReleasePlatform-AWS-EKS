@@ -52,7 +52,7 @@ The new EKS OIDC provider needs explicit creation/tagging approval; Terraform ma
 
 Use the complete PLATFORM_INPUTS_JSON shape and Console paths in DEPLOYMENT.md. Confirm actual compatible Fargate add-on pins and approved Kubernetes API source addresses. Approve the live plan operation separately; then approve the ACTUAL saved resource plan and costs at the protected apply gate. Current AWS gate stays false.
 
-Planning costs: infrastructure with CoreDNS/Metrics Server is about $137.53/month before usage. Full assumed nine-Pod release is $198.08/month before ALB, traffic and telemetry; $205â€“225 is a light-usage allowance excluding ALB, not a cap. API Pods at 250m/512Mi bill 1GB after overhead. COSTS.md cites regional SKUs and exclusions.
+Planning costs: infrastructure with CoreDNS/Metrics Server is about $137.53/month before usage. Full assumed nine-Pod release is $198.08/month before ALB, traffic and telemetry; $205–225 is a light-usage allowance excluding ALB, not a cap. API Pods at 250m/512Mi bill 1GB after overhead. COSTS.md cites regional SKUs and exclusions.
 
 ## F. Checkpoint
 
