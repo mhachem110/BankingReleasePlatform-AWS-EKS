@@ -1,0 +1,25 @@
+{
+  "hours_per_month": 730,
+  "rates": {
+    "fargate_vcpu_hour": "0.04048",
+    "fargate_gb_hour": "0.004445"
+  },
+  "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/us-east-2/index.json",
+  "publication_date": "2026-09-11T12:44:25Z",
+  "retrieved_date": "2026-10-11",
+  "cpu_sku": "UGSJ89BUWB7SMJ6A",
+  "ram_sku": "HH5EE3ZFWSFKGKWM",
+  "pods": [
+    {"component": "Account and Payment (two replicas each)", "replicas": 4, "billed_vcpu": "0.25", "billed_gb": "1"},
+    {"component": "CoreDNS", "replicas": 2, "billed_vcpu": "0.25", "billed_gb": "0.5"},
+    {"component": "Metrics Server", "replicas": 1, "billed_vcpu": "0.25", "billed_gb": "0.5"},
+    {"component": "Load Balancer Controller (planning assumption)", "replicas": 2, "billed_vcpu": "0.25", "billed_gb": "0.5"}
+  ],
+  "fixed_monthly_usd": {
+    "eks_standard_support": "73.00",
+    "one_nat_gateway_planning_rate_0_045_hour": "32.85",
+    "one_nat_public_ipv4_planning_rate_0_005_hour": "3.65",
+    "one_customer_managed_kms_key": "1.00"
+  },
+  "excluded": ["NAT processing and cross-AZ transfer", "CloudWatch ingestion/storage", "KMS requests/rotation increases", "ECR and S3 usage", "ALB/LCU/public IPv4 charges", "Database/messaging/full monitoring", "Taxes and credits"]
+}

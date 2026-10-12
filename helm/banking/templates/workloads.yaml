@@ -1,0 +1,104 @@
+{{- range $service := list "account" "payment" }}
+{{- $image := index $.Values.images $service }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $.Release.Name }}-{{ $service }}
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-{{ $service }}
+  labels: {app: {{ $.Release.Name }}-{{ $service }}}
+spec:
+  {{- if not $.Values.autoscaling.enabled }}
+  replicas: {{ $.Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 180
+  selector:
+    matchLabels: {app: {{ $.Release.Name }}-{{ $service }}}
+  template:
+    metadata:
+      labels: {app: {{ $.Release.Name }}-{{ $service }}}
+    spec:
+      serviceAccountName: {{ $.Release.Name }}-{{ $service }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        seccompProfile: {type: RuntimeDefault}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app: {{ $.Release.Name }}-{{ $service }}}
+      containers:
+        - name: {{ $service }}
+          image: "{{ required "Supply an ECR image repository" $image.repository }}@{{ required "Supply an immutable sha256 image digest" $image.digest }}"
+          imagePullPolicy: IfNotPresent
+          ports: [{name: http, containerPort: 8080}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          env:
+            - {name: ASPNETCORE_HTTP_PORTS, value: "8080"}
+            - {name: ASPNETCORE_ENVIRONMENT, value: "Production"}
+            {{- if eq $service "payment" }}
+            - {name: AccountApi__BaseUrl, value: "http://{{ $.Release.Name }}-account:8080/"}
+            {{- end }}
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+          volumeMounts: [{name: temporary, mountPath: /tmp}]
+      volumes: [{name: temporary, emptyDir: {sizeLimit: 64Mi}}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-{{ $service }}
+spec:
+  type: ClusterIP
+  selector: {app: {{ $.Release.Name }}-{{ $service }}}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $.Release.Name }}-{{ $service }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: {{ $.Release.Name }}-{{ $service }}}
+{{- if $.Values.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $.Release.Name }}-{{ $service }}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ $.Release.Name }}-{{ $service }}}
+  minReplicas: {{ $.Values.autoscaling.minReplicas }}
+  maxReplicas: {{ $.Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: {{ $.Values.autoscaling.targetCPUUtilizationPercentage }}}
+{{- end }}
+{{- end }}

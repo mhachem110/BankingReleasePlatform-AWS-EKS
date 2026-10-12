@@ -1,0 +1,27 @@
+{{- range $service := list "account" "payment" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $.Release.Name }}-{{ $service }}-ingress
+spec:
+  podSelector:
+    matchLabels: {app: {{ $.Release.Name }}-{{ $service }}}
+  policyTypes: [Ingress]
+  {{- if or (eq $service "account") $.Values.ingressSourceCidrs }}
+  ingress:
+    - from:
+        {{- if eq $service "account" }}
+        - podSelector:
+            matchLabels: {app: {{ $.Release.Name }}-payment}
+        {{- end }}
+        {{- range $.Values.ingressSourceCidrs }}
+        - ipBlock: {cidr: {{ . | quote }}}
+        {{- end }}
+      ports: [{protocol: TCP, port: 8080}]
+  {{- else }}
+  ingress: []
+  {{- end }}
+{{- end }}
+# Egress remains available for DNS and Account HTTP. Fine-grained egress
+# and service identity are Phase 6 work, rather than claimed here.

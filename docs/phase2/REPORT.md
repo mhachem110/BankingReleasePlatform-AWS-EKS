@@ -1,4 +1,6 @@
-# Phase 2 final preparation report
+# Historical Phase 2 preparation report
+
+This records the earlier preparation checkpoint, before live execution. The current status is **COMPLETE**; see [the verified completion report](COMPLETION.md) for actual connectivity, recovery, locking and plan results.
 
 ## A. Phase Completed
 

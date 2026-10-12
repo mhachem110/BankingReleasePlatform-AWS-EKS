@@ -4,13 +4,23 @@ on:
     branches: [dev, stage, uat, main]
     paths:
       - 'infra/**'
+      - 'iam/**'
+      - 'docs/infrastructure/**'
       - 'scripts/bootstrap/**'
+      - 'scripts/infra/**'
+      - 'helm/**'
+      - '.github/workflows/infra-operations.yml'
       - '.github/workflows/terraform-*.yml'
   push:
     branches: [dev, stage, uat, main]
     paths:
       - 'infra/**'
+      - 'iam/**'
+      - 'docs/infrastructure/**'
       - 'scripts/bootstrap/**'
+      - 'scripts/infra/**'
+      - 'helm/**'
+      - '.github/workflows/infra-operations.yml'
       - '.github/workflows/terraform-*.yml'
 permissions:
   contents: read
@@ -30,12 +40,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for root in infra/modules/state-bucket infra/bootstrap infra/environments/dev; do
+          for root in infra/modules/state-bucket infra/bootstrap infra/environments/dev infra/modules/network infra/modules/registry infra/modules/eks infra/environments/dev/platform; do
             terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
             terraform -chdir="$root" validate
           done
           terraform -chdir=infra/modules/state-bucket test
+          for root in infra/modules/network infra/modules/registry infra/modules/eks infra/environments/dev/platform; do
+            terraform -chdir="$root" test
+          done
           python -m unittest discover -s scripts/bootstrap/tests -v
+          python -m pip install -r scripts/infra/requirements.txt
+          python -m unittest discover -s scripts/infra/tests -v
+      - uses: azure/setup-helm@bf6a7d304bc2fdb57e0331155b7ebf2c504acf0a # v4
+        with:
+          version: 'v4.3.0'
+      - name: Helm lint, rendering and workload safety tests
+        run: |
+          python -m pip install PyYAML==6.0.3
+          python -m unittest discover -s scripts/deploy/tests -v
       - name: Checkov static scan
         run: |
           python -m pip install checkov==3.3.17

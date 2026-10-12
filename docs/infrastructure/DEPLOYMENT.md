@@ -1,0 +1,60 @@
+# Fargate deployment and verification procedure
+
+Status: source prepared, not deployed. Phase 2 is complete and unchanged. Use only infra/environments/dev/platform with platform key banking-release-platform/dev/platform/terraform.tfstate in the existing approved bucket. There is no bucket resource, import, state migration or initialization retry in this workflow.
+
+## One reviewed infrastructure operation
+
+1. Review PR #8 (infra -> dev), its real checks, administrator request, interface and costs. Merge requires the owner's separate approval; no automatic merge. Working branches are retained and synchronized with dev before later work.
+2. Obtain administrator-approved prerequisite roles, existing service-linked roles, actual KMS key, operator/deployer identities, quotas/SCP review and endpoint source CIDRs. Paid key creation requires owner approval. Follow ADMIN-REQUEST.md; neither Codex nor Terraform creates roles.
+3. GitHub -> Settings -> Environments -> bootstrap: retain its dev-only branch restriction, required owner review, no admin bypass, verified immutable OIDC subject and AWS_ROLE_ARN secret. Preserve AWS_REGION=us-east-2, AWS_EXPECTED_ACCOUNT_ID and TF_STATE_BUCKET, and BOOTSTRAP_STATE_READY=true. AWS_OPERATIONS_ENABLED stays false until the owner authorizes a live plan.
+4. Add bootstrap environment variable PLATFORM_INPUTS_JSON with this COMPLETE shape. Replace placeholders with actual administrator-approved values; never put credentials in it.
+
+```json
+{
+  "availability_zones": ["us-east-2a", "us-east-2b"],
+  "vpc_cidr": "10.70.0.0/16",
+  "endpoint_cidrs": ["APPROVED_OPERATOR_OR_RUNNER_IPV4_CIDR"],
+  "cluster_role_arn": "ACTUAL_APPROVED_CLUSTER_ROLE_ARN",
+  "fargate_execution_role_arn": "ACTUAL_APPROVED_PATHLESS_FARGATE_EXECUTION_ROLE_ARN",
+  "flow_log_role_arn": "ACTUAL_APPROVED_FLOW_LOG_ROLE_ARN",
+  "operator_role_arn": "ACTUAL_APPROVED_OPERATOR_ROLE_ARN",
+  "deployer_role_arn": "ACTUAL_APPROVED_DISTINCT_APPLICATION_DEPLOY_ROLE_ARN",
+  "kms_key_arn": "ACTUAL_APPROVED_SYMMETRIC_KEY_ARN",
+  "kubernetes_version": "1.36",
+  "addon_versions": {
+    "coredns": "REVIEWED_COMPATIBLE_FARGATE_VERSION",
+    "metrics-server": "REVIEWED_COMPATIBLE_FARGATE_VERSION"
+  }
+}
+```
+
+Exact pins are intentionally not guessed. Read them using approved temporary OIDC credentials: `aws eks describe-addon-versions --region us-east-2 --kubernetes-version 1.36 --addon-name coredns` and the same for metrics-server. Each selected version must list amd64, Fargate compute support and cluster compatibility. Run `aws eks describe-addon-configuration --region us-east-2 --addon-name NAME --addon-version EXACT_VERSION` to inspect its JSON schema. The workflow validates the checked-in addon-configuration.json against that exact schema before planning. Unsupported settings fail; they are not silently ignored. No node AMI/SSM release pin is needed.
+
+5. After authorization for plan execution, Settings -> Secrets and variables -> Actions -> Variables: set AWS_OPERATIONS_ENABLED=true. Actions -> Controlled Banking infrastructure -> Run workflow -> dev -> operation plan, approval blank. Personally approve bootstrap. The session checks identity, collisions, roles, service-linked roles, add-on schema/version and existing bucket protections, then saves a native-locked creation-only plan. It cannot write bucket configuration or either Phase 2 state key.
+6. Inspect plan.txt, plan-review.json, saved plan SHA256 and COSTS.md. Expected types include new VPC/subnets/IGW/NAT/EIP/routes/S3 gateway endpoint/logs/flow log, two ECR repositories, EKS cluster, three Fargate profiles, two managed add-ons, explicit access entries/associations and the new cluster OIDC provider. Expect no EC2 workers, launch template, Pod Identity association, IAM role, bucket, database or ALB. The guard rejects updates/deletes/replacements to existing resources.
+7. Only after owner approval of the ACTUAL resource plan and costs, dispatch operation apply with approval APPLY-REVIEWED-PHASE3-PLAN. Its plan job creates a fresh reviewed artifact and its apply job pauses at a second protected deployment. Review this same run's plan/hash before approving apply. The downloaded artifact's SHA256 and configuration must match; the exact binary plan is applied with Terraform state locking and stale-plan protection.
+8. Verification reads ACTIVE cluster/profiles, zero managed node groups, pinned healthy CoreDNS/Metrics Server configuration, the actual cluster OIDC provider/audience/tags, explicit operator and namespace deployer access, encrypted retained logs and immutable ECR. A post-apply detailed-exitcode plan must be zero-change. Actual Kubernetes DNS/metrics and application/ALB traffic are verified during separately approved operator/application deployments; AWS profile ACTIVE alone does not prove application health.
+9. Download banking-fargate-verified-interface (platform-outputs.json and controller-irsa-trust.json). Verify issuer/provider in EKS/IAM, then have the authorized administrator create/authorize the dedicated controller role using that complete trust and matching controller permissions. Chat 2 uses its actual ARN, service account, region and VPC outputs to install the controller with approved operator access.
+10. Return AWS_OPERATIONS_ENABLED=false after any authorized operation, success or failure; leave BOOTSTRAP_STATE_READY=true. No PR validation or application release applies Terraform.
+
+An incomplete apply or existing Banking name stops this first-creation workflow. Recovery needs a separately reviewed bounded update/recovery plan, preserving state. Do not reinitialize first-time state, overwrite state, force-unlock or remove safeguards to make recovery proceed.
+
+## Network and compute tradeoffs
+
+Two AZs each have public, private application and isolated database subnets. Fargate ENIs use only private application subnets and have no public IP. One NAT in AZ1 provides outbound AWS API/image access; S3/ECR layer downloads use the free S3 gateway endpoint. AZ2 cross-AZ NAT transfer and AZ1 outbound failure are explicit lab tradeoffs. No RDS is provisioned. Pods consume subnet IPs and Fargate quota; HPA scales Pods and bills additional capacity, without a node group.
+
+The private EKS endpoint is enabled. Public HTTPS is restricted to approved IPv4 /24-or-narrower sources. GitHub-hosted runner addresses are dynamic; later Helm needs an approved network/operator path, not 0.0.0.0/0. No runner or VPN is deployed here.
+
+EKS-managed cluster SG defaults attach to Fargate Pod ENIs, providing self-traffic for DNS, internal APIs and webhooks. Default broad outbound access and absence of Fargate NetworkPolicy enforcement are documented lab limitations, not production isolation. Equal CPU/memory requests and limits are required. Both subnets in one profile do not guarantee equal AZ placement; topologySpreadConstraints/affinity must not be used to promise availability.
+
+No managed VPC CNI/kube-proxy/Pod Identity agent DaemonSets are installed. AWS provides Fargate host networking; CoreDNS is explicitly Fargate and Metrics Server uses the compatible community add-on on 10251. IRSA is used for controller AWS access. No EBS worker volume, AMI pin, SSH or IMDS access exists.
+
+## Chat 2 handoff and later verification
+
+See INTERFACE.md. This redesign edits no Helm/application/deployment-script files. PR #8 retains the earlier chart source; Chat 2 owns its Fargate replacement and application CI/CD. Merge order must avoid accepting stale EC2 chart assumptions: review infrastructure first, then synchronize/reconcile the application PR with dev. The installed path policy can block feature/app Helm/workflow changes; resolve through a scoped owner-reviewed governance change, never a bypass.
+
+An approved operator creates banking-dev and installs controller CRDs/RBAC. App deployer scope cannot create namespaces or cluster-scoped resources. Later read-only verification includes `kubectl -n kube-system rollout status deployment/coredns`, Metrics Server rollout/APIService availability, `kubectl top pods -n banking-dev`, both API rollouts/health/payment checks and each Pod's CapacityProvisioned annotation. ALB IP target health and controller IRSA are verified only after separate authorized deployments. Do not use eksctl commands that create roles behind the scenes.
+
+## Cleanup safety
+
+No destroy workflow is provided. Owner must approve a separate platform-only destroy plan. Remove approved ingress first while controller IRSA still works, verify ALB/target groups/ENIs are cleaned, then remove workloads/profiles/add-ons/cluster/NAT/EIP/VPC and the Banking cluster OIDC provider. Fargate profiles are immutable; deleting one interrupts matching Pods. OIDC deletion needs separately approved IAM permission because the creation session does not grant it. ECR force_delete=false protects tagged releases; archive/delete only authorized images. Preserve the S3 bucket, both Phase 2 state paths, Retail resources, GitHub provider and administrator-owned roles/key. Retain encrypted logs/key as required; key deletion is a separate review.

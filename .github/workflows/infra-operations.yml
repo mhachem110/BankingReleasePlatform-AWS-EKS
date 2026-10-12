@@ -1,0 +1,183 @@
+name: Controlled Banking infrastructure
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [plan, apply]
+        default: plan
+        description: 'Plan only by default; apply pauses again for saved-plan and cost review'
+      approval:
+        type: string
+        default: ''
+        description: 'Apply only: APPLY-REVIEWED-PHASE3-PLAN'
+permissions:
+  contents: read
+concurrency:
+  group: banking-dev-platform
+  cancel-in-progress: false
+env:
+  AWS_EC2_METADATA_DISABLED: 'true'
+  AWS_PAGER: ''
+  TF_IN_AUTOMATION: 'true'
+jobs:
+  prerequisites:
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/bootstrap/check-github-environment.py
+  plan:
+    needs: prerequisites
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
+      AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+      OPERATION: ${{ inputs.operation }}
+      APPROVAL: ${{ inputs.approval }}
+    outputs:
+      digest: ${{ steps.hash.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: python -m pip install -r scripts/infra/requirements.txt
+      - id: config
+        run: python scripts/infra/guard.py inputs
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-phase3-plan
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - run: python scripts/infra/preflight.py
+      - name: Verify existing backend protections without repairs
+        run: python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Save the exact creation-only plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/infra/write-backend.py
+          root=infra/environments/dev/platform
+          terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/platform.tfbackend.json"
+          [[ "$(terraform -chdir="$root" workspace show)" == default ]]
+          terraform -chdir="$root" validate
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -var-file="$GITHUB_WORKSPACE/platform.tfvars.json" -out="$GITHUB_WORKSPACE/platform.tfplan"
+          terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/platform.tfplan" > platform-plan.json
+          python scripts/infra/guard.py plan --path platform-plan.json > plan-review.json
+          terraform -chdir="$root" show -no-color "$GITHUB_WORKSPACE/platform.tfplan" > plan.txt
+      - id: hash
+        shell: bash
+        run: echo "digest=$(sha256sum platform.tfplan | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-phase3-reviewed-plan
+          path: |
+            platform.tfplan
+            platform.tfbackend.json
+            platform.tfvars.json
+            plan-review.json
+            plan.txt
+          retention-days: 1
+          if-no-files-found: error
+      - name: Publish review instructions
+        run: |
+          echo 'Review plan.txt, plan-review.json, the exact saved-plan SHA256, IAM approvals and docs/infrastructure/COSTS.md before approving the apply deployment.' >> "$GITHUB_STEP_SUMMARY"
+  apply:
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-PHASE3-PLAN'
+    needs: [prerequisites, plan]
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
+      AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+      OPERATION: ${{ inputs.operation }}
+      APPROVAL: ${{ inputs.approval }}
+      REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: python -m pip install -r scripts/infra/requirements.txt
+      - id: config
+        run: python scripts/infra/guard.py inputs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: banking-phase3-reviewed-plan
+          path: reviewed
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Verify same-run saved plan and unchanged approved inputs
+        run: |
+          set -euo pipefail
+          echo "$REVIEWED_DIGEST  reviewed/platform.tfplan" | sha256sum --check --strict
+          cmp platform.tfvars.json reviewed/platform.tfvars.json
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-phase3-apply
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - name: Apply only the reviewed saved plan, then verify
+        run: |
+          set -euo pipefail
+          root=infra/environments/dev/platform
+          terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/reviewed/platform.tfbackend.json"
+          [[ "$(terraform -chdir="$root" workspace show)" == default ]]
+          terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/reviewed/platform.tfplan" > platform-plan.json
+          cp reviewed/platform.tfplan platform.tfplan
+          python scripts/infra/guard.py plan --path platform-plan.json
+          terraform -chdir="$root" apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/reviewed/platform.tfplan"
+          terraform -chdir="$root" output -json > platform-outputs.json
+          python scripts/infra/verify-platform.py
+          python scripts/infra/export-irsa-request.py
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/reviewed/platform.tfvars.json"
+      - name: Publish verified interface and exact administrator IRSA request
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-fargate-verified-interface
+          path: |
+            platform-outputs.json
+            controller-irsa-trust.json
+          retention-days: 7
+          if-no-files-found: error
