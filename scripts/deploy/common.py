@@ -12,6 +12,28 @@ PREVIOUS = {"stage": "dev", "uat": "stage", "prod": "uat"}
 DIGEST = re.compile(r"sha256:[a-f0-9]{64}")
 SHA = re.compile(r"[a-f0-9]{40}")
 
+def runtime_values(environment):
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate runtime configuration key")
+            result[key] = value
+        return result
+    values = json.loads(os.environ.get("APP_RUNTIME_VALUES_JSON") or "{}", object_pairs_hook=unique)
+    if not isinstance(values, dict) or set(values) - {"persistence", "messaging", "monitoring"}:
+        raise ValueError("Runtime configuration permits only non-secret persistence/messaging/monitoring references")
+    allowed = {"persistence": {"enabled", "accountSecretName", "paymentSecretName", "caConfigMapName"},
+               "messaging": {"enabled", "approved", "roleArn", "queueUrl", "deadLetterQueueUrl"},
+               "monitoring": {"scrape"}}
+    for section, settings in values.items():
+        if not isinstance(settings, dict) or set(settings) - allowed[section]:
+            raise ValueError("Unknown runtime setting; plaintext credentials and arbitrary Helm overrides are forbidden")
+    if values.get("persistence", {}).get("enabled") or values.get("messaging", {}).get("enabled"):
+        if environment != "dev" or os.environ.get("APP_DATA_OPERATIONS_ENABLED") != "true":
+            raise ValueError("Data/messaging requires separate explicit dev authorization")
+    return values
+
 def run(args, *, capture=False, check=True, **kwargs):
     result = subprocess.run([str(a) for a in args], check=check, text=True,
                             capture_output=capture, **kwargs)

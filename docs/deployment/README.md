@@ -103,3 +103,16 @@ See [the current reconciliation](../infrastructure/RECONCILIATION.md). Only add 
 workflow is installed in dev and successful execution is observed.
 
 Read ENVIRONMENT.md, CHAT1-REQUIREMENTS.md, RUNBOOK.md and REPORT.md for setup and evidence.
+
+## Prepared persistence, messaging and monitoring
+
+Chart 0.3.0 adds opt-in PostgreSQL connection/CA references, payment-only IRSA/SQS
+references, dependency readiness and per-Pod metric discovery. Defaults keep memory
+mode and messaging disabled. `APP_DATA_OPERATIONS_ENABLED=true` and validated
+`APP_RUNTIME_VALUES_JSON` require separate explicit dev authorization; no credentials
+belong in those values. Existing digest provenance, environment reviews and rollback
+gates still apply. See [data and events](DATA-AND-EVENTS.md),
+[incident recovery](INCIDENTS.md), [monitoring](monitoring/README.md),
+[architecture](ARCHITECTURE.md) and [demonstration material](DEMO-PRESENTATION.md).
+The new offline data suite uses only isolated local Docker fixtures. Live acceptance
+and alert delivery remain pending.

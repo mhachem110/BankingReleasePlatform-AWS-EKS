@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import socket
 import subprocess
 import tempfile
 from pathlib import Path
@@ -7,6 +8,11 @@ from smoke import smoke
 
 @contextlib.contextmanager
 def forwards(namespace, release):
+    # Refuse occupied local ports before starting either forward, so HTTP evidence
+    # cannot accidentally come from an unrelated process on this workstation.
+    for port in (18081, 18082):
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", port))
     processes = []
     with tempfile.TemporaryDirectory() as directory:
         logs = []

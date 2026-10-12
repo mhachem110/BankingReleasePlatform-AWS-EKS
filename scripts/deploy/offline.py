@@ -28,6 +28,7 @@ if __name__ == "__main__":
                        "--logger","trx","--results-directory",str(output/"test-results")]),
         ("helm-and-deployment-tests", [sys.executable,"-m","unittest","discover","-s","scripts/deploy/tests","-v"]),
         ("kubernetes-schemas", [sys.executable,"scripts/deploy/validate-chart.py"]),
+        ("monitoring-config", [sys.executable,"scripts/deploy/validate-monitoring.py"]),
         ("actionlint", ["actionlint", "-config-file", "scripts/deploy/actionlint.yaml", *[f".github/workflows/{name}" for name in
                        ["app-ci.yml","app-validation.yml","app-publish.yml","app-deploy.yml"]]]),
     ]
@@ -35,6 +36,7 @@ if __name__ == "__main__":
         commands.append(("docker-build", [sys.executable,"scripts/deploy/build.py","--commit",commit]))
     commands += [
         ("container-integration", [sys.executable,"scripts/deploy/docker-smoke.py"]),
+        ("data-messaging-integration", [sys.executable,"scripts/deploy/data-integration.py","--skip-build"]),
         ("trivy", [sys.executable,"scripts/deploy/scan.py"]),
         ("live-checkpoint", [sys.executable,"scripts/deploy/demonstrate.py"]),
     ]

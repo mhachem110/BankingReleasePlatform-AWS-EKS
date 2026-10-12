@@ -55,7 +55,10 @@ Minimum role permissions to review:
 No IAM administration, EKS creation/update, Fargate profile creation, EC2 mutations,
 Terraform state access, S3 writes, RDS, ELB or infrastructure apply permission is needed.
 ECR push/storage itself requires explicit authorization; nothing was pushed offline.
-An application runtime ServiceAccount needs no AWS permissions for these APIs.
+The default memory-mode application ServiceAccounts need no AWS permissions.
+Opt-in Phase 6 messaging requires the separately approved payment-only IRSA role
+and exact queue/KMS permissions described in DATA-AND-EVENTS.md. Account still
+needs no AWS API access. Pods must never receive the RDS managed master secret.
 Fargate image pulls use the administrator's separate Pod execution role, not an app
 ServiceAccount or GitHub role. Future controller AWS access uses the administrator-approved separate IRSA
 role on kube-system/aws-load-balancer-controller.

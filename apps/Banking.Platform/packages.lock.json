@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "AWSSDK.SQS": {
+        "type": "Direct",
+        "requested": "[4.0.100.16, )",
+        "resolved": "4.0.100.16",
+        "contentHash": "qBwINJqBfun/nEwmsGwKEzTtWhquDdlWMJvkg1pFX4YHqTYuTpegPvyeBjSDw9vi0xZHDUJ32f2v3nVYeGe10Q==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.102.9, 5.0.0)"
+        }
+      },
+      "Npgsql": {
+        "type": "Direct",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "7nb5YzXuvWWJxB0J8DiyL3we+X4FOctZrt0fIBnucOIaIevFEEwGQVZKtiu9olXdlNAK1eNgqSral6r/jlhI4w=="
+      },
+      "prometheus-net.AspNetCore": {
+        "type": "Direct",
+        "requested": "[8.2.1, )",
+        "resolved": "8.2.1",
+        "contentHash": "/4TfTvbwIDqpaKTiWvEsjUywiHYF9zZvGZF5sK15avoDsUO/WPQbKsF8TiMaesuphdFQPK2z52P0zk6j26V0rQ==",
+        "dependencies": {
+          "prometheus-net": "8.2.1"
+        }
+      },
+      "AWSSDK.Core": {
+        "type": "Transitive",
+        "resolved": "4.0.102.9",
+        "contentHash": "VWGkR0QXDTmThusATC6I9IX06YtYeQNF+1/v6vBbfzIC+MaAuNjYn0aSTIyX+abciZvFhuSSi0d6/pC93wROCw=="
+      },
+      "prometheus-net": {
+        "type": "Transitive",
+        "resolved": "8.2.1",
+        "contentHash": "3wVgdEPOCBF752s2xps5T+VH+c9mJK8S8GKEDg49084P6JZMumTZI5Te6aJ9MQpX0sx7om6JOnBpIi7ZBmmiDQ=="
+      }
+    }
+  }
+}
