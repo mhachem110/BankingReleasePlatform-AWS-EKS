@@ -2,7 +2,7 @@
 
 ## Reuse these branches
 
-- `feature/app`: Account/Payment APIs, tests, Docker and application documentation. No Terraform, Helm, GitHub configuration, IAM artifacts or privileged scripts.
+- `feature/app`: Account/Payment APIs, tests, Docker and application documentation. Owner-authored application releases may also change helm/banking/**, scripts/deploy/**, docs/deployment/** and exactly app-ci.yml, app-validation.yml, app-publish.yml, app-deploy.yml under .github/workflows. No Terraform/HCL, CODEOWNERS, IAM, shared infrastructure, governance or other GitHub configuration. These release exceptions retain cloud ownership and require the verified cloud-owner author.
 - `bootstrap`: Terraform backend, S3 state, GitHub OIDC connectivity and bootstrap configuration.
 - `infra`: Terraform AWS networking, VPC, EKS, ECR, RDS and monitoring; Helm, GitHub workflows, IAM artifacts and shared repository governance. Cloud engineers may make reviewed cross-cutting application changes here alongside cloud changes.
 
