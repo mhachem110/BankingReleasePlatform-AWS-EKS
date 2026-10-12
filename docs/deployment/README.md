@@ -97,9 +97,9 @@ in helm/banking/**, scripts/deploy/**, docs/deployment/** and the four named app
 workflows, alongside the existing application scope. Terraform/HCL/backend inputs,
 CODEOWNERS, IAM, infrastructure, governance and unrelated workflows remain restricted.
 The required Repository security policy passes; all existing protection rules remain.
-PR #9 may become ready for review after its current checks pass, but merging requires
-the owner's separate approval. No application or infrastructure deployment is authorized
-by making the PR ready. Only add Application CI as a required check after its trusted
+PR #9 is merged, followed by final infrastructure preparation PR #11. Live publication
+and application/infrastructure deployment remain separately authorized operations.
+See [the current reconciliation](../infrastructure/RECONCILIATION.md). Only add Application CI as a required check after its trusted
 workflow is installed in dev and successful execution is observed.
 
 Read ENVIRONMENT.md, CHAT1-REQUIREMENTS.md, RUNBOOK.md and REPORT.md for setup and evidence.

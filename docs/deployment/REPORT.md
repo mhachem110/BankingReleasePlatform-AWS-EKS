@@ -1,6 +1,9 @@
 # Phase 4/5 application preparation report
 
-Checkpoint: 2026-10-11. Application/Helm/CI code is implemented and offline validated.
+Historical checkpoint: 2026-10-11. PR #9 and final preparation PR #11 have since merged.
+See [the current reconciliation](../infrastructure/RECONCILIATION.md).
+The dated validation results below are retained as historical evidence.
+Application/Helm/CI code is implemented and offline validated.
 No application cloud deployment or live Kubernetes test is claimed.
 
 ## Actual local results
@@ -56,8 +59,8 @@ authorization; mocked rollback tests are not evidence of live Helm success.
 1. PR #8 and PR #10 are merged into dev. Ordinary merges synchronized feature/app,
    preserving Fargate infrastructure and the newer application chart. GitHub governance,
    .NET, Docker/Trivy, Helm and Terraform checks passed at the integrated baseline above.
-   Mark PR #9 ready only after all checks pass at its final head; its separate owner
-   merge approval is still required.
+   PR #9 is now merged with owner approval; PR #11 final preparation is also
+   merged. No publication, deployment or live infrastructure operation is implied.
 2. The approved trusted policy permits the exact owner-authored application release
    paths. CODEOWNERS, IAM/infrastructure ownership, required security checks and branch
    protections remain active. Application CI may be made native-required only after

@@ -1,5 +1,10 @@
 # Historical Fargate redesign checkpoint
 
+> Historical checkpoint evidence/instructions. For current merged PRs, active
+> controls and AWS evidence limits, read [the 12 October reconciliation](RECONCILIATION.md).
+> Earlier pending approvals and EC2 worker-role references below are superseded;
+> the current approved compute is EKS Fargate. Do not repeat completed setup.
+
 This report records the earlier parallel-workstream preparation. PRs #8/#9/#10 have since merged. Current readiness, tests and approvals are in PREPARATION-REPORT.md and ADMIN-REQUEST.md; historical counts and pending-PR statements below are not current deployment evidence.
 
 # Phase 3 Fargate implementation report

@@ -1,6 +1,13 @@
 # GitHub security checkpoint
 
-> Historical governance preparation snapshot. PRs #1, #3 and #2 have since merged with individual owner approval. See [current migration progress](reusable-branches.md) and [verification evidence](security-verification.md) for the remaining PR #4 and status-check activation. AWS operations remain unexecuted.
+> Historical checkpoint evidence/instructions. For current merged PRs, active
+> controls and AWS evidence limits, read [the 12 October reconciliation](../infrastructure/RECONCILIATION.md).
+> Earlier pending approvals and EC2 worker-role references below are superseded;
+> the current approved compute is EKS Fargate. Do not repeat completed setup.
+
+The sections below retain the original governance preparation snapshot. PR #4 and
+the required dev security-check activation are complete; the reconciliation above
+records the current controls and Phase 2 evidence.
 
 Repository: https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS
 

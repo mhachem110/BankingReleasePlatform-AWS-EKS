@@ -1,6 +1,12 @@
 # Repository governance checkpoint
 
-> Historical governance preparation snapshot. PRs #1, #3 and #2 have since merged with individual owner approval. See [current migration progress](reusable-branches.md) and [verification evidence](security-verification.md) for the remaining PR #4 and status-check activation. AWS operations remain unexecuted.
+> Historical governance preparation snapshot. PRs #1–#11 are merged. The trusted
+> policy is installed and Repository security policy is required on dev; the seven
+> rulesets remain Active. Bootstrap is configured and Phase 2 has historical live
+> completion evidence. Later app environments and live Phase 3 deployment remain
+> pending. Read [the current reconciliation](../infrastructure/RECONCILIATION.md)
+> before using the dated setup/activation instructions below. Do not repeat the
+> completed migration or weaken any current gate.
 
 Repository: https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS
 

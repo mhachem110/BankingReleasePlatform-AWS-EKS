@@ -1,5 +1,10 @@
 # Final Phase 3 deployment preparation checkpoint
 
+Historical validation/preparation report for PR #11, now merged as 85a7b1d.
+Statements about awaiting its review/merge below describe that earlier checkpoint.
+See [RECONCILIATION.md](RECONCILIATION.md) for current repository/control state;
+no live platform deployment is evidenced.
+
 ## A. Readiness estimate
 
 Approximately **80% of Phase 3 preparation**, a judgment estimate rather than a
@@ -106,11 +111,10 @@ monthly budget are proposals only; no billing settings or notifications changed.
 
 ## J–K. Plan readiness and next action
 
-No live plan or apply was run. AWS_OPERATIONS_ENABLED remains false. Review the
-existing infra branch's preparation PR and approve its code merge only when all
-checks pass. In parallel, review/send ONE ADMIN-REQUEST.md package and return the
-administrator's actual approved bundle. Only then authorize the protected GitHub
-plan window; the owner personally reviews bootstrap. Present actual plan inventory,
+No live plan or apply was run. AWS_OPERATIONS_ENABLED remains false. PR #11
+is merged; its final exact-commit CI succeeded. Review/send ONE ADMIN-REQUEST.md
+package and return the administrator's actual approved bundle. Only then authorize
+the protected GitHub plan window; the owner personally reviews bootstrap. Present actual plan inventory,
 effective tags, role/key references, unexpected changes, hash and costs before a
 separate paid apply approval. No direct push to dev, merge or AWS access change is
 authorized by this report.

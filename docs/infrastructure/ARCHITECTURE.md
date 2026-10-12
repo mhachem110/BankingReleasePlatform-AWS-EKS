@@ -1,6 +1,6 @@
 # Phase 3 EKS Fargate architecture
 
-PRs #8/#9/#10 are integrated in dev. Final preparation changes remain a reviewed infra PR; no paid deployment or IAM modification has run.
+PRs #8/#9/#10/#11 are integrated in dev. This diagram describes the prepared deployment flow. No Phase 3 deployment is evidenced; actual AWS inventory must be refreshed through approved access. See [the current reconciliation](RECONCILIATION.md).
 
 ```mermaid
 flowchart TD

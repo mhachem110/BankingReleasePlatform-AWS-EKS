@@ -1,5 +1,10 @@
 # Phase 2 IAM review and exact manual steps
 
+> Historical checkpoint evidence/instructions. For current merged PRs, active
+> controls and AWS evidence limits, read [the 12 October reconciliation](../infrastructure/RECONCILIATION.md).
+> Earlier pending approvals and EC2 worker-role references below are superseded;
+> the current approved compute is EKS Fargate. Do not repeat completed setup.
+
 **Historical preparation instructions:** live connectivity and both installed policy/trust relationships have since been verified. The actual role ARN includes `:role/`. See [COMPLETION.md](COMPLETION.md) for current evidence. Do not repeat or replace policies based on the earlier unverified wording below.
 
 The owner supplied the complete current trust policy and all 18 statements of the CloudOpsTrackerBootstrap inline policy. They were reviewed locally; AWS IAM was not inspected or changed. Boundary: none, attached policies: none, as reported. No existing grant or trust statement is removed.
