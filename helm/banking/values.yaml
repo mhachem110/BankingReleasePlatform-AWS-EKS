@@ -1,18 +1,14 @@
 replicaCount: 2
+replicas:
+  account: null
+  payment: null
 images:
-  account:
-    repository: ""
-    digest: ""
-  payment:
-    repository: ""
-    digest: ""
+  account: {repository: "", digest: ""}
+  payment: {repository: "", digest: ""}
+# Guaranteed QoS; 512Mi plus Fargate overhead rounds up to a 1GB task.
 resources:
-  requests:
-    cpu: 100m
-    memory: 128Mi
-  limits:
-    cpu: 500m
-    memory: 256Mi
+  requests: {cpu: 250m, memory: 512Mi}
+  limits: {cpu: 250m, memory: 512Mi}
 autoscaling:
   enabled: false
   minReplicas: 2
@@ -20,7 +16,12 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 ingress:
   enabled: false
+  approved: false
+  scheme: internal
   certificateArn: ""
   host: ""
-# ALB traffic is denied until approved subnet CIDRs are supplied in Phase 4.
-ingressSourceCidrs: []
+  subnets: []
+  securityGroups: []
+demonstration:
+  enabled: false
+  failPaymentReadiness: false

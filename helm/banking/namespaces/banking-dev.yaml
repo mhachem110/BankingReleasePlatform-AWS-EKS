@@ -1,0 +1,9 @@
+# Applied once by the infrastructure owner, outside the application Helm release.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: banking-dev
+  labels:
+    app.kubernetes.io/part-of: banking
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest

@@ -1,0 +1,42 @@
+{
+  "actionlint": {
+    "windows": {
+      "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_windows_amd64.zip",
+      "sha256": "6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9"
+    },
+    "linux": {
+      "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz",
+      "sha256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+    }
+  },
+  "kubeconform": {
+    "windows": {
+      "url": "https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-windows-amd64.zip",
+      "sha256": "e3f56102bcf4f50b034a567e2482a1c5330799983ddd655952310211aef73d93"
+    },
+    "linux": {
+      "url": "https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz",
+      "sha256": "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883"
+    }
+  },
+  "helm": {
+    "windows": {
+      "url": "https://get.helm.sh/helm-v4.3.0-windows-amd64.zip",
+      "sha256": "304ea163cce4d9ad14e189c01846c6a34de9cfdfe48536ae54b2e8ba7884e67c"
+    },
+    "linux": {
+      "url": "https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz",
+      "sha256": "86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb"
+    }
+  },
+  "kubectl": {
+    "windows": {
+      "url": "https://dl.k8s.io/release/v1.36.0/bin/windows/amd64/kubectl.exe",
+      "sha256": "9abf2164fe79d9d80185ff5085f6154eda9d21793ee18fa8dff34dfffffed36d"
+    },
+    "linux": {
+      "url": "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kubectl",
+      "sha256": "123d8c8844f46b1244c547fffb3c17180c0c26dac9890589fe7e67763298748e"
+    }
+  }
+}

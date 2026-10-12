@@ -1,3 +1,12 @@
+{{- if or (ne .Values.resources.requests.cpu .Values.resources.limits.cpu) (ne .Values.resources.requests.memory .Values.resources.limits.memory) }}
+{{- fail "Fargate requires equal CPU/memory requests and limits" }}
+{{- end }}
+{{- if gt .Values.autoscaling.minReplicas .Values.autoscaling.maxReplicas }}
+{{- fail "autoscaling.minReplicas must not exceed maxReplicas" }}
+{{- end }}
+{{- if and .Values.demonstration.failPaymentReadiness (or (not .Values.demonstration.enabled) (ne .Release.Namespace "banking-dev")) }}
+{{- fail "Fault injection requires demonstration.enabled and banking-dev" }}
+{{- end }}
 {{- range $service := list "account" "payment" }}
 {{- $image := index $.Values.images $service }}
 ---
@@ -5,39 +14,44 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
+  namespace: {{ $.Release.Namespace }}
+  labels: {app: {{ $.Release.Name }}-{{ $service }}, app.kubernetes.io/instance: {{ $.Release.Name }}}
 automountServiceAccountToken: false
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
-  labels: {app: {{ $.Release.Name }}-{{ $service }}}
+  namespace: {{ $.Release.Namespace }}
+  labels: {app: {{ $.Release.Name }}-{{ $service }}, app.kubernetes.io/instance: {{ $.Release.Name }}}
 spec:
   {{- if not $.Values.autoscaling.enabled }}
-  replicas: {{ $.Values.replicaCount }}
+  replicas: {{ default $.Values.replicaCount (index $.Values.replicas $service) }}
   {{- end }}
-  revisionHistoryLimit: 3
-  progressDeadlineSeconds: 180
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxUnavailable: 0, maxSurge: 1}
   selector:
     matchLabels: {app: {{ $.Release.Name }}-{{ $service }}}
   template:
     metadata:
-      labels: {app: {{ $.Release.Name }}-{{ $service }}}
+      labels:
+        app: {{ $.Release.Name }}-{{ $service }}
+        app.kubernetes.io/instance: {{ $.Release.Name }}
+        app.kubernetes.io/part-of: banking
     spec:
       serviceAccountName: {{ $.Release.Name }}-{{ $service }}
       automountServiceAccountToken: false
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true
         runAsUser: 1654
         runAsGroup: 1654
         fsGroup: 1654
         seccompProfile: {type: RuntimeDefault}
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: ScheduleAnyway
-          labelSelector:
-            matchLabels: {app: {{ $.Release.Name }}-{{ $service }}}
       containers:
         - name: {{ $service }}
           image: "{{ required "Supply an ECR image repository" $image.repository }}@{{ required "Supply an immutable sha256 image digest" $image.digest }}"
@@ -51,20 +65,27 @@ spec:
             - {name: ASPNETCORE_HTTP_PORTS, value: "8080"}
             - {name: ASPNETCORE_ENVIRONMENT, value: "Production"}
             {{- if eq $service "payment" }}
-            - {name: AccountApi__BaseUrl, value: "http://{{ $.Release.Name }}-account:8080/"}
+            - {name: AccountApi__BaseUrl, value: "http://{{ $.Release.Name }}-account.{{ $.Release.Namespace }}.svc.cluster.local:8080/"}
             {{- end }}
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}
           startupProbe:
             httpGet: {path: /health, port: http}
+            timeoutSeconds: 2
             periodSeconds: 5
-            failureThreshold: 24
+            failureThreshold: 60
           readinessProbe:
-            httpGet: {path: /health, port: http}
+            httpGet:
+              path: {{ if and (eq $service "payment") $.Values.demonstration.failPaymentReadiness }}/demonstration-not-found{{ else }}/health{{ end }}
+              port: http
+            timeoutSeconds: 2
             periodSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet: {path: /health, port: http}
+            timeoutSeconds: 2
             periodSeconds: 10
+            failureThreshold: 3
           volumeMounts: [{name: temporary, mountPath: /tmp}]
       volumes: [{name: temporary, emptyDir: {sizeLimit: 64Mi}}]
 ---
@@ -72,6 +93,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
+  namespace: {{ $.Release.Namespace }}
+  labels: {app: {{ $.Release.Name }}-{{ $service }}, app.kubernetes.io/instance: {{ $.Release.Name }}}
 spec:
   type: ClusterIP
   selector: {app: {{ $.Release.Name }}-{{ $service }}}
@@ -81,8 +104,9 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
+  namespace: {{ $.Release.Namespace }}
 spec:
-  minAvailable: 1
+  maxUnavailable: 1
   selector:
     matchLabels: {app: {{ $.Release.Name }}-{{ $service }}}
 {{- if $.Values.autoscaling.enabled }}
@@ -91,6 +115,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ $.Release.Name }}-{{ $service }}
+  namespace: {{ $.Release.Namespace }}
 spec:
   scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ $.Release.Name }}-{{ $service }}}
   minReplicas: {{ $.Values.autoscaling.minReplicas }}
