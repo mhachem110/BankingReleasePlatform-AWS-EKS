@@ -21,7 +21,8 @@ def export(output):
     paths += sorted((ROOT / "infra/environments/prod/data").glob("*.tf"))
     paths += [ROOT / "docs/infrastructure/ACCEPTANCE.md"]
     paths += [ROOT / "iam/phase3/deployer-verification-rbac.yaml", ROOT / "docs/deployment/DATA-AND-EVENTS.md",
-              ROOT / "docs/deployment/monitoring/aws-logging.yaml", ROOT / "docs/deployment/monitoring/prometheus-rbac.yaml"]
+              ROOT / "docs/deployment/monitoring/aws-logging.yaml", ROOT / "docs/deployment/monitoring/prometheus-rbac.yaml",
+              ROOT / "docs/deployment/monitoring/prod-prometheus-rbac.yaml", ROOT / "docs/deployment/monitoring/prod-prometheus.yml"]
     paths = sorted(set(paths))
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
     output = Path(output).resolve()

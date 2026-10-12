@@ -118,6 +118,19 @@ class SharedClusterTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 snapshot.compare(before, after | changes)
 
+    def test_monitoring_discovery_and_rbac_are_separate_per_namespace(self):
+        folder = common.ROOT/"docs/deployment/monitoring"
+        for namespace, prefix in [("banking-dev", ""), ("banking-prod", "prod-")]:
+            config = yaml.safe_load((folder/(prefix+"prometheus.yml")).read_text(encoding="utf-8"))
+            for job in config["scrape_configs"]:
+                self.assertEqual(job["kubernetes_sd_configs"][0]["namespaces"]["names"], [namespace])
+            resources = list(yaml.safe_load_all((folder/(prefix+"prometheus-rbac.yaml")).read_text(encoding="utf-8")))
+            self.assertTrue(all(r["metadata"]["namespace"]==namespace for r in resources))
+            role = next(r for r in resources if r["kind"]=="Role")
+            self.assertEqual(role["rules"], [{"apiGroups":[""], "resources":["pods"], "verbs":["get","list","watch"]}])
+            binding = next(r for r in resources if r["kind"]=="RoleBinding")
+            self.assertTrue(all(s["namespace"]==namespace for s in binding["subjects"]))
+
 
 if __name__ == "__main__":
     unittest.main()
