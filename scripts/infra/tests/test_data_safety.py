@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts/infra"))
 import data_guard as guard
 import data_iam as iam
 import data_preflight as preflight
+import data_verify as verification
 import yaml
 
 
@@ -40,6 +41,17 @@ def review():
 
 
 class DataSafetyTests(unittest.TestCase):
+    def test_post_apply_rejects_extra_db_group_before_claiming_isolation(self):
+        # AWS-style metadata from a private DB can still carry a second open SG.
+        database={"DBInstanceIdentifier":"banking-dev-postgres","DBInstanceStatus":"available","Engine":"postgres",
+            "EngineVersion":"17.6","DBInstanceClass":"db.t4g.micro","DBName":"banking","PubliclyAccessible":False,
+            "StorageEncrypted":True,"KmsKeyId":values()["kms_key_arn"],"MultiAZ":False,"DeletionProtection":True,
+            "BackupRetentionPeriod":7,"AllocatedStorage":20,"MaxAllocatedStorage":40,"IAMDatabaseAuthenticationEnabled":True,
+            "MonitoringInterval":60,"MonitoringRoleArn":values()["monitoring_role_arn"],
+            "VpcSecurityGroups":[{"VpcSecurityGroupId":"sg-approved","Status":"active"},{"VpcSecurityGroupId":"sg-unreviewed","Status":"active"}]}
+        with self.assertRaisesRegex(ValueError,"exactly one"):
+            verification.verify(database, {}, {}, values())
+
     def test_workflow_uses_two_reviews_disabled_gate_same_run_hash_and_data_state(self):
         workflow=yaml.safe_load((ROOT/".github/workflows/data-operations.yml").read_text())
         jobs=workflow["jobs"]

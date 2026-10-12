@@ -6,8 +6,9 @@ was merged with explicit owner approval; feature/app synchronized normally with 
 During final integration, infra PR #13 was merged first and its data root preserved
 by an ordinary merge into feature/app. A Windows CP1252/UTF-8 Docker metadata
 decoding failure was preserved and corrected with explicit UTF-8 subprocess I/O;
-the PostgreSQL/SQS recovery suite then passed. PR #14 remains subject to final
-current-head checks and the owner's approved normal integration sequence.
+the PostgreSQL/SQS recovery suite then passed. PR #14 merged normally at `f3afff4`
+after all 12 current-head checks passed. The full offline suite then passed from
+that updated dev commit. See ../infrastructure/FINAL-INTEGRATION.md.
 
 ## Implemented behavior
 

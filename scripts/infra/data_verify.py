@@ -12,6 +12,8 @@ def verify(database, source, dead, values):
         "DeletionProtection":True, "BackupRetentionPeriod":7, "AllocatedStorage":20, "MaxAllocatedStorage":40,
         "IAMDatabaseAuthenticationEnabled":True, "MonitoringInterval":60, "MonitoringRoleArn":values["monitoring_role_arn"]}
     require(all(database.get(k) == v for k,v in expected.items()), "Actual database security/capacity/version mismatch")
+    require(len(database.get("VpcSecurityGroups", [])) == 1 and database["VpcSecurityGroups"][0].get("Status") == "active",
+            "Require exactly one active database SG; an extra group can weaken isolation")
     secret = database.get("MasterUserSecret") or {}
     require(secret.get("SecretStatus") == "active" and secret.get("KmsKeyId") == values["kms_key_arn"] and
             secret.get("SecretArn", "").startswith(f"arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:rds!db-"), "RDS-managed operator secret must be healthy and encrypted")

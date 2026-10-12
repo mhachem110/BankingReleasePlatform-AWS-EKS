@@ -48,6 +48,7 @@ def main():
     require(any(o.get("StorageType") == "gp3" and o.get("SupportsStorageEncryption") and o.get("SupportsEnhancedMonitoring") for o in options),
             "Exact approved engine/class must support reviewed storage/encryption/monitoring")
     require(not any(d["DBInstanceIdentifier"] == "banking-dev-postgres" for d in aws("rds", "describe-db-instances")["DBInstances"]), "Database name exists; recovery requires separate reviewed scope")
+    require(not any(s["DBSnapshotIdentifier"] == "banking-dev-postgres-final-reviewed" for s in aws("rds", "describe-db-snapshots")["DBSnapshots"]), "Retained final-snapshot name exists; preserve it and review recovery separately")
     require(not any(d["DBSubnetGroupName"] == "banking-dev-database" for d in aws("rds", "describe-db-subnet-groups")["DBSubnetGroups"]), "Database subnet group already exists")
     require(not any(d["DBParameterGroupName"] == "banking-dev-postgres17" for d in aws("rds", "describe-db-parameter-groups")["DBParameterGroups"]), "Database parameter group already exists")
     require(not aws("ec2", "describe-security-groups", "--filters", "Name=vpc-id,Values="+values["vpc_id"], "Name=group-name,Values=banking-dev-database")["SecurityGroups"], "Database security group already exists")
