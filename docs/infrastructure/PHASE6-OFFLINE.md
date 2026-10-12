@@ -63,8 +63,9 @@ alert destination/delivery scope. No blanket IAM grant or shared-policy replacem
 3. Review this separate resource inventory and current costs, including storage
    growth, backups/snapshots, secrets, SQS/KMS requests, logs/custom metrics/alarms,
    monitoring Pods and migration surge. There is no current spend estimate or cap.
-4. Prepare a separate protected plan workflow with fail-closed input/inventory/state
-   guards and two personal reviews. Do not reuse or weaken the Phase 3 workflow.
+4. Review the separate prepared data-operations.yml workflow and DATA-DEPLOYMENT.md,
+   its exact creation inventory, own state, cost/session-policy receipts and two
+   personal reviews. It remains disabled/unexecuted. The Phase 3 workflow is unchanged.
 5. Obtain specific live-plan authorization, then approval of the actual saved plan
    and costs before apply. This source-only PR authorizes neither operation.
 6. Install reviewed runtime secrets/RBAC/IRSA/logging, run explicit forward migrations
