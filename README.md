@@ -123,7 +123,7 @@ While Account API is stopped, Payment's `/health` stays healthy but payment requ
 
 ## Working branches
 
-Reuse `feature/app` for application work, `bootstrap` for backend/OIDC work and `infra` for infrastructure and governance; the approved application release scope also includes Helm and the four application workflows. Each opens a PR into `dev`; promote through `dev â†’ stage â†’ uat â†’ main`. PR #1 is merged and historical branches are preserved. Follow [the reviewed branch rules](AGENTS.md) and [governance](docs/governance/reusable-branches.md).
+Reuse `feature/app` for application work, `bootstrap` for backend/OIDC work and `infra` for infrastructure and governance; the approved application release scope also includes Helm and the four application workflows. Each opens a PR into `dev`; promote through `dev → stage → uat → main`. PR #1 is merged and historical branches are preserved. Follow [the reviewed branch rules](AGENTS.md) and [governance](docs/governance/reusable-branches.md).
 
 ## Phase 2 complete
 
@@ -134,3 +134,5 @@ GitHub OIDC and the dedicated Ohio S3 backend were verified through protected Gi
 The separate `infra/environments/dev/platform` root uses modules for two-AZ networking, immutable Account/Payment ECR repositories and EKS Fargate Pods. The existing bucket and Phase 2 roots remain separate. [Architecture](docs/infrastructure/ARCHITECTURE.md), [deployment steps](docs/infrastructure/DEPLOYMENT.md), [administrator request](docs/infrastructure/ADMIN-REQUEST.md), [cost estimate](docs/infrastructure/COSTS.md) and [remaining assignment coverage](docs/infrastructure/REQUIREMENTS.md) explain the reviewed scope.
 
 Terraform/Checkov/Helm CI runs without AWS credentials. The manually dispatched infrastructure workflow uses protected OIDC sessions, saved-plan hashes and a second environment review before apply. No paid Phase 3 resource has been created; real IAM prerequisites, plan/cost review and owner approval remain required. The prepared `helm/banking` chart deploys two APIs internally by immutable digest; ingress defaults off until Phase 4 authorization.
+
+Final Phase 3 preparation: [readiness](docs/infrastructure/PREPARATION-REPORT.md), [approved tag convention](docs/infrastructure/TAGGING.md), [exact source inventory](docs/infrastructure/RESOURCE-INVENTORY.md) and [safe cleanup](docs/infrastructure/CLEANUP.md). CostCenter is optional until assigned; live planning requires administrator-approved inputs and protected review.

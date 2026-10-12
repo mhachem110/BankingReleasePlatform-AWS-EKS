@@ -2,6 +2,7 @@ mock_provider "aws" {
   mock_data "aws_vpc" { defaults = { cidr_block = "10.70.0.0/16" } }
 }
 variables {
+  tags                       = { Project = "BankingReleasePlatform", Environment = "dev", ManagedBy = "Terraform", Owner = "TestOwner", Purpose = "CloudEngineerTraining" }
   name                       = "banking-dev"
   vpc_id                     = "vpc-00000000000000000"
   subnet_ids                 = ["subnet-00000000000000001", "subnet-00000000000000002"]

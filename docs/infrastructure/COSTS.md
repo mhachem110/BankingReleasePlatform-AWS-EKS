@@ -38,3 +38,59 @@ Add NAT processing, cross-AZ transfer, CloudWatch flow/control log ingestion/sto
 6. Approved teardown after a short lab avoids ongoing EKS/NAT costs. EKS cannot be stopped; scaling apps down still leaves cluster/NAT and system Pod charges. A 40-hour full baseline is roughly $10.85 plus usage and retained-key/storage charges, assuming separately approved teardown.
 
 These are modeled decisions. The assignment's three evidence-supported cost optimizations still require actual Phase 6 cost/usage measurements. No discounts, credits, free-tier eligibility or taxes are assumed.
+
+## Final preparation duration, scaling and variable-usage model
+
+Run `python scripts/infra/cost-exposure.py`; optionally add `--usage-json` pointing
+to a local JSON of actual approved traffic/storage/request assumptions. No AWS
+calls, credits/free tiers or invented usage are included. The underlying configuration
+and Ohio Fargate rates are unchanged; this is a source model, not a live plan/bill.
+
+| Scenario | Hourly | 8h | 24h | 40h | 730h/month |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| initial system | $0.1884 | $1.51 | $4.52 | $7.54 | $137.53 |
+| four apis | $0.2467 | $1.97 | $5.92 | $9.87 | $180.06 |
+| four apis and controller | $0.2713 | $2.17 | $6.51 | $10.85 | $198.08 |
+| hpa max | $0.3296 | $2.64 | $7.91 | $13.18 | $240.61 |
+| hpa max all rollouts | $0.3958 | $3.17 | $9.50 | $15.83 | $288.90 |
+
+Baseline excludes variable charges. HPA max means four replicas per API (currently
+disabled). All-rollouts peak models two API surges plus one per CoreDNS/Metrics/
+controller deployment: 18 Pods/4.5 vCPU. It is a capacity/cost envelope, not a
+request to deploy them or a promise that autoscaling is enabled.
+
+The optional usage model shows explicit planning unit assumptions: NAT data $0.045/GB;
+standard logs ingestion $0.50/GB and archived storage $0.03/GB-month; ECR $0.10/GB-month;
+S3 Standard $0.023/GB-month, PUT $0.005/1000 and GET $0.0004/1000; symmetric KMS
+requests $0.03/10000. Actual log class/tiers/Region/operations must be rechecked in
+the live cost review, with recorded usage quantities. For example, 10GB NAT,
+2GB log ingestion, 1GB-month log storage, 2GB-month ECR, 0.1GB-month S3,
+1000 PUT/5000 GET and 10000 symmetric KMS requests add about $1.72, before transfer.
+That is an example ONLY, not measured Banking usage. Inspector enhanced ECR scanning
+is not enabled; basic scan and CI Trivy are the prepared path.
+
+Sources: [CloudWatch](https://aws.amazon.com/cloudwatch/pricing/),
+[ECR](https://aws.amazon.com/ecr/pricing/), [S3](https://aws.amazon.com/s3/pricing/),
+[KMS](https://aws.amazon.com/kms/pricing/). Cross-AZ NAT traffic and Internet egress
+are additional, direction/volume dependent; a zero-volume baseline is not a cap.
+
+Phase 4 ALB estimate: $0.0225/ALB-hour + $0.008/LCU-hour;
+internet-facing two-AZ ALB starts with at least two public addresses at $0.005/IP-hour.
+An assumed constant one LCU plus two addresses adds $0.0405/hour ($29.57/month)
+to the controller-inclusive scenario. Internal ALB has no public IPv4 assumption;
+capacity scaling can add addresses/LCUs. No ALB is created by initial Terraform.
+[ELB pricing](https://aws.amazon.com/elasticloadbalancing/pricing/)
+
+KMS key/storage retained after a short run continue charging; the proportional
+key assumption in this table does not promise a $1 key disappears on teardown.
+Starting/stopping app Pods does not stop the EKS control plane or NAT Gateway.
+
+## Proposed reporting and alert setup — approval needed
+
+Billing administrator: activate approved cost allocation tags as TAGGING.md explains,
+review Cost Explorer daily by Project/Environment/Service and reconcile unallocated
+Fargate charges. Propose one monthly project budget (e.g. $250, owner must approve
+the actual amount and recipient) with actual alerts at 50/80/100% and forecast at
+100%; review shared-account coverage and ALB/usage allowance first. AWS Budgets,
+notifications, billing settings and extra paid dashboards are NOT created here.
+Use a scheduled manual end-of-lab inventory review before adopting automation.

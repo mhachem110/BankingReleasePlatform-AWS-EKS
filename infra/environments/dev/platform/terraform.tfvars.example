@@ -17,3 +17,6 @@ addon_versions = {
   coredns                = "REPLACE_WITH_COMPATIBLE_VERSION"
   metrics-server         = "REPLACE_WITH_COMPATIBLE_VERSION"
 }
+
+owner = "MahmoudHachem"
+# cost_center = "ACTUAL_APPROVED_VALUE" # optional; omit until assigned

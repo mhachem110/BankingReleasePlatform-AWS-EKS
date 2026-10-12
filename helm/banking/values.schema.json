@@ -235,6 +235,20 @@
           "type": "boolean"
         }
       }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner"
+      ],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
     }
   },
   "$schema": "https://json-schema.org/draft-07/schema#"

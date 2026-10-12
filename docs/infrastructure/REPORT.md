@@ -1,3 +1,7 @@
+# Historical Fargate redesign checkpoint
+
+This report records the earlier parallel-workstream preparation. PRs #8/#9/#10 have since merged. Current readiness, tests and approvals are in PREPARATION-REPORT.md and ADMIN-REQUEST.md; historical counts and pending-PR statements below are not current deployment evidence.
+
 # Phase 3 Fargate implementation report
 
 ## A. Phase completed

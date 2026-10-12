@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "vpc-flow-logs.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": {
+          "aws:SourceAccount": "866934333672"
+        },
+        "ArnLike": {
+          "aws:SourceArn": "arn:aws:ec2:us-east-2:866934333672:vpc-flow-log/*"
+        }
+      }
+    }
+  ]
+}

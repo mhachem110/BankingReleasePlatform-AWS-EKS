@@ -4,7 +4,9 @@ terraform {
   }
 }
 variable "name" { type = string }
+variable "tags" { type = map(string) }
 resource "aws_ecr_repository" "service" {
+  tags = merge(var.tags, { Component = "registry", Name = "${var.name}-${each.key}" })
   # checkov:skip=CKV_AWS_136:ECR uses AES256 at rest; customer KMS registry encryption is deferred to Phase 6.
   for_each             = toset(["account", "payment"])
   name                 = "${var.name}-${each.key}"

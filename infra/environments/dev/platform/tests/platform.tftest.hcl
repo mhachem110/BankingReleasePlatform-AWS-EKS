@@ -44,3 +44,18 @@ run "bootstrap_role_as_fargate_rejected" {
   variables { fargate_execution_role_arn = "arn:aws:iam::123456789012:role/cloudbatch818-mahmoud-cloudops-bootstrap" }
   expect_failures = [terraform_data.prerequisites]
 }
+run "approved_cost_center" {
+  command = plan
+  variables { cost_center = "approved-test-fixture" }
+  assert {
+    condition = (output.common_resource_tags.Owner == "MahmoudHachem" &&
+      output.common_resource_tags.Purpose == "CloudEngineerTraining" &&
+    output.common_resource_tags.CostCenter == "approved-test-fixture")
+    error_message = "Owner/Purpose are consistent and only the supplied cost center is used."
+  }
+}
+run "blank_cost_center_rejected" {
+  command = plan
+  variables { cost_center = " " }
+  expect_failures = [var.cost_center]
+}

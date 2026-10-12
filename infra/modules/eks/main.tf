@@ -2,6 +2,7 @@ terraform {
   required_providers { aws = { source = "hashicorp/aws", version = "= 6.68.0" } }
 }
 variable "name" { type = string }
+variable "tags" { type = map(string) }
 variable "vpc_id" { type = string }
 variable "subnet_ids" { type = list(string) }
 variable "cluster_role_arn" { type = string }
@@ -36,16 +37,19 @@ variable "addon_versions" {
 }
 locals { addon_configuration = jsondecode(file("${path.module}/addon-configuration.json")) }
 resource "aws_cloudwatch_log_group" "cluster" {
+  tags = merge(var.tags, { Component = "logging", Name = "${var.name}-cluster-logs" })
   # checkov:skip=CKV_AWS_338:Development logs retain 30 days; review annual retention in Phase 6.
   name              = "/aws/eks/${var.name}/cluster"
   retention_in_days = 30
   kms_key_id        = var.kms_key_arn
 }
 resource "aws_eks_cluster" "this" {
+  tags = merge(var.tags, { Component = "eks", Name = "${var.name}" })
   # checkov:skip=CKV_AWS_339:Scanner 3.3.17 predates EKS 1.36; review AWS release calendar before deployment.
   # checkov:skip=CKV_AWS_39:Private endpoint plus explicit /24-or-narrower operator CIDRs.
   # checkov:skip=CKV_AWS_38:Public HTTPS needed for approved external operator; private endpoint enabled.
   name                          = var.name
+  deletion_protection           = true
   role_arn                      = var.cluster_role_arn
   version                       = var.kubernetes_version
   enabled_cluster_log_types     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
@@ -72,10 +76,11 @@ resource "aws_eks_cluster" "this" {
 resource "aws_iam_openid_connect_provider" "cluster" {
   url            = aws_eks_cluster.this.identity[0].oidc[0].issuer
   client_id_list = ["sts.amazonaws.com"]
-  tags           = { Name = "${var.name}-irsa", Project = "BankingReleasePlatform", Environment = "dev" }
+  tags           = merge(var.tags, { Component = "security" }, { Name = "${var.name}-irsa" })
 }
 # EKS profile creation is sequential. The root waits for private NAT routes.
 resource "aws_eks_fargate_profile" "coredns" {
+  tags                   = merge(var.tags, { Component = "fargate", Name = "${var.name}-coredns" })
   cluster_name           = aws_eks_cluster.this.name
   fargate_profile_name   = "${var.name}-coredns"
   pod_execution_role_arn = var.fargate_execution_role_arn
@@ -86,6 +91,7 @@ resource "aws_eks_fargate_profile" "coredns" {
   }
 }
 resource "aws_eks_fargate_profile" "controller" {
+  tags                   = merge(var.tags, { Component = "fargate", Name = "${var.name}-controller" })
   cluster_name           = aws_eks_cluster.this.name
   fargate_profile_name   = "${var.name}-controller"
   pod_execution_role_arn = var.fargate_execution_role_arn
@@ -101,6 +107,7 @@ resource "aws_eks_fargate_profile" "controller" {
   depends_on = [aws_eks_fargate_profile.coredns]
 }
 resource "aws_eks_fargate_profile" "banking" {
+  tags                   = merge(var.tags, { Component = "fargate", Name = "${var.name}-app" })
   cluster_name           = aws_eks_cluster.this.name
   fargate_profile_name   = "${var.name}-app"
   pod_execution_role_arn = var.fargate_execution_role_arn
@@ -109,6 +116,7 @@ resource "aws_eks_fargate_profile" "banking" {
   depends_on = [aws_eks_fargate_profile.controller]
 }
 resource "aws_eks_access_entry" "operator" {
+  tags          = merge(var.tags, { Component = "security", Name = "${var.name}-operator-access" })
   cluster_name  = aws_eks_cluster.this.name
   principal_arn = var.operator_role_arn
   type          = "STANDARD"
@@ -120,6 +128,7 @@ resource "aws_eks_access_policy_association" "operator" {
   access_scope { type = "cluster" }
 }
 resource "aws_eks_access_entry" "deployer" {
+  tags              = merge(var.tags, { Component = "security", Name = "${var.name}-deployer-access" })
   cluster_name      = aws_eks_cluster.this.name
   principal_arn     = var.deployer_role_arn
   kubernetes_groups = ["banking-release-verifier"]
@@ -135,6 +144,7 @@ resource "aws_eks_access_policy_association" "deployer" {
   }
 }
 resource "aws_eks_addon" "this" {
+  tags                        = merge(var.tags, { Component = "eks", Name = "${var.name}-${each.key}-addon" })
   for_each                    = var.addon_versions
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = each.key

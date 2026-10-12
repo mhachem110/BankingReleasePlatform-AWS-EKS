@@ -10,7 +10,15 @@ kind: Ingress
 metadata:
   name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: banking
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: banking
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    banking.example/environment: {{ trimPrefix "banking-" .Release.Namespace | quote }}
   annotations:
+    banking.example/owner: {{ .Values.ownership.owner | quote }}
     alb.ingress.kubernetes.io/scheme: {{ .Values.ingress.scheme }}
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'

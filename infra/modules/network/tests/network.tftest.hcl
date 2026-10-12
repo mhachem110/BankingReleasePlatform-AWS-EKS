@@ -1,5 +1,11 @@
-mock_provider "aws" {}
+mock_provider "aws" {
+  mock_resource "aws_cloudwatch_log_group" {
+    defaults = { arn = "arn:aws:logs:us-east-2:123456789012:log-group:/banking/banking-dev/vpc-flow" }
+  }
+}
 variables {
+  aws_region         = "us-east-2"
+  tags               = { Project = "BankingReleasePlatform", Environment = "dev", ManagedBy = "Terraform", Owner = "TestOwner", Purpose = "CloudEngineerTraining" }
   name               = "banking-dev"
   cidr               = "10.70.0.0/16"
   availability_zones = ["us-east-2a", "us-east-2b"]
@@ -33,4 +39,17 @@ run "duplicate_zone_rejected" {
   command = plan
   variables { availability_zones = ["us-east-2a", "us-east-2a"] }
   expect_failures = [var.availability_zones]
+}
+run "routing_connections" {
+  command = apply
+  assert {
+    condition = (aws_nat_gateway.this.subnet_id == aws_subnet.public["0"].id &&
+      aws_route.internet.gateway_id == aws_internet_gateway.this.id &&
+      alltrue([for route in aws_route.nat : route.nat_gateway_id == aws_nat_gateway.this.id]) &&
+      alltrue([for key, link in aws_route_table_association.application : link.subnet_id == aws_subnet.application[key].id && link.route_table_id == aws_route_table.application[key].id]) &&
+      alltrue([for key, link in aws_route_table_association.public : link.subnet_id == aws_subnet.public[key].id && link.route_table_id == aws_route_table.public.id]) &&
+      alltrue([for key, link in aws_route_table_association.database : link.subnet_id == aws_subnet.database[key].id && link.route_table_id == aws_route_table.database[key].id]) &&
+    aws_vpc_endpoint.s3.route_table_ids == toset([for table in aws_route_table.application : table.id]))
+    error_message = "NAT/IGW, every tier association and S3 endpoint must connect to the intended resources."
+  }
 }

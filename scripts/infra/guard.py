@@ -29,10 +29,15 @@ def configuration(env):
         raise ValueError("Only the existing dedicated Banking bucket is allowed.")
     inputs = json.loads(env["PLATFORM_INPUTS_JSON"])
     allowed = set(ROLE_NAMES) | {"operator_role_arn", "deployer_role_arn", "kms_key_arn",
-        "availability_zones", "vpc_cidr", "endpoint_cidrs", "kubernetes_version", "addon_versions"}
+        "availability_zones", "vpc_cidr", "endpoint_cidrs", "kubernetes_version", "addon_versions", "owner", "cost_center"}
     if set(inputs) - allowed:
         raise ValueError("Unknown/stale platform fields are not accepted.")
     inputs.setdefault("kubernetes_version", "1.36")
+    inputs.setdefault("owner", "MahmoudHachem")
+    for field in ("owner", "cost_center"):
+        value = inputs.get(field)
+        if (field == "owner" or value is not None) and (not isinstance(value, str) or not value.strip() or len(value) > 128 or value != value.strip() or "REPLACE" in value.upper()):
+            raise ValueError("Use only an approved nonblank " + field + "; omit CostCenter until assigned.")
     for field, name in ROLE_NAMES.items():
         if not re.fullmatch(r"arn:aws:iam::" + account + r":role/(?:[\w+=,.@-]+/)*" + name, inputs[field]):
             raise ValueError("Administrator role ARN does not match " + field)
@@ -43,6 +48,8 @@ def configuration(env):
             raise ValueError("Access entries must use verified same-account IAM roles.")
     if inputs["operator_role_arn"] == inputs["deployer_role_arn"]:
         raise ValueError("Operator and namespace deployer must be distinct.")
+    if len(set(inputs[k] for k in [*ROLE_NAMES, "operator_role_arn", "deployer_role_arn"])) != 5:
+        raise ValueError("Service roles, operator and application identities must all be distinct.")
     if not re.fullmatch(r"arn:aws:kms:us-east-2:" + account + r":key/[a-f0-9-]{36}", inputs["kms_key_arn"]):
         raise ValueError("Use the administrator-approved symmetric KMS key.")
     if inputs.get("kubernetes_version", "1.36") != "1.36":
@@ -129,6 +136,12 @@ if __name__ == "__main__":
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             output.write("session_policy=" + session_policy(values) + "\n")
     else:
-        report = verify_plan(json.loads(Path(args.path).read_text(encoding="utf-8")))
+        plan = json.loads(Path(args.path).read_text(encoding="utf-8"))
+        report = verify_plan(plan)
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("plan_audit", Path(__file__).with_name("plan-audit.py"))
+        audit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(audit)
+        report.update(audit.audit(plan, json.loads(Path("platform.tfvars.json").read_text())))
         report["plan_sha256"] = hashlib.sha256(Path("platform.tfplan").read_bytes()).hexdigest()
         print(json.dumps(report, indent=2))
