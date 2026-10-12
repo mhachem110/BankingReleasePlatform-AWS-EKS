@@ -123,7 +123,7 @@ While Account API is stopped, Payment's `/health` stays healthy but payment requ
 
 ## Working branches
 
-Reuse `feature/app` for application work, `bootstrap` for backend/OIDC work and `infra` for infrastructure and governance; the proposed reviewed application scope also includes Helm and the four application workflows. Each opens a PR into `dev`; promote through `dev → stage → uat → main`. PR #1 is merged and historical branches are preserved. Follow [the reviewed branch rules](AGENTS.md) and [governance](docs/governance/reusable-branches.md).
+Reuse `feature/app` for application work, `bootstrap` for backend/OIDC work and `infra` for infrastructure and governance; the approved application release scope also includes Helm and the four application workflows. Each opens a PR into `dev`; promote through `dev â†’ stage â†’ uat â†’ main`. PR #1 is merged and historical branches are preserved. Follow [the reviewed branch rules](AGENTS.md) and [governance](docs/governance/reusable-branches.md).
 
 ## Phase 2 complete
 

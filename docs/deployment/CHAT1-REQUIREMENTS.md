@@ -1,8 +1,10 @@
-# Interface requirements for Chat 1
+# Infrastructure/application interface and deployment prerequisites
 
-This is the application-owner handoff document. No infrastructure file is changed.
+This is the shared application/infrastructure interface. PR #8 and PR #10 are merged;
+feature/app has synchronized with their approved dev history through ordinary merges.
+The application PR does not modify infrastructure or IAM files.
 
-Confirmed coordination message:
+Confirmed interface:
 - Cluster and namespace banking-dev, Region us-east-2, port 8080.
 - Fargate profile selects every banking-dev Pod in both private application subnets.
 - CoreDNS profile selects kube-system / k8s-app=kube-dns.
@@ -27,17 +29,19 @@ Remaining infrastructure/admin dependencies:
 5. Namespace banking-dev created once with the prepared restricted Pod-security labels,
    outside the app Helm release; keep environment-specific namespaces/clusters isolated.
 6. Protected dev environment and approval controls before enabling manual app actions.
-7. Review the feature/app path-policy conflict in a separate infra/security workstream.
-   Do not bypass the mandatory aggregate or expand all application file privileges.
-   The concrete paths are four new app workflows, helm/banking/**, scripts/deploy/**,
-   and docs/deployment/**. No proposed governance patch is bundled here.
-8. Preserve/reference the final Fargate chart interface from PR #8. Application PR must
-   reconcile that final version and follow the infrastructure baseline merge.
+7. The approved governance change now authorizes only the required owner-authored
+   application release paths. Required security checks, restricted infrastructure/IAM
+   ownership and branch/environment protection remain active. PR #9 still needs its
+   own merge approval after current checks pass.
+8. The final Fargate interface from approved PR #8 is reconciled with the newer chart.
+   Preserve that interface and use ordinary merges for future synchronization.
 
-Optional dependencies remain disabled: Metrics Server/HPA and ALB controller/IRSA,
-approved ACM host/certificate, selected ALB subnets and security groups with approved
-backend rules. Application workflows do not create ALBs or enable ingress.
+CoreDNS and Metrics Server add-ons are prepared in the infrastructure code; their actual
+versions, Fargate scheduling and runtime health require protected AWS preflight/deployment
+verification. Optional HPA and ALB ingress remain disabled. The controller/IRSA role,
+approved ACM host/certificate, selected ALB subnets/security groups and backend rules
+need separate approval. Application workflows do not create ALBs or enable ingress.
 
 Prepared later stage/UAT/prod targets do not request provisioning those environments.
-No approval to merge PR #8, provision infrastructure, change IAM or incur cloud costs
-is conveyed by this document.
+This interface conveys no approval to merge PR #9, provision infrastructure, change IAM
+or incur cloud costs.

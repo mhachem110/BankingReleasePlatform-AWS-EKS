@@ -2,7 +2,8 @@
 
 Nothing in this document creates roles, trust, environments or resources.
 APP_DEPLOYMENTS_ENABLED is absent/false by default. Do not change it until separate
-deployment approval, Phase 3 readiness, baseline reconciliation and governance resolution.
+deployment approval and verified Phase 3 readiness. Baseline reconciliation and the
+owner-approved application governance change are complete.
 
 Create/review protected GitHub environments dev, stage, uat and prod through the
 authorized infrastructure/security workstream. Require human reviewers and restrict
@@ -56,7 +57,7 @@ Terraform state access, S3 writes, RDS, ELB or infrastructure apply permission i
 ECR push/storage itself requires explicit authorization; nothing was pushed offline.
 An application runtime ServiceAccount needs no AWS permissions for these APIs.
 Fargate image pulls use the administrator's separate Pod execution role, not an app
-ServiceAccount or GitHub role. Future controller AWS access uses Chat 1's separate IRSA
+ServiceAccount or GitHub role. Future controller AWS access uses the administrator-approved separate IRSA
 role on kube-system/aws-load-balancer-controller.
 
 EKS access entry/RBAC must map the approved application role to namespace-scoped
@@ -66,8 +67,12 @@ Grant get on the approved Namespace and get on Nodes for compute-type verificati
 without node mutation or cluster administration. Node get is cluster-scoped because
 the verifier confirms actual eks.amazonaws.com/compute-type=fargate labels.
 Default workflows keep Ingress off, so granting ingress writes is optional and should
-wait for approval. EKS namespace Edit alone might not supply Namespace/Node get;
-Chat 1/admin must review the narrow additional read-only RBAC.
+wait for approval. EKS namespace Edit alone might not supply Namespace/Node get.
+The approved infrastructure access entry maps the application role to the
+banking-release-verifier group. After cluster creation, an approved operator applies
+iam/phase3/deployer-verification-rbac.yaml, granting Node get and get on only the
+banking-dev Namespace. This separate binding permits verification without cluster
+administration or node mutation.
 
 Role permission/trust, environment reviewer approval, Kubernetes RBAC and network access
 are independent prerequisites. None has been installed by this application PR.

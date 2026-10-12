@@ -30,7 +30,7 @@ At the defaults, the extra platform memory rounds each Pod to a 0.25vCPU/1GB Far
 validate actual CapacityProvisioned annotations during the live demonstration.
 
 HPA is optional and disabled. It requires a working Fargate-compatible Metrics Server,
-which Chat 1 owns. Namespace creation is deliberately outside the Helm release:
+which the infrastructure workstream owns. Namespace creation is deliberately outside the Helm release:
 helm/banking/namespaces/banking-dev.yaml is prepared for the infrastructure owner.
 The deployer neither creates namespaces nor needs namespace-administration permissions.
 
@@ -39,7 +39,7 @@ certificate ARN, subnet IDs and security-group IDs. It uses IP targets and HTTPS
 defaults to internal scheme and does not let the controller edit backend security-group
 rules. Chart approval flags are configuration guards, not replacements for human approval.
 No pipeline enables ingress. Controller/ACM/DNS/security-group setup and ALB expense
-require separate approval through Chat 1.
+require separate approval through the infrastructure operator.
 
 ## Workflows
 
@@ -84,25 +84,22 @@ evidence. See [Helm upgrade](https://helm.sh/docs/helm/helm_upgrade/).
 
 ## Integration and governance checkpoint
 
-The initial Helm baseline was copied exclusively from PR #8 commit
-41fae7fdfa9c10bf95ff3f2f2e733e80a58b2d6e. No infra history was merged or modified.
+PR #8's approved Fargate infrastructure and PR #10's approved governance/access
+contract are now merged into dev. feature/app synchronized with that history through
+ordinary merges, preserving the newer application chart and all infrastructure code.
 The application chart retains baseline names/selectors so existing releases can upgrade.
-The baseline's EC2 network policies/topology spreading were removed for Fargate.
-Schema changes and the new 0.2.0 chart reject unknown legacy values; the deployment
-uses --reset-values plus explicit environment/images files to avoid carrying EC2 values.
+EC2 network policies/topology spreading were removed for Fargate. Strict values schemas
+and chart 0.2.0 reject unknown legacy values; deployment uses --reset-values plus
+explicit environment/image files to avoid carrying old settings.
 
-PR #8 is owned by Chat 1 and remains unmodified by this chat.
-Before application merge: compare the final Fargate PR #8 Helm changes, reconcile in
-feature/app, rerun offline checks, and wait for the infrastructure baseline's approved
-merge. Then fetch, synchronize feature/app with origin/feature/app and merge origin/dev
-using ordinary merges. Stop on conflicts or Git failures. No force pushes or rebases.
-
-The installed scripts/governance/validate_pr_paths.py rejects helm/, scripts/deploy/,
-.github/ and docs/deployment/ from feature/app. The owner's explicit Phase 4/5 assignment
-authorizes preparing them here; it does not alter the installed gate.
-The application PR must remain draft/blocked until a separate reviewed infra/security
-decision resolves the ownership policy. No shared governance, CODEOWNERS or required
-check was weakened. Do not request merge while this check fails.
-Only add Application CI as a required check after observing actual successful runs.
+The installed trusted ownership policy permits owner-authored feature/app changes only
+in helm/banking/**, scripts/deploy/**, docs/deployment/** and the four named application
+workflows, alongside the existing application scope. Terraform/HCL/backend inputs,
+CODEOWNERS, IAM, infrastructure, governance and unrelated workflows remain restricted.
+The required Repository security policy passes; all existing protection rules remain.
+PR #9 may become ready for review after its current checks pass, but merging requires
+the owner's separate approval. No application or infrastructure deployment is authorized
+by making the PR ready. Only add Application CI as a required check after its trusted
+workflow is installed in dev and successful execution is observed.
 
 Read ENVIRONMENT.md, CHAT1-REQUIREMENTS.md, RUNBOOK.md and REPORT.md for setup and evidence.
