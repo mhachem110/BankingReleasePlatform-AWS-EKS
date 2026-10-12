@@ -11,7 +11,8 @@ percentage for the whole seven-phase project.
 ## B. Naming and tagging
 
 Approved Owner=MahmoudHachem, Project=BankingReleasePlatform, Environment=dev,
-ManagedBy=Terraform, Purpose=CloudEngineerTraining. CostCenter is configurable,
+ManagedBy=Terraform for Terraform-owned resources, Purpose=CloudEngineerTraining.
+Administrator-owned roles/key use ManagedBy=Administrator, subject to organizational tag approval. CostCenter is configurable,
 optional and omitted until assigned. One common Terraform map supplies provider
 defaults and module tags; resource Name/Component and ALB discovery tags are
 explicit. All 31 supported managed tag maps passed offline checks. Live effective
@@ -49,7 +50,7 @@ IAM role creation, bucket initialization or change to Phase 2 is introduced.
 ## D. Actual validation
 
 Passed locally: fmt; seven offline Terraform root validations; **16 mock Terraform
-tests**; **48 bootstrap**, **26 governance**, **44 infrastructure** and
+tests**; **48 bootstrap**, **26 governance**, **45 infrastructure** and
 **24 Helm/deployment** Python tests; actionlint on eight workflows using the
 existing approved custom runner-label configuration. Checkov 3.3.17: **43 passed,
 0 failed, 11 documented exceptions, 0 parsing errors**. Source/resource/tag mutations

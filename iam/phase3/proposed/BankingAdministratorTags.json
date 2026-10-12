@@ -2,7 +2,7 @@
   "cloudbatch818-mahmoud-banking-eks-cluster": {
     "Project": "BankingReleasePlatform",
     "Environment": "dev",
-    "ManagedBy": "Terraform",
+    "ManagedBy": "Administrator",
     "Owner": "MahmoudHachem",
     "Purpose": "CloudEngineerTraining",
     "Name": "cloudbatch818-mahmoud-banking-eks-cluster",
@@ -11,7 +11,7 @@
   "cloudbatch818-mahmoud-banking-fargate-execution": {
     "Project": "BankingReleasePlatform",
     "Environment": "dev",
-    "ManagedBy": "Terraform",
+    "ManagedBy": "Administrator",
     "Owner": "MahmoudHachem",
     "Purpose": "CloudEngineerTraining",
     "Name": "cloudbatch818-mahmoud-banking-fargate-execution",
@@ -20,7 +20,7 @@
   "cloudbatch818-mahmoud-banking-flow-logs": {
     "Project": "BankingReleasePlatform",
     "Environment": "dev",
-    "ManagedBy": "Terraform",
+    "ManagedBy": "Administrator",
     "Owner": "MahmoudHachem",
     "Purpose": "CloudEngineerTraining",
     "Name": "cloudbatch818-mahmoud-banking-flow-logs",
@@ -29,7 +29,7 @@
   "cloudbatch818-mahmoud-banking-app-deploy-dev": {
     "Project": "BankingReleasePlatform",
     "Environment": "dev",
-    "ManagedBy": "Terraform",
+    "ManagedBy": "Administrator",
     "Owner": "MahmoudHachem",
     "Purpose": "CloudEngineerTraining",
     "Name": "banking-dev-app-deployment",
@@ -38,7 +38,7 @@
   "banking-dev-kms": {
     "Project": "BankingReleasePlatform",
     "Environment": "dev",
-    "ManagedBy": "Terraform",
+    "ManagedBy": "Administrator",
     "Owner": "MahmoudHachem",
     "Purpose": "CloudEngineerTraining",
     "Name": "banking-dev-kms",

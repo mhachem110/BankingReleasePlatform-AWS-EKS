@@ -14,7 +14,7 @@ No policy here has been applied. Use the single request in
 - BankingReleasePlatformPhase3.REVIEW-TEMPLATE: complete review shape with an
   inert key marker. **Do not paste it.** Render the final complete exact-key JSON
   using `scripts/infra/prepare-admin-request.py` with the actual approved KMS ARN.
-- BankingAdministratorTags: approved proposed tags, not instructions to retag
+- BankingAdministratorTags: ManagedBy=Administrator for administrator-owned roles/key (organizational approval required), not instructions to retag
   shared identities/keys. Optional CostCenter is omitted until assigned.
 
 Preserve CloudOpsTrackerBootstrap, BankingReleasePlatformState and both current

@@ -26,6 +26,21 @@ def fixture():
 
 
 class SafetyTests(unittest.TestCase):
+    def test_administrator_tags_match_actual_ownership(self):
+        values = configuration(fixture())
+        args = (values["expected_account_id"], "us-east-2", values["state_bucket_name"], values["kms_key_arn"])
+        tags = admin.policies(*args)["BankingAdministratorTags.json"]
+        self.assertTrue(all(t["ManagedBy"] == "Administrator" and "CostCenter" not in t for t in tags.values()))
+        self.assertEqual(tags, json.loads((ROOT / "iam/phase3/proposed/BankingAdministratorTags.json").read_text()))
+        alternate = admin.policies(*args, administrator_managed_by="ApprovedManual", cost_center="approved-test")["BankingAdministratorTags.json"]
+        self.assertTrue(all(t["ManagedBy"] == "ApprovedManual" and t["CostCenter"] == "approved-test" for t in alternate.values()))
+        with self.assertRaises(ValueError):
+            admin.policies(*args, administrator_managed_by="Terraform")
+        spec = importlib.util.spec_from_file_location("tag_audit", ROOT / "scripts/infra/plan-audit.py")
+        tag_audit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tag_audit)
+        self.assertEqual(tag_audit.common_tags(values)["ManagedBy"], "Terraform")
+
     def test_same_named_customer_policy_cannot_substitute_for_aws_managed(self):
         name = "AmazonEKSClusterPolicy"
         verify_managed_policies([{"PolicyName":name,"PolicyArn":"arn:aws:iam::aws:policy/"+name}], {name})

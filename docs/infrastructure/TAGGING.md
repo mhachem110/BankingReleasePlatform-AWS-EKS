@@ -32,9 +32,12 @@ effective tags. There is no live bypass flag. Actual live compliance remains
 pending administrator inputs and a protected plan.
 
 Dedicated administrator-provided IAM roles/key use the reviewed tag maps in
-`iam/phase3/proposed/BankingAdministratorTags.json`. Despite this requested project
-taxonomy, these resources remain externally administrator-owned and outside
-Terraform state. `ManagedBy=Terraform` is not permission to alter/destroy them.
+`iam/phase3/proposed/BankingAdministratorTags.json`. These roles/key are externally administrator-owned and outside Terraform state,
+so their designation is ManagedBy=Administrator, subject to organizational
+tagging approval. The offline renderer accepts --administrator-managed-by for
+another approved manual-management designation and rejects Terraform. Actual
+Terraform-managed resources retain ManagedBy=Terraform. Tags do not authorize
+changes or teardown of shared resources.
 Shared identities/keys keep their tags unless their owner separately authorizes
 an additive change. Effective account tag-policy requirements, including a
 mandatory CostCenter if imposed, are an administrator prerequisite; no value is

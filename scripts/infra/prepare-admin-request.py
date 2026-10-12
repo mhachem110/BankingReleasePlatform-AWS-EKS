@@ -24,7 +24,7 @@ def controller_trust(account, region, issuer):
     }]}
 
 
-def policies(account, region, bucket, key_arn, issuer=None, role_arns=None, owner="MahmoudHachem", cost_center=None):
+def policies(account, region, bucket, key_arn, issuer=None, role_arns=None, owner="MahmoudHachem", cost_center=None, administrator_managed_by="Administrator"):
     if not re.fullmatch(r"[0-9]{12}", account) or region != "us-east-2" or bucket != "mhachem-banking-tfstate-" + account:
         raise ValueError("Use the verified Banking account, Ohio Region and dedicated bucket.")
     if not re.fullmatch(r"arn:aws:kms:us-east-2:" + account + r":key/[a-f0-9-]{36}", key_arn):
@@ -40,7 +40,9 @@ def policies(account, region, bucket, key_arn, issuer=None, role_arns=None, owne
     files = {}
     if not owner.strip() or len(owner) > 128 or (cost_center is not None and (not cost_center.strip() or len(cost_center) > 128)):
         raise ValueError("Use approved Owner and optional actual CostCenter values.")
-    tags = {"Project":"BankingReleasePlatform", "Environment":"dev", "ManagedBy":"Terraform",
+    if not administrator_managed_by.strip() or len(administrator_managed_by) > 128 or administrator_managed_by.strip().casefold() == "terraform":
+        raise ValueError("Use an approved administrator-managed designation, not Terraform.")
+    tags = {"Project":"BankingReleasePlatform", "Environment":"dev", "ManagedBy":administrator_managed_by,
             "Owner":owner, "Purpose":"CloudEngineerTraining"}
     if cost_center is not None:
         tags["CostCenter"] = cost_center
@@ -113,11 +115,12 @@ if __name__ == "__main__":
     parser.add_argument("--flow-log-role-arn")
     parser.add_argument("--owner", default="MahmoudHachem")
     parser.add_argument("--cost-center", help="Only an actual approved value; otherwise omitted")
+    parser.add_argument("--administrator-managed-by", default="Administrator", help="Organization-approved designation for externally managed roles/key; never Terraform")
     parser.add_argument("--output", default="artifacts/phase3-admin")
     args = parser.parse_args()
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
-    for name, value in policies(args.account, args.region, args.bucket, args.kms_key_arn, args.oidc_issuer, {"cluster_role_arn": args.cluster_role_arn, "flow_log_role_arn": args.flow_log_role_arn}, args.owner, args.cost_center).items():
+    for name, value in policies(args.account, args.region, args.bucket, args.kms_key_arn, args.oidc_issuer, {"cluster_role_arn": args.cluster_role_arn, "flow_log_role_arn": args.flow_log_role_arn}, args.owner, args.cost_center, args.administrator_managed_by).items():
         (output / name).write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
     print("Rendered complete additive policies. No AWS calls; preserve Retail, GitHub trust and Phase 2 policies.")
     if not args.oidc_issuer:

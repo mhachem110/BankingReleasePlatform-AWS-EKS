@@ -101,10 +101,13 @@ owner approval. Do not select another project's key or fabricate an ARN.
 
 IAM -> new role -> Tags / KMS -> new dedicated key -> Tags: use COMPLETE maps in
 BankingAdministratorTags.json. Approved common values: Project=BankingReleasePlatform,
-Environment=dev, ManagedBy=Terraform, Owner=MahmoudHachem, Purpose=CloudEngineerTraining,
-plus file-specific Name/Component. These admin-owned resources stay outside
-Terraform state despite the requested project taxonomy; tags do not authorize
-alteration or teardown. Shared/bootstrap identities are not retagged. CostCenter
+Environment=dev, ManagedBy=Administrator, Owner=MahmoudHachem,
+Purpose=CloudEngineerTraining, plus file-specific Name/Component. Administrator
+must confirm this manual-management designation against organizational tagging
+requirements; another approved value can be supplied through
+--administrator-managed-by (Terraform is rejected). Actual Terraform-owned
+resources retain ManagedBy=Terraform. Administrator-owned roles/key stay outside
+Terraform state; tags do not authorize alteration or teardown. Shared/bootstrap identities are not retagged. CostCenter
 is absent until assigned; confirm whether effective tag policy requires a real code.
 Cost allocation tag activation is a separate billing-admin proposal in TAGGING.md.
 
@@ -127,7 +130,7 @@ python scripts/infra/prepare-admin-request.py --account 866934333672 --region us
 ```
 
 For approved cluster/flow IAM paths, also pass full --cluster-role-arn /
---flow-log-role-arn. Optional --cost-center is only a real approved value.
+--flow-log-role-arn. Optional --cost-center is only a real approved value; --administrator-managed-by accepts an approved external-management designation.
 IAM -> bootstrap role -> Permissions -> Add permissions -> Create inline policy
 -> JSON -> generated BankingReleasePlatformPhase3.json; name BankingReleasePlatformPhase3.
 Check aggregate inline-policy quota. It grants precisely three service-conditioned
