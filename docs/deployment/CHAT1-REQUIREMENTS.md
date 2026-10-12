@@ -31,8 +31,8 @@ Remaining infrastructure/admin dependencies:
 6. Protected dev environment and approval controls before enabling manual app actions.
 7. The approved governance change now authorizes only the required owner-authored
    application release paths. Required security checks, restricted infrastructure/IAM
-   ownership and branch/environment protection remain active. PR #9 still needs its
-   own merge approval after current checks pass.
+   ownership and branch/environment protection remain active. PR #9 and final
+   preparation PR #11 are merged; live execution remains separately approval-gated.
 8. The final Fargate interface from approved PR #8 is reconciled with the newer chart.
    Preserve that interface and use ordinary merges for future synchronization.
 

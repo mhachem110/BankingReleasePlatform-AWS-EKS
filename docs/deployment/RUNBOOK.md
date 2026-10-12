@@ -27,7 +27,7 @@ Trivy uses no ignore-unfixed or exception flags. Resolve actual findings before 
 ## Live prerequisites and deployment
 
 Infrastructure/chart reconciliation and the approved governance change are complete.
-Pending: separate application PR approval, explicit Phase 3 deployment, ACTIVE banking-dev,
+PR #9 and PR #11 are merged. Pending: explicit Phase 3 deployment, ACTIVE banking-dev,
 healthy CoreDNS and Fargate profiles, approved runner,
 namespace, separate app OIDC role/RBAC and protected dev environment variables.
 Check ENVIRONMENT.md and CHAT1-REQUIREMENTS.md. No live checks have run.

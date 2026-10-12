@@ -60,7 +60,7 @@ GitHub: repository → Settings → Environments → bootstrap retains owner rev
 
 The exact Banking subject remains `repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:bootstrap`, audience `sts.amazonaws.com`. Retail retains `repo:mhachem110@150286776/E-CommerceAWS_Terraform@1399001550:environment:bootstrap`. Do not replace either relationship for Phase 3.
 
-SCP restrictions for future EC2/EKS operations cannot be inferred from successful S3 access. Phase 3 requires administrator review of effective permissions and distinct EKS service/node/controller roles; see the consolidated infrastructure administrator request.
+SCP restrictions for future EC2/EKS operations cannot be inferred from successful S3 access. Phase 3 now uses EKS Fargate and requires administrator review of effective permissions, distinct cluster/Fargate-execution/flow-log roles, operator/app identities and actual KMS key; the controller IRSA role follows the real issuer later. No EC2 worker role is required. See the consolidated infrastructure administrator request.
 
 ## F. Checkpoint
 

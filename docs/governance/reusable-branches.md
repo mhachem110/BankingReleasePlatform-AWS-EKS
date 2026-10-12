@@ -1,6 +1,6 @@
 # Reusable working branches and safe PR migration
 
-Migration progress on 2026-10-11: PRs #1, #3 and #2 were merged into dev with individual owner approval and merge commits. PR #4 is synchronized with that history and still requires its own approval. Phase 2 preparation is included, but AWS configuration, connectivity and resources remain unexecuted. Instructions below do not authorize any remaining merge or AWS operation.
+Current status verified 12 October 2026: PRs #1–#11 are merged, including the completed reusable-branch migration and scoped owner-authored application release policy. Phase 2 has historical live completion evidence; Phase 3 deployment remains pending. The migration sequence and verification narrative below preserve the earlier checkpoint history and do not authorize repeating merges/setup or retiring original PR heads. See [the current reconciliation](../infrastructure/RECONCILIATION.md).
 
 ## Target structure
 
@@ -16,7 +16,7 @@ flowchart LR
 
 | Branch | Workstream | Created from |
 | --- | --- | --- |
-| `feature/app` | APIs, tests, Docker and application documentation; no Terraform, Helm, IAM or workflows | Original PR #1 application history |
+| `feature/app` | APIs, tests, Docker and application docs; approved owner-authored Helm/deployment paths and four app workflows per AGENTS.md; no Terraform/IAM/generic GitHub configuration | Original PR #1 application history |
 | `bootstrap` | Terraform backend, S3 state and GitHub OIDC/bootstrap work | Original PR #3 bootstrap history |
 | `infra` | VPC, EKS, ECR, networking, RDS, monitoring, Helm, workflows and governance | Existing dev baseline; this migration PR adds governance files only |
 

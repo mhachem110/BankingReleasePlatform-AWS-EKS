@@ -4,7 +4,7 @@ Status: source prepared, not deployed. Phase 2 is complete and unchanged. Use on
 
 ## One reviewed infrastructure operation
 
-1. PRs #8/#9/#10 are integrated in dev. Review the final preparation infra PR, its real checks, consolidated administrator request, tags and costs. Merge requires the owner's separate approval; no automatic merge. Working branches are retained and synchronized with dev before later work.
+1. PRs #8/#9/#10/#11 are integrated in dev; final preparation merged as 85a7b1d. Review the current consolidated administrator request, actual inputs, tags and costs. Future changes still require reviewed PRs and separate owner merge approval. Working branches are retained and synchronized with dev before later work. See RECONCILIATION.md for current evidence and access limits.
 2. Obtain administrator-approved prerequisite roles, existing service-linked roles, actual KMS key, operator/deployer identities, quotas/SCP review and endpoint source CIDRs. Paid key creation requires owner approval. Follow ADMIN-REQUEST.md; neither Codex nor Terraform creates roles.
 3. GitHub -> Settings -> Environments -> bootstrap: retain its dev-only branch restriction, required owner review, no admin bypass, verified immutable OIDC subject and AWS_ROLE_ARN secret. Preserve AWS_REGION=us-east-2, AWS_EXPECTED_ACCOUNT_ID and TF_STATE_BUCKET, and BOOTSTRAP_STATE_READY=true. AWS_OPERATIONS_ENABLED stays false until the owner authorizes a live plan.
 4. Add bootstrap environment variable PLATFORM_INPUTS_JSON with this COMPLETE shape. Replace placeholders with actual administrator-approved values; never put credentials in it.

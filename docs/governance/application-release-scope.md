@@ -1,11 +1,27 @@
-# Application release scope — separate owner review required
+# Reviewed application release scope
 
-PR #8 was merged through the normal merge API at 9ee705ef0993a38a1319646b797f75a3e8e6cc98 after all checks passed. PR #9 is retained and synchronized through an ordinary merge. The trusted dev policy currently rejects its application release paths; a PR cannot authorize itself by changing that policy.
+PR #10 approved the narrow release-path and verification-access contract; PR #9
+application release code and PR #11 final infrastructure preparation are merged.
+See [the current reconciliation](../infrastructure/RECONCILIATION.md) for observed
+GitHub controls and pending live execution. The original review history remains
+available in the merged PRs.
 
-This infra PR proposes exactly helm/banking/**, scripts/deploy/**, docs/deployment/** and four exact workflow files: .github/workflows/app-ci.yml, app-validation.yml, app-publish.yml, app-deploy.yml. Release-path changes additionally require verified cloud-owner author ID 150286776. Ordinary API/test paths retain their current author rules. Terraform/HCL/backend files and CODEOWNERS remain forbidden to feature/app even inside release directories. Renames validate both paths, artifacts remain blocked, and repository identity/pagination/head-race checks remain strict.
+The trusted metadata policy permits exactly helm/banking/**, scripts/deploy/**,
+docs/deployment/** and four workflows: app-ci.yml, app-validation.yml,
+app-publish.yml and app-deploy.yml under .github/workflows, alongside ordinary
+application paths. Release-path changes require verified cloud-owner author ID
+150286776. Terraform/HCL/backend files and CODEOWNERS remain forbidden to
+feature/app even inside release directories. Renames check both paths;
+artifact, repository identity, pagination and head-race checks remain strict.
 
-CODEOWNERS, branch routes, all native rulesets, mandatory Repository security policy, trusted pull_request_target execution and AWS/environment protections are unchanged. No AWS OIDC permission is derived from these paths. This does permit the owner to review privileged application deployment code, so this policy needs separate explicit approval before merge. A second eligible reviewer would enable independent code-owner review later; the current single-developer settings do not imply such a review occurred.
+CODEOWNERS, the six branch routes, native rulesets, required Repository security
+policy, trusted pull_request_target execution and AWS/environment protections
+remain separate controls. These paths grant no AWS role or deployment access.
+Independent code-owner review requires a second eligible reviewer; no reviewer
+identity is invented. Future policy changes require an infra/security PR.
 
-After this infra PR is approved and merged, synchronize feature/app with dev using an ordinary merge. The trusted governance check then evaluates PR #9 using the newly installed policy. Inspect all final checks and request separate approval before merging PR #9. Never bypass the current failing checks or require an unobserved check.
-
-Integration also exposes a concrete access gap: namespace Edit does not grant the app verifier permission to read a Pod's Node. Terraform now maps only the approved deployer to banking-release-verifier; the checked-in RBAC grants get on Nodes and get on namespace banking-dev, with no list, writes or cluster administration. An approved operator installs that binding after cluster deployment. The group alone grants nothing until the binding exists. This minimal access configuration and its negative regression are included in the same owner-reviewed infra PR; app code cannot edit either the Terraform mapping or IAM-owned RBAC.
+The namespace-scoped application access entry also maps the approved deployer to
+banking-release-verifier. The prepared RBAC grants get on Nodes and get on only
+namespace banking-dev, with no node mutation or cluster administration. An
+approved operator installs the binding after cluster creation; the group alone
+grants nothing until that binding exists. Live access remains unverified.

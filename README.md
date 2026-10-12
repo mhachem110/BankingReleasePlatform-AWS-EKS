@@ -2,9 +2,9 @@
 
 AWS Week 4 Financial Services CI/CD and Kubernetes Release Platform, by Mahmoud Hachem. Phase 1 implements two ASP.NET Core APIs using .NET 10 LTS and local Docker containers. All customers and payments are fictional.
 
-The current folder was empty and was not a Git repository at the initial inspection. Local Git was initialized with `main` and the feature branch `feature/phase1-banking-apis`. The confirmed remote is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS). Both branches are published, and [Phase 1 PR #1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) is open for review. The earlier CloudOpsTracker repository is a read-only reference.
+The existing repository is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS), with `dev` as its development default. PRs #1–#11 are merged, including the EKS Fargate infrastructure, Helm/application pipelines, scoped governance and final deployment preparation. The earlier CloudOpsTracker repository remains a read-only reference.
 
-Only Phase 1 is implemented. AWS provisioning, IAM changes, Terraform, Helm and CI/CD workflows require approval of their respective phases. See [requirements mapping](docs/assignment-requirements.md), [architecture and repository layout](docs/architecture.md), [reference review](docs/reference-project-review.md) and [Phase 1 report](docs/phase-1-report.md).
+Phases 1 and 2 have implementation and execution evidence. Phase 3 infrastructure and Phase 4/5 Helm/CI/CD code are merged and offline validated; live EKS deployment, ECR publication and Helm releases remain pending administrator prerequisites and specific owner authorization. Phase 6 persistence, messaging and operational monitoring, and Phase 7 live recovery/final demonstration remain incomplete. Read the [12 October reconciliation](docs/infrastructure/RECONCILIATION.md) for verified GitHub state, evidence limits and the single administrator handoff. The [requirements mapping](docs/infrastructure/ASSIGNMENT-MAPPING.md) retains the complete assignment scope.
 
 ## Prerequisites
 
@@ -104,9 +104,9 @@ Payment uses a three-second outbound timeout and approves only a consistent vali
 
 Payment reads `AccountApi:BaseUrl`, with `http://localhost:5101/` as the local default. In Compose, `AccountApi__BaseUrl=http://account-api:8080/` uses Docker's service name resolution. `localhost` inside the payment container refers to that container itself, so it cannot be used to reach Account API.
 
-Each Dockerfile builds with the SDK in one stage and copies only published output into an ASP.NET runtime stage. The runtime runs as the image's unprivileged application user. Compose uses a read-only filesystem, temporary `/tmp`, no Linux capabilities, and no privilege escalation. The initial image tags are local development tags; immutable release tagging is deferred to Phase 5.
+Each Dockerfile builds with the SDK in one stage and copies only published output into an ASP.NET runtime stage. The runtime runs as the image's unprivileged application user. Compose uses a read-only filesystem, temporary `/tmp`, no Linux capabilities, and no privilege escalation. Compose tags remain local development tags. The merged publication/deployment workflows prepare immutable SHA/run tags and verified ECR digests; no cloud publication has run.
 
-`IAccountRepository` isolates data access so an RDS-backed implementation can replace `SampleAccountRepository` later. `IAccountClient` isolates Payment's HTTP dependency. Authentication, durable storage, ledger operations, secrets integration, cloud telemetry and release scanning are later phase work. Local HTTP endpoints are intended for a fictional lab demonstration.
+`IAccountRepository` isolates data access so an RDS-backed implementation can replace `SampleAccountRepository` later. `IAccountClient` isolates Payment's HTTP dependency. Authentication, durable storage, ledger operations, secrets integration and cloud telemetry remain later phase work. Release scanning is implemented in CI; live publication/deployment is pending. Local HTTP endpoints are intended for a fictional lab demonstration.
 
 ## Local dependency failure demonstration
 

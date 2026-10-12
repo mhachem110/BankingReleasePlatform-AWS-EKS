@@ -7,9 +7,9 @@ The official Week 4 CI/CD Engineering assignment remains the deliverable source;
 | Account/Payment application, Docker, local communication/tests | Phase 1 complete |
 | OIDC, secure remote state, lifecycle, native locking | Phase 2 complete; COMPLETION.md has actual run evidence |
 | Two-AZ VPC/public/private/isolated networking, ECR, EKS Fargate profiles | Phase 3 code prepared; administrator prerequisites/live plan/deployment pending |
-| Kubernetes services, Helm, probes, limits, replicas/HPA, Ingress | Chat 2 owns Fargate chart/release work; controller/application live deployment pending authorization |
-| PR build/tests/static checks, Trivy, Terraform Checkov, Helm | Terraform/Checkov/Helm validation prepared; full application CI and release scans pending Phase 5 |
-| OIDC SHA/digest image publication, approvals, smoke/rollback, separate infra workflow | Controlled infra workflow prepared; application release/promotion workflows pending Phase 5 |
+| Kubernetes services, Helm, probes, limits, replicas/HPA, Ingress | PR #9 Fargate Helm/chart/runbooks merged; controller/application live deployment pending authorization |
+| PR build/tests/static checks, Trivy, Terraform Checkov, Helm | Merged .NET/Docker/Trivy/Helm and Terraform/Checkov CI passes; live publication/deployment scans pending execution |
+| OIDC SHA/digest image publication, approvals, smoke/rollback, separate infra workflow | Controlled infra and application publication/digest-promotion workflows merged; protected live execution pending |
 | RDS/Aurora and migration of sample persistence | Mandatory Phase 6; isolated subnet outputs reserved, not omitted |
 | SQS/EventBridge concrete asynchronous use case | Mandatory assignment coverage planned Phase 6 payment-completed event; not yet implemented |
 | Secrets Manager/KMS, least privilege, Kubernetes RBAC | KMS key prerequisites/explicit EKS access prepared; secrets/workload IAM/full RBAC evidence Phase 6 |
@@ -27,4 +27,4 @@ No production-readiness, availability, security-findings or live-deployment succ
 
 Fargate is the user-approved compute alternative; no managed node group is required. No DaemonSets, Pod Identity agent or VPC CNI policy enforcement are claimed. Metrics Server supports HPA/current utilization; historical monitoring, app metrics, Fargate logging, relational persistence and asynchronous events remain mandatory later-phase work. IRSA controller trust depends on the actual cluster issuer and administrator approval. Code preparation and mock plans do not fulfill live EKS/application acceptance criteria.
 
-Parallel application changes can be blocked by the installed feature/app file policy; this infrastructure checkpoint documents the scoped review requirement rather than changing governance or bypassing security checks. See INTERFACE.md.
+PR #10 resolved the narrow owner-authored application release-path blocker; PR #9 and PR #11 are merged. Infrastructure/IAM/governance ownership and all deployment approval gates remain. See INTERFACE.md and [the current reconciliation](RECONCILIATION.md).
