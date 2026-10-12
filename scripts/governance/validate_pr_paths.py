@@ -19,6 +19,12 @@ APP_FILES = frozenset({
     "BankingReleasePlatform.sln", "Directory.Build.props", "global.json",
     "scripts/smoke-test.ps1", "scripts/test-local.ps1",
 })
+# Owner-authored application release changes only; shared cloud ownership remains.
+APP_RELEASE_PREFIXES = ("helm/banking/", "scripts/deploy/", "docs/deployment/")
+APP_RELEASE_FILES = frozenset({
+    ".github/workflows/app-ci.yml", ".github/workflows/app-validation.yml",
+    ".github/workflows/app-publish.yml", ".github/workflows/app-deploy.yml",
+})
 BOOTSTRAP_PREFIXES = (
     "infra/bootstrap/", "infra/backend/", "infra/modules/state-bucket/",
     "scripts/bootstrap/", "docs/phase2/",
@@ -75,7 +81,15 @@ def cloud_owned(path):
     )
 
 
+def application_release_path(path):
+    name = PurePosixPath(path).name
+    sensitive = name == "CODEOWNERS" or name.endswith((".tf", ".tf.json", ".hcl")) or ".tfvars" in name or ".tfbackend" in name
+    return not sensitive and (path.startswith(APP_RELEASE_PREFIXES) or path in APP_RELEASE_FILES)
+
+
 def application_path(path):
+    if application_release_path(path):
+        return True
     if cloud_owned(path):
         return False
     name = PurePosixPath(path).name
@@ -116,6 +130,8 @@ def validate(pr, files, repository):
             raise PolicyError("Promotion PRs must be authored by an authorized cloud engineer.")
         return paths
     if source == "feature/app":
+        if any(application_release_path(path) for path in paths) and not cloud_author:
+            raise PolicyError("Application release paths require an authorized cloud-owner author.")
         denied = [path for path in paths if not application_path(path)]
         if denied:
             raise PolicyError("Application PR contains cloud/unknown paths: " + json.dumps(denied))

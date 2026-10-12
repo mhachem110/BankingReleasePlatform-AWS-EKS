@@ -38,7 +38,7 @@ def fixture():
                     "logging": {"clusterLogging": [{"enabled": True, "types": ["api", "audit", "authenticator", "controllerManager", "scheduler"]}]},
                     "encryptionConfig": [{"resources": ["secrets"], "provider": {"keyArn": key}}],
                     "identity": {"oidc": {"issuer": issuer}}},
-        "nodes": [], "profiles": {
+        "verification_groups": ["banking-release-verifier"], "nodes": [], "profiles": {
             name: {"status": "ACTIVE", "podExecutionRoleArn": values["fargate_execution_role_arn"],
                    "subnets": outputs["application_subnet_ids"]["value"], "selectors": selectors}
             for name, selectors in profiles.items()},
@@ -56,6 +56,7 @@ def fixture():
         if operation == "list-addons": return {"addons": list(data["addons"])}
         if operation == "describe-addon": return {"addon": data["addons"][args[-1]]}
         if operation == "get-open-id-connect-provider": return data["provider"]
+        if operation == "describe-access-entry": return {"accessEntry": {"kubernetesGroups": data["verification_groups"]}}
         if operation == "list-associated-access-policies":
             operator = args[-1] == values["operator_role_arn"]
             policy = "AmazonEKSClusterAdminPolicy" if operator else "AmazonEKSEditPolicy"
@@ -73,6 +74,13 @@ class VerificationTests(unittest.TestCase):
     def test_complete_fargate_platform(self):
         values, outputs, _, call = fixture()
         verify.verify(values, outputs, call)
+
+    def test_verification_group_cannot_be_missing_or_admin(self):
+        for groups in [[], ["system:masters"], ["banking-release-verifier", "system:masters"]]:
+            values, outputs, data, call = fixture()
+            data["verification_groups"] = groups
+            with self.subTest(groups=groups), self.assertRaises(RuntimeError):
+                verify.verify(values, outputs, call)
 
     def test_profiles_must_be_active_and_private(self):
         for field, wrong in [("status", "CREATE_FAILED"), ("subnets", ["subnet-other"]),

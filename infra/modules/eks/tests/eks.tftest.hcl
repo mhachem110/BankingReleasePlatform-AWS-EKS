@@ -28,6 +28,10 @@ run "cluster_security" {
     error_message = "Application deployer must not receive cluster-wide rights."
   }
   assert {
+    condition     = aws_eks_access_entry.deployer.kubernetes_groups == toset(["banking-release-verifier"])
+    error_message = "Release verification must use the explicit read-only RBAC group."
+  }
+  assert {
     condition     = aws_eks_cluster.this.upgrade_policy[0].support_type == "STANDARD" && length(aws_eks_cluster.this.enabled_cluster_log_types) == 5
     error_message = "Avoid automatic extended-support charges and retain all control-plane log types."
   }
