@@ -13,6 +13,7 @@ on:
       - 'AGENTS.md'
       - 'helm/**'
       - '.github/workflows/infra-operations.yml'
+      - '.github/workflows/data-operations.yml'
       - '.github/workflows/terraform-*.yml'
   push:
     branches: [dev, stage, uat, main]
@@ -27,6 +28,7 @@ on:
       - 'AGENTS.md'
       - 'helm/**'
       - '.github/workflows/infra-operations.yml'
+      - '.github/workflows/data-operations.yml'
       - '.github/workflows/terraform-*.yml'
 permissions:
   contents: read
@@ -62,7 +64,7 @@ jobs:
         run: python scripts/deploy/install-tools.py
       - name: Validate infrastructure and application workflows
         run: |
-          actionlint -config-file scripts/deploy/actionlint.yaml .github/workflows/infra-operations.yml .github/workflows/terraform-validation.yml .github/workflows/terraform-operations.yml .github/workflows/branch-governance.yml .github/workflows/app-ci.yml .github/workflows/app-validation.yml .github/workflows/app-publish.yml .github/workflows/app-deploy.yml
+          actionlint -config-file scripts/deploy/actionlint.yaml .github/workflows/infra-operations.yml .github/workflows/data-operations.yml .github/workflows/terraform-validation.yml .github/workflows/terraform-operations.yml .github/workflows/branch-governance.yml .github/workflows/app-ci.yml .github/workflows/app-validation.yml .github/workflows/app-publish.yml .github/workflows/app-deploy.yml
       - name: Helm lint, rendering and workload safety tests
         run: |
           python -m pip install PyYAML==6.0.3

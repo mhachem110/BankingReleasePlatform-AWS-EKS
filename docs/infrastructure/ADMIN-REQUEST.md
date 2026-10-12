@@ -1,6 +1,11 @@
 # ONE Banking Fargate administrator request — proposals only
 
 Account **866934333672**, Ohio **us-east-2**, cluster/namespace **banking-dev**.
+Updated after normal code-only integration of PRs #13/#14 into dev `f3afff4`
+on 12 October 2026. This remains the ONE administrator handoff for the project.
+The first EKS/Fargate plan needs sections 1–5 and the bootstrap configuration;
+controller/payment IRSA and the data rollout follow the actual cluster interface.
+Do not delay the first platform plan waiting for a guessed future issuer or database.
 Review the complete package together. It does not authorize live IAM changes,
 paid key creation or Terraform apply. The owner cannot create IAM roles.
 Obtain the owner's access-change approval before an administrator applies it;
@@ -239,7 +244,41 @@ BOOTSTRAP_ROLE_ARN=arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops
 No long-lived credentials. Branch routing and environment/OIDC authorization stay
 separate; working branch names never become new AWS trust subjects.
 
-## Return ONE administrator bundle
+### 7. Phase 6 data services, credentials and monitoring — after verified Phase 3
+
+The merged data root is `infra/environments/dev/data`; its separate state key is
+`banking-release-platform/dev/data/terraform.tfstate`. The original Phase 3
+resource inventory and plan/apply workflow stay unchanged. Review the new
+[protected data procedure](DATA-DEPLOYMENT.md) with this same handoff.
+
+| Requirement | Administrator/operator return |
+| --- | --- |
+| Data infrastructure permissions | Additive RDS/SQS/log/alarm/SG and exact data-state permissions; preserve both original bootstrap policies and trusts plus the Phase 3 addition. Review policy size, boundaries and service API dependencies. No role/key creation by Terraform. |
+| Managed session cap | Actual same-account `BankingReleasePlatformPhase6Session` policy ARN/default-version document and canonical SHA256. Render the complete proposal with `scripts/infra/data_iam.py`; use it as the separately reviewed data session cap and add required missing identity permissions without replacing shared policies. It permits no role/key creation, database deletion, message sending or other state-object writes. |
+| RDS monitoring | Dedicated `cloudbatch818-mahmoud-banking-rds-monitoring`, `monitoring.rds.amazonaws.com` trust with exact banking-dev-postgres SourceArn/account, AWS-managed `service-role/AmazonRDSEnhancedMonitoringRole`, actual ARN/boundary and exact service-conditioned PassRole. Confirm existing RDS service-linked role; do not let Terraform create it. |
+| Encryption | Actual enabled symmetric Ohio data key; reviewed RDS/Secrets Manager service grants, exact SQS runtime key access and CloudWatch contexts for `/banking/banking-dev/application` and `/aws/rds/instance/banking-dev-postgres/{postgresql,upgrade}`. Preserve all existing shared-key statements. A new paid key still requires separate owner approval. |
+| Engine/capacity/cost | Exact current orderable PostgreSQL 17 patch and approved db.t4g class supporting gp3/encryption/Enhanced Monitoring; RDS/storage/backups/secrets/SQS/CloudWatch quotas and isolated subnet/AZ headroom. Approve single AZ, 20→40 GiB maximum growth, connection capacity up to 100 plus operator headroom, CPU credits and retained snapshots. Return dated actual pricing evidence and all data cost components, not guessed numbers. |
+| Payment runtime IRSA | `cloudbatch818-mahmoud-banking-payment-runtime-dev`, actual Banking EKS issuer/provider, exact `system:serviceaccount:banking-dev:banking-payment` subject and STS audience. Source queue send/receive/delete/visibility/attributes; DLQ attributes only; approved key decrypt/data-key via SQS. No GitHub/deployer/Fargate role reuse. Render trust only after the actual issuer exists. |
+| PostgreSQL identities | Authorized migration operator can retrieve the actual RDS-managed master secret; APIs must use separate runtime logins with the schema rights in DATA-AND-EVENTS.md, no DDL/ownership and VerifyFull hostname/CA verification. Return secret ARNs/reference names and delivery/rotation ownership; never passwords/session tokens. |
+| Fargate-compatible secret delivery | Approved operator retrieves only the scoped runtime secrets into namespace Kubernetes Secrets through a protected runner, with no console/command-line/log/plaintext artifact exposure. Account/payment use mounted `connectionString`; mount reviewed RDS CA in `root-ca.pem`. Review Kubernetes Secret RBAC and etcd encryption. No DaemonSet/CSI dependency is assumed on Fargate. Rotation includes an approved rolling restart and replay verification. |
+| Logs and collection | Scoped Pod execution log-stream/event permission to the precreated application group; reviewed `aws-observability/aws-logging` configuration; per-Pod Prometheus/Grafana namespace RBAC, Fargate-compatible placement, resources, persistence/access and costs. No logging DaemonSet and no public `/metrics`. |
+| Alert destination | Existing approved Ohio `banking-dev-*` SNS topic ARN, confirmed recipients, CloudWatch publish authorization/topic policy and explicit notification approval. Five service alarms plus six Prometheus alerts require actual delivery/incident verification. No subscriber or SNS topic is invented. |
+
+`scripts/infra/data_iam.py --inputs ACTUAL_DATA_INPUT_FILE --policy-arn ACTUAL_APPROVED_POLICY_ARN --output artifacts/data-admin`
+renders complete additive proposals and a digest locally. Add `--issuer` only for
+the actual verified cluster issuer. Inputs contain IDs/ARNs, never credentials.
+Treat generated documents as proposals until explicitly authorized and read back.
+The managed cap avoids STS's 2,048-character inline-policy limit; generation checks
+the 6,144-character managed-policy limit. Default-version drift fails preflight.
+
+Keep protected bootstrap `DATA_OPERATIONS_ENABLED=false` until a separate data-plan
+approval. Later populate actual DATA_INPUTS_JSON, DATA_COST_REVIEW_JSON,
+DATA_SESSION_POLICY_ARN and DATA_SESSION_POLICY_SHA256. Existing AWS_ROLE_ARN and
+immutable bootstrap OIDC subject stay unchanged. Data plan/apply each require
+personal bootstrap review; apply uses the exact same-run saved plan and cost receipt.
+Do not run this workflow while obtaining the first platform prerequisites.
+
+## Return ONE administrator bundle, in deployment order
 
 Owner-authorized actual service/operator/app ARNs and trusts/policies/boundaries,
 actual approved KMS ARN/key policy, rendered additional Phase3 policy, unchanged
@@ -247,6 +286,12 @@ original policies/trust confirmation, AZs/all-CIDR/endpoint approvals, actual ad
 pins/schemas, recent capacity report and runner/network arrangement. Confirm
 optional CostCenter is accepted or supply the actually required approved code.
 Do not return credentials/session tokens.
+
+Include section 7 approvals/owners and known actual ARNs in the same bundle; mark
+post-EKS issuer/DB/runtime values as pending until generated and verified. Later
+return those actual interfaces as one update to this handoff, not a new unrelated
+administrator request. Actual absence/authorization is rechecked; source proposals
+and successful offline tests do not satisfy live IAM/key/secret requirements.
 
 After prerequisites AND reviewed code merge, the owner authorizes the protected
 live plan window. Present actual inventory/effective tags/hash and costs before
