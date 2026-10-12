@@ -1,0 +1,158 @@
+{
+  "region": "us-east-2",
+  "classification": "Public list rates; no credits/free-tier assumptions, spending authorization or measured AWS bill",
+  "rates": {
+    "fargate_vcpu_hour": {
+      "usd_per_unit": "0.0404800000",
+      "unit": "hours",
+      "sku": "UGSJ89BUWB7SMJ6A",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:44:25Z",
+      "retrieved_at": "2026-10-12T21:01:17.353100+00:00"
+    },
+    "fargate_gb_hour": {
+      "usd_per_unit": "0.0044450000",
+      "unit": "hours",
+      "sku": "HH5EE3ZFWSFKGKWM",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:44:25Z",
+      "retrieved_at": "2026-10-12T21:01:17.353100+00:00"
+    },
+    "rds_micro_hour": {
+      "usd_per_unit": "0.0160000000",
+      "unit": "Hrs",
+      "sku": "GGD6FE59WWUNDKDC",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/us-east-2/index.json",
+      "publication_date": "2026-10-06T22:40:50Z",
+      "retrieved_at": "2026-10-12T21:01:18.655242+00:00"
+    },
+    "rds_small_hour": {
+      "usd_per_unit": "0.0320000000",
+      "unit": "Hrs",
+      "sku": "JBDFT6PN9ME2D9FK",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/us-east-2/index.json",
+      "publication_date": "2026-10-06T22:40:50Z",
+      "retrieved_at": "2026-10-12T21:01:18.655242+00:00"
+    },
+    "rds_medium_hour": {
+      "usd_per_unit": "0.0650000000",
+      "unit": "Hrs",
+      "sku": "ATUDCTTG2W8H2WEK",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/us-east-2/index.json",
+      "publication_date": "2026-10-06T22:40:50Z",
+      "retrieved_at": "2026-10-12T21:01:18.655242+00:00"
+    },
+    "rds_gp3_gb_month": {
+      "usd_per_unit": "0.1150000000",
+      "unit": "GB-Mo",
+      "sku": "JQQGK6D789TWJF8B",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/us-east-2/index.json",
+      "publication_date": "2026-10-06T22:40:50Z",
+      "retrieved_at": "2026-10-12T21:01:18.655242+00:00"
+    },
+    "secret_month": {
+      "usd_per_unit": "0.4000000000",
+      "unit": "Secrets",
+      "sku": "HHK3AZN6HN5CFDJM",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSSecretsManager/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:46:10Z",
+      "retrieved_at": "2026-10-12T21:01:17.157047+00:00"
+    },
+    "secret_request": {
+      "usd_per_unit": "0.0000050000",
+      "unit": "API Requests",
+      "sku": "DYZUZWKV5HMGF5A9",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSSecretsManager/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:46:10Z",
+      "retrieved_at": "2026-10-12T21:01:17.157047+00:00"
+    },
+    "sqs_standard_request": {
+      "usd_per_unit": "0.0000004000",
+      "unit": "Requests",
+      "sku": "9C8YFGPNBKF9HP9A",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSQueueService/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:46:07Z",
+      "retrieved_at": "2026-10-12T21:05:03.234985+00:00"
+    },
+    "kms_key_month": {
+      "usd_per_unit": "1.0000000000",
+      "unit": "Keys",
+      "sku": "FEMX7ZQ4DJ6QE2KP",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/awskms/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:46:01Z",
+      "retrieved_at": "2026-10-12T21:05:03.166726+00:00"
+    },
+    "kms_request": {
+      "usd_per_unit": "0.0000030000",
+      "unit": "Requests",
+      "sku": "9XXHSZC4PS7S6AY2",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/awskms/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:46:01Z",
+      "retrieved_at": "2026-10-12T21:05:03.166726+00:00"
+    },
+    "logs_gb_ingested": {
+      "usd_per_unit": "0.5000000000",
+      "unit": "GB",
+      "sku": "5T6Z6V26DSR7SZ49",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudWatch/current/us-east-2/index.json",
+      "publication_date": "2026-10-07T11:55:40Z",
+      "retrieved_at": "2026-10-12T21:05:03.190107+00:00"
+    },
+    "logs_gb_stored_month": {
+      "usd_per_unit": "0.0300000000",
+      "unit": "GB-Mo",
+      "sku": "X7X4WD4A95NDR9U5",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudWatch/current/us-east-2/index.json",
+      "publication_date": "2026-10-07T11:55:40Z",
+      "retrieved_at": "2026-10-12T21:05:03.190107+00:00"
+    },
+    "alarm_month": {
+      "usd_per_unit": "0.1000000000",
+      "unit": "Alarms",
+      "sku": "28VSMYRVQXUWCTMA",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudWatch/current/us-east-2/index.json",
+      "publication_date": "2026-10-07T11:55:40Z",
+      "retrieved_at": "2026-10-12T21:05:03.190107+00:00"
+    },
+    "custom_metric_month": {
+      "usd_per_unit": "0.3000000000",
+      "unit": "Metrics",
+      "sku": "XK7C3D2X45XTHURD",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudWatch/current/us-east-2/index.json",
+      "publication_date": "2026-10-07T11:55:40Z",
+      "retrieved_at": "2026-10-12T21:05:03.190107+00:00"
+    },
+    "ecr_gb_month": {
+      "usd_per_unit": "0.1000000000",
+      "unit": "GB-Mo",
+      "sku": "NA4VZMZUEQGMXP2Y",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECR/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:44:25Z",
+      "retrieved_at": "2026-10-12T21:05:03.147143+00:00"
+    },
+    "s3_gb_month": {
+      "usd_per_unit": "0.0230000000",
+      "unit": "GB-Mo",
+      "sku": "YPGKVRB2EKTVDJDT",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/us-east-2/index.json",
+      "publication_date": "2026-10-12T17:53:18Z",
+      "retrieved_at": "2026-10-12T21:05:03.246456+00:00"
+    },
+    "alb_hour": {
+      "usd_per_unit": "0.0225000000",
+      "unit": "Hrs",
+      "sku": "HCVPZW9WEWSJKJWJ",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSELB/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:45:44Z",
+      "retrieved_at": "2026-10-12T21:05:03.171984+00:00"
+    },
+    "alb_lcu_hour": {
+      "usd_per_unit": "0.0080000000",
+      "unit": "LCU-Hrs",
+      "sku": "S3YDM2U7G69S4W5C",
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSELB/current/us-east-2/index.json",
+      "publication_date": "2026-09-11T12:45:44Z",
+      "retrieved_at": "2026-10-12T21:05:03.171984+00:00"
+    }
+  }
+}

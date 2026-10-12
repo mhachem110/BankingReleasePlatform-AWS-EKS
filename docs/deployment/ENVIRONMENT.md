@@ -5,8 +5,8 @@ APP_DEPLOYMENTS_ENABLED is absent/false by default. Do not change it until separ
 deployment approval and verified Phase 3 readiness. Baseline reconciliation and the
 owner-approved application governance change are complete.
 
-Create/review protected GitHub environments dev, stage, uat and prod through the
-authorized infrastructure/security workstream. Require human reviewers and restrict
+Review the existing GitHub environments dev, stage, uat and prod through the
+authorized infrastructure/security workstream. Require human reviewers for active deployments and restrict
 deployment branches to dev/dev, stage/stage, uat/uat, prod/main respectively.
 Prevent self-review where an eligible independent reviewer exists. A working branch
 never grants environment access. No additional reviewer identity is invented.
@@ -19,8 +19,8 @@ never grants environment access. No additional reviewer identity is invented.
 | AWS_REGION | us-east-2 for the prepared dev infrastructure |
 | ECR_ACCOUNT_REPOSITORY | ACCOUNT.dkr.ecr.us-east-2.amazonaws.com/banking-dev-account |
 | ECR_PAYMENT_REPOSITORY | ACCOUNT.dkr.ecr.us-east-2.amazonaws.com/banking-dev-payment |
-| EKS_CLUSTER_NAME | banking-dev; later banking-stage, banking-uat, banking-prod only if separately provisioned |
-| K8S_NAMESPACE | Same banking-ENV namespace as the target cluster |
+| EKS_CLUSTER_NAME | banking-dev for both dev/prod in shared-cluster-demo mode |
+| K8S_NAMESPACE | banking-dev for dev, banking-prod for prod; namespaces differ from shared cluster |
 | INFRA_ROLE_ARN / BOOTSTRAP_ROLE_ARN | Existing protected role ARNs, used to reject accidental application-role reuse |
 
 GITHUB_REPOSITORY, GITHUB_REF, GITHUB_SHA, GITHUB_RUN_ID and GH_TOKEN are supplied by
@@ -43,12 +43,13 @@ separately approved environment subjects for promotion). GitHub's environment br
 rules independently enforce the source ref; OIDC environment subjects do not encode it.
 Do not trust feature/app, infra, bootstrap working branches or wildcard environment
 subjects. No static AWS key secrets are used. Prefer environment-specific application
-roles; dev's role is not automatically authorized on later clusters.
+roles; dev's role is not authorized in the production namespace.
 
 Minimum role permissions to review:
 - ecr:GetAuthorizationToken on * (API requires it).
 - ecr:DescribeRepositories, DescribeImages and pull/upload layer/PutImage APIs on
-  exactly the two approved existing repository ARNs.
+  exactly the two approved existing repository ARNs for dev publication. Prod gets
+  approved image read operations only, with no upload/PutImage.
 - eks:DescribeCluster on the exact approved environment cluster ARN.
 - sts:GetCallerIdentity and OIDC AssumeRoleWithWebIdentity through the approved trust.
 
@@ -70,12 +71,31 @@ Grant get on the approved Namespace and get on Nodes for compute-type verificati
 without node mutation or cluster administration. Node get is cluster-scoped because
 the verifier confirms actual eks.amazonaws.com/compute-type=fargate labels.
 Default workflows keep Ingress off, so granting ingress writes is optional and should
-wait for approval. EKS namespace Edit alone might not supply Namespace/Node get.
+wait for approval. The prepared release Role supplies no cluster mutation rights.
 The approved infrastructure access entry maps the application role to the
-banking-release-verifier group. After cluster creation, an approved operator applies
+banking-release-dev or banking-release-prod group. After cluster creation, an approved operator applies
 iam/phase3/deployer-verification-rbac.yaml, granting Node get and get on only the
-banking-dev Namespace. This separate binding permits verification without cluster
+own banking-dev or banking-prod Namespace. This separate binding permits verification without cluster
 administration or node mutation.
 
 Role permission/trust, environment reviewer approval, Kubernetes RBAC and network access
 are independent prerequisites. None has been installed by this application PR.
+
+## Verified manual environment update and demonstration mode
+
+On 12 October GitHub confirmed all five environments. Both dev and prod now require
+owner review, no administrator bypass, exact dev/main branch restrictions and complete
+non-secret variables. APP_RELEASE_MODE=shared-cluster-demo permits dev then prod
+against banking-dev, retaining the source branch promotion routes dev/stage/uat/main.
+Stage/UAT are available for branch governance and remain inactive as paid workloads.
+Deployment/data switches remain false and prod runtime is explicitly memory mode.
+Prod persistence/messaging cannot be enabled through the current dev-only workflow;
+its isolated data design requires a separate actual resource/cost plan approval.
+
+The existing CloudOps deployment role trusts/permissions are user-reported and await
+full AWS audit. Workflow STS caps add no permission and constrain dev publication and
+read-only prod ECR/cluster discovery. No production rebuild/push is permitted.
+Successful version-2 dev deployment evidence binds cluster, namespace, run/commit and
+both exact scanned digests before prod. Legacy/sequential evidence fails in demo mode.
+EKS access uses only operator-installed namespace roles, with no managed Edit policy;
+scripts/deploy/isolation.py verifies live cross-namespace/cluster denials before Helm.

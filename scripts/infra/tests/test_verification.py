@@ -22,6 +22,7 @@ def fixture():
               "fargate_execution_role_arn": "arn:aws:iam::123456789012:role/fargate",
               "operator_role_arn": "arn:aws:iam::123456789012:role/operator",
               "deployer_role_arn": "arn:aws:iam::123456789012:role/deployer",
+              "prod_deployer_role_arn": "arn:aws:iam::123456789012:role/prod-deployer",
               "addon_versions": {"coredns": "v1.0.0-eksbuild.1", "metrics-server": "v1.0.0-eksbuild.1"}}
     outputs = {"application_subnet_ids": {"value": ["subnet-one", "subnet-two"]},
                "oidc_issuer_url": {"value": issuer}, "oidc_provider_arn": {"value": provider}}
@@ -30,6 +31,7 @@ def fixture():
         "banking-dev-controller": [{"namespace": "kube-system", "labels": {"app.kubernetes.io/name": "aws-load-balancer-controller"}},
                                   {"namespace": "kube-system", "labels": {"k8s-app": "metrics-server"}}],
         "banking-dev-app": [{"namespace": "banking-dev", "labels": {}}],
+        "banking-dev-prod-app": [{"namespace": "banking-prod", "labels": {}}],
     }
     configs = json.loads((ROOT / "infra/modules/eks/addon-configuration.json").read_text())
     data = {
@@ -38,7 +40,7 @@ def fixture():
                     "logging": {"clusterLogging": [{"enabled": True, "types": ["api", "audit", "authenticator", "controllerManager", "scheduler"]}]},
                     "encryptionConfig": [{"resources": ["secrets"], "provider": {"keyArn": key}}],
                     "identity": {"oidc": {"issuer": issuer}}},
-        "verification_groups": ["banking-release-verifier"], "nodes": [], "profiles": {
+        "verification_groups": ["banking-release-dev"], "nodes": [], "profiles": {
             name: {"status": "ACTIVE", "podExecutionRoleArn": values["fargate_execution_role_arn"],
                    "subnets": outputs["application_subnet_ids"]["value"], "selectors": selectors}
             for name, selectors in profiles.items()},
@@ -56,10 +58,11 @@ def fixture():
         if operation == "list-addons": return {"addons": list(data["addons"])}
         if operation == "describe-addon": return {"addon": data["addons"][args[-1]]}
         if operation == "get-open-id-connect-provider": return data["provider"]
-        if operation == "describe-access-entry": return {"accessEntry": {"kubernetesGroups": data["verification_groups"]}}
+        if operation == "describe-access-entry": return {"accessEntry": {"kubernetesGroups": data["verification_groups"] if args[-1] == values["deployer_role_arn"] else ["banking-release-prod"], "principalArn": args[-1], "type": "STANDARD"}}
         if operation == "list-associated-access-policies":
             operator = args[-1] == values["operator_role_arn"]
-            policy = "AmazonEKSClusterAdminPolicy" if operator else "AmazonEKSEditPolicy"
+            if not operator: return {"associatedAccessPolicies": []}
+            policy = "AmazonEKSClusterAdminPolicy"
             scope = {"type": "cluster", "namespaces": []} if operator else {"type": "namespace", "namespaces": ["banking-dev"]}
             return {"associatedAccessPolicies": [{"policyArn": "arn:aws:eks::aws:cluster-access-policy/" + policy, "accessScope": scope}]}
         if operation == "describe-log-groups":
@@ -76,7 +79,7 @@ class VerificationTests(unittest.TestCase):
         verify.verify(values, outputs, call)
 
     def test_verification_group_cannot_be_missing_or_admin(self):
-        for groups in [[], ["system:masters"], ["banking-release-verifier", "system:masters"]]:
+        for groups in [[], ["system:masters"], ["banking-release-dev", "system:masters"]]:
             values, outputs, data, call = fixture()
             data["verification_groups"] = groups
             with self.subTest(groups=groups), self.assertRaises(RuntimeError):
@@ -120,6 +123,12 @@ class VerificationTests(unittest.TestCase):
     def test_cluster_creator_admin_rejected(self):
         values, outputs, data, call = fixture()
         data["cluster"]["accessConfig"]["bootstrapClusterCreatorAdminPermissions"] = True
+        with self.assertRaises(RuntimeError):
+            verify.verify(values, outputs, call)
+
+    def test_production_profile_cannot_select_development(self):
+        values, outputs, data, call = fixture()
+        data["profiles"]["banking-dev-prod-app"]["selectors"] = [{"namespace":"banking-dev"}]
         with self.assertRaises(RuntimeError):
             verify.verify(values, outputs, call)
 

@@ -2,9 +2,18 @@
 
 AWS Week 4 Financial Services CI/CD and Kubernetes Release Platform, by Mahmoud Hachem. Phase 1 implements two ASP.NET Core APIs using .NET 10 LTS and local Docker containers. All customers and payments are fictional.
 
-The existing repository is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS), with `dev` as its development default. PRs #1–#14 are merged, including EKS Fargate infrastructure, Helm/application pipelines, governance, verified reconciliation and PostgreSQL/SQS implementation. The earlier CloudOpsTracker repository remains a read-only reference.
+The existing repository is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS), with `dev` as its development default. PRs #1–#15 are merged, including EKS Fargate infrastructure, Helm/application pipelines, governance, verified reconciliation and PostgreSQL/SQS implementation. The earlier CloudOpsTracker repository remains a read-only reference.
 
 Phases 1 and 2 have implementation and execution evidence. Phase 3 infrastructure and Phase 4/5 Helm/CI/CD code are merged and offline validated; live EKS deployment, ECR publication and Helm releases remain pending administrator prerequisites and specific owner authorization. Phase 6 persistence/messaging/monitoring code is merged and locally tested; its actual AWS operation and Phase 7 live recovery/final demonstration remain incomplete. Read [final integration evidence](docs/infrastructure/FINAL-INTEGRATION.md), the [single administrator handoff](docs/infrastructure/ADMIN-REQUEST.md) and [requirements mapping](docs/infrastructure/ASSIGNMENT-MAPPING.md). No source merge authorizes a live Terraform plan or paid apply.
+
+The approved demonstration design uses **one banking-dev EKS Fargate cluster**
+with **banking-dev and banking-prod namespaces**. Dev publishes the scanned digest
+pair; protected prod deploys that same pair only after successful dev evidence.
+Shared-cluster changes are under review; actual AWS roles and live acceptance
+remain blocked. Read [shared architecture and execution order](docs/infrastructure/SHARED-CLUSTER.md),
+[PASS/BLOCKED acceptance matrix](docs/infrastructure/ACCEPTANCE.md) and [updated cost assumptions](docs/infrastructure/COSTS.md).
+GitHub environments exist with deployments disabled; adding an inline allow policy
+does not restrict older CloudOps permissions. No live plan/apply is authorized.
 
 ## Prerequisites
 

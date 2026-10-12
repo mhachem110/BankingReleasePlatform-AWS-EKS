@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def aws(*args):
-    result = subprocess.run(["aws", *args, "--output", "json", "--no-cli-pager"], check=True, capture_output=True, text=True)
+    result = subprocess.run(["aws", *args, "--output", "json", "--no-cli-pager"], check=True, capture_output=True, text=True, encoding="utf-8")
     return json.loads(result.stdout)
 
 
@@ -109,12 +109,12 @@ def main():
         role = aws("iam", "get-role", "--role-name", name)["Role"]
         if role["Arn"] != f"arn:aws:iam::{values['expected_account_id']}:role/aws-service-role/{service}/{name}":
             raise ValueError("Administrator must confirm existing service-linked role: " + name)
-    for field in ["operator_role_arn", "deployer_role_arn"]:
+    for field in ["operator_role_arn", "deployer_role_arn", "prod_deployer_role_arn"]:
         role = aws("iam", "get-role", "--role-name", values[field].split("/")[-1])["Role"]
         if role["Arn"] != values[field]:
             raise ValueError("Access role ARN mismatch.")
-        if field == "deployer_role_arn":
-            expected = "repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:dev"
+        if field in {"deployer_role_arn", "prod_deployer_role_arn"}:
+            expected = "repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:" + ("dev" if field == "deployer_role_arn" else "prod")
             trust = role["AssumeRolePolicyDocument"]["Statement"]
             if not any(s.get("Effect") == "Allow" and s.get("Action") == "sts:AssumeRoleWithWebIdentity" and
                 s.get("Principal", {}).get("Federated") == f"arn:aws:iam::{values['expected_account_id']}:oidc-provider/token.actions.githubusercontent.com" and

@@ -26,6 +26,7 @@ variable "endpoint_cidrs" {
 }
 variable "operator_role_arn" { type = string }
 variable "deployer_role_arn" { type = string }
+variable "prod_deployer_role_arn" { type = string }
 variable "addon_versions" {
   type = map(string)
   validation {
@@ -115,6 +116,16 @@ resource "aws_eks_fargate_profile" "banking" {
   selector { namespace = "banking-dev" }
   depends_on = [aws_eks_fargate_profile.controller]
 }
+# Separate selectors ensure production actually receives Fargate compute.
+resource "aws_eks_fargate_profile" "production" {
+  tags                   = merge(var.tags, { Environment = "prod", Component = "fargate", Name = "${var.name}-prod-app" })
+  cluster_name           = aws_eks_cluster.this.name
+  fargate_profile_name   = "${var.name}-prod-app"
+  pod_execution_role_arn = var.fargate_execution_role_arn
+  subnet_ids             = var.subnet_ids
+  selector { namespace = "banking-prod" }
+  depends_on = [aws_eks_fargate_profile.banking]
+}
 resource "aws_eks_access_entry" "operator" {
   tags          = merge(var.tags, { Component = "security", Name = "${var.name}-operator-access" })
   cluster_name  = aws_eks_cluster.this.name
@@ -131,17 +142,17 @@ resource "aws_eks_access_entry" "deployer" {
   tags              = merge(var.tags, { Component = "security", Name = "${var.name}-deployer-access" })
   cluster_name      = aws_eks_cluster.this.name
   principal_arn     = var.deployer_role_arn
-  kubernetes_groups = ["banking-release-verifier"]
+  kubernetes_groups = ["banking-release-dev"]
   type              = "STANDARD"
 }
-resource "aws_eks_access_policy_association" "deployer" {
-  cluster_name  = aws_eks_cluster.this.name
-  principal_arn = aws_eks_access_entry.deployer.principal_arn
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
-  access_scope {
-    type       = "namespace"
-    namespaces = ["banking-dev"]
-  }
+# No managed Edit policy for release identities: it grants more than Helm needs.
+# Operator installs the reviewed namespace Roles/Bindings after cluster creation.
+resource "aws_eks_access_entry" "prod_deployer" {
+  tags              = merge(var.tags, { Environment = "prod", Component = "security", Name = "${var.name}-prod-deployer-access" })
+  cluster_name      = aws_eks_cluster.this.name
+  principal_arn     = var.prod_deployer_role_arn
+  kubernetes_groups = ["banking-release-prod"]
+  type              = "STANDARD"
 }
 resource "aws_eks_addon" "this" {
   tags                        = merge(var.tags, { Component = "eks", Name = "${var.name}-${each.key}-addon" })
@@ -152,7 +163,7 @@ resource "aws_eks_addon" "this" {
   resolve_conflicts_on_create = "NONE"
   resolve_conflicts_on_update = "NONE"
   configuration_values        = jsonencode(local.addon_configuration[each.key])
-  depends_on                  = [aws_eks_fargate_profile.banking]
+  depends_on                  = [aws_eks_fargate_profile.production]
 }
 output "cluster_name" { value = aws_eks_cluster.this.name }
 output "endpoint" { value = aws_eks_cluster.this.endpoint }
@@ -164,5 +175,6 @@ output "fargate_profiles" {
     coredns    = aws_eks_fargate_profile.coredns.fargate_profile_name
     controller = aws_eks_fargate_profile.controller.fargate_profile_name
     banking    = aws_eks_fargate_profile.banking.fargate_profile_name
+    production = aws_eks_fargate_profile.production.fargate_profile_name
   }
 }

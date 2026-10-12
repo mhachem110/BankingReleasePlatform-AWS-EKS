@@ -43,7 +43,7 @@ flowchart TD
 
 Fargate provisions one isolated compute environment per matching Pod. There are no managed EC2 worker nodes, launch templates, EBS worker disks or node AMI pins. The execution role is for the Fargate kubelet and ECR pulls; containers cannot use it as an application IAM identity. Controller AWS calls use the separate IRSA role and the cluster's actual OIDC issuer. GitHub OIDC continues to use the existing GitHub provider and protected bootstrap subject; those trust relationships remain unchanged.
 
-Three profiles use both private application subnets: CoreDNS, controller plus Metrics Server, and all banking-dev Pods. Creation is sequential, after NAT/private routes exist. CoreDNS explicitly uses computeType Fargate, two replicas, equal requests/limits and no topology spread configuration. Metrics Server uses the AWS community add-on (serving port 10251) with equal requests/limits. Exact add-on pins, amd64/Fargate compute compatibility and AWS configuration schemas are verified read-only before any live plan.
+Four profiles use both private application subnets: CoreDNS, controller plus Metrics Server, banking-dev Pods, and banking-prod Pods. Creation is sequential, after NAT/private routes exist. CoreDNS explicitly uses computeType Fargate, two replicas, equal requests/limits and no topology spread configuration. Metrics Server uses the AWS community add-on (serving port 10251) with equal requests/limits. Exact add-on pins, amd64/Fargate compute compatibility and AWS configuration schemas are verified read-only before any live plan.
 
 Fargate supplies its host CNI and kube-proxy. Terraform does not install VPC CNI, kube-proxy or Pod Identity agent DaemonSets. AWS VPC CNI NetworkPolicy enforcement, DaemonSets, privileged/host-network workloads, EBS volumes and topologySpreadConstraints are unavailable here. Metrics Server is for current utilization/HPA; historical dashboards still need the later monitoring phase. See [the handoff contract](INTERFACE.md) and [AWS Fargate limitations](https://docs.aws.amazon.com/eks/latest/userguide/fargate.html).
 
@@ -54,3 +54,13 @@ One NAT in the first AZ is a lab cost/availability tradeoff. Fargate does not gu
 Read-only earlier Ohio inventory found four VPC primary ranges (10.20/16, 10.50/16, 10.60/16 and 172.31/16), two other EKS clusters and no proposed Banking ECR names. Proposed 10.70.0.0/16 avoids those observed primary ranges; the protected runtime preflight checks all primary/secondary associations again. Those observations do not authorize reuse, establish quotas or prove SCP permissions.
 
 Centralized approved tags and limitations: TAGGING.md. Exact source inventory: RESOURCE-INVENTORY.md. EKS deletion protection is enabled; approved teardown is documented in CLEANUP.md.
+
+## Approved shared-cluster demonstration update
+
+PR #15 is integrated at d101fb7. The current reviewed target is one banking-dev
+control plane and two application profiles/namespaces (banking-dev and banking-prod),
+with distinct release identity groups and operator-installed namespace RBAC/quotas.
+Apply both helm/banking/namespaces manifests and iam/phase3/deployer-verification-rbac.yaml
+only after approved EKS creation. No application identity may install these controls.
+The exact current platform inventory is 46 managed entries, 33 taggable.
+See SHARED-CLUSTER.md and ADMIN-REQUEST.md for current architecture/access limits.

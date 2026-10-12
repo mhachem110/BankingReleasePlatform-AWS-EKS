@@ -28,6 +28,7 @@ jobs:
       id-token: write
     env:
       APP_DEPLOYMENTS_ENABLED: ${{ vars.APP_DEPLOYMENTS_ENABLED }}
+      APP_RELEASE_MODE: ${{ vars.APP_RELEASE_MODE }}
       APP_DEPLOY_ROLE_ARN: ${{ vars.APP_DEPLOY_ROLE_ARN }}
       INFRA_ROLE_ARN: ${{ vars.INFRA_ROLE_ARN }}
       BOOTSTRAP_ROLE_ARN: ${{ vars.BOOTSTRAP_ROLE_ARN }}
@@ -42,7 +43,8 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
-      - run: python scripts/deploy/preflight.py --environment dev --publishing
+      - id: config
+        run: python scripts/deploy/preflight.py --environment dev --publishing
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: scanned-images
@@ -51,6 +53,8 @@ jobs:
         with:
           role-to-assume: ${{ vars.APP_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
           allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
           role-session-name: banking-app-publish-${{ github.run_id }}
       - run: python scripts/deploy/publish.py

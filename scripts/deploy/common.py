@@ -12,6 +12,34 @@ PREVIOUS = {"stage": "dev", "uat": "stage", "prod": "uat"}
 DIGEST = re.compile(r"sha256:[a-f0-9]{64}")
 SHA = re.compile(r"[a-f0-9]{40}")
 
+def release_mode():
+    mode = os.environ.get("APP_RELEASE_MODE", "sequential")
+    if mode not in {"sequential", "shared-cluster-demo"}:
+        raise ValueError("Unknown reviewed release mode")
+    return mode
+
+def predecessor(environment):
+    if release_mode() == "shared-cluster-demo":
+        if environment not in {"dev", "prod"}:
+            raise ValueError("Stage/UAT deployments are inactive in the approved demonstration")
+        return "dev" if environment == "prod" else None
+    return PREVIOUS.get(environment)
+
+def application_session_policy(cfg, *, publishing=False):
+    if publishing and cfg["environment"] != "dev":
+        raise ValueError("Production cannot publish images")
+    actions = ["ecr:DescribeRepositories", "ecr:DescribeImages", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"]
+    if publishing:
+        actions += ["ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload", "ecr:PutImage"]
+    statements = [{"Effect":"Allow", "Action":["sts:GetCallerIdentity", "ecr:GetAuthorizationToken"], "Resource":"*"},
+        {"Effect":"Allow", "Action":actions, "Resource":[f"arn:aws:ecr:{cfg['region']}:{cfg['account']}:repository/banking-dev-{s}" for s in ("account","payment")]}]
+    if not publishing:
+        statements.append({"Effect":"Allow", "Action":"eks:DescribeCluster", "Resource":f"arn:aws:eks:{cfg['region']}:{cfg['account']}:cluster/{cfg['cluster']}"})
+    value = json.dumps({"Version":"2012-10-17", "Statement":statements}, separators=(",", ":"))
+    if len(value) > 2048:
+        raise ValueError("Application STS cap exceeds the supported limit")
+    return value
+
 def runtime_values(environment):
     def unique(pairs):
         result = {}
@@ -51,6 +79,7 @@ def required(name):
 def config(environment, *, publishing=False):
     if environment not in ROUTES:
         raise ValueError("Unknown deployment environment")
+    predecessor(environment)
     if required("GITHUB_REPOSITORY") != REPOSITORY:
         raise ValueError("Unexpected repository")
     if required("GITHUB_REF") != "refs/heads/" + ROUTES[environment]:
@@ -79,8 +108,9 @@ def config(environment, *, publishing=False):
     if not publishing:
         result["cluster"] = required("EKS_CLUSTER_NAME")
         result["namespace"] = required("K8S_NAMESPACE")
-        if result["cluster"] != "banking-" + environment or result["namespace"] != "banking-" + environment:
-            raise ValueError("Environment must use its own approved cluster and namespace")
+        expected_cluster = "banking-dev" if release_mode() == "shared-cluster-demo" else "banking-" + environment
+        if result["cluster"] != expected_cluster or result["namespace"] != "banking-" + environment:
+            raise ValueError("Use the approved cluster and the environment-specific namespace")
     return result
 
 def validate_manifest(manifest, repos):

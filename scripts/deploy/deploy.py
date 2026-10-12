@@ -7,8 +7,9 @@ import sys
 import tempfile
 from pathlib import Path
 from common import ROOT, config, helm_values, json_run, run, runtime_values, save_json, validate_manifest
-from provenance import manifest_hash, verify_previous, verify_publication
+from provenance import deployment_receipt, verify_previous, verify_publication
 from verify import verify
+from isolation import verify_access
 
 def previous_revision(namespace, release):
     releases = json_run(["helm", "list", "-n", namespace, "--all", "--filter", "^" + release + "$", "-o", "json"])
@@ -75,12 +76,13 @@ if __name__ == "__main__":
         os.environ["KUBECONFIG"] = str(Path(directory) / "kubeconfig")
         run(["aws", "eks", "update-kubeconfig", "--name", cfg["cluster"], "--region", cfg["region"]])
         run(["kubectl", "get", "namespace", cfg["namespace"]])
+        verify_access(cfg["namespace"])
         revision = previous_revision(cfg["namespace"], "banking")
         values = Path(directory) / "images.json"
         save_json(values, helm_values(manifest) | runtime)
         run(["helm", "lint", ROOT / "helm/banking", "--strict", "-f", values])
         transaction(cfg["namespace"], "banking", values, args.environment, manifest, revision=revision)
         run(["helm", "history", "banking", "-n", cfg["namespace"]])
-    save_json("release/deployment.json", {"environment": args.environment,
-        "manifestHash": manifest_hash(manifest), "publishRunId": manifest["publishRunId"]})
+    save_json("release/deployment.json", deployment_receipt(args.environment, manifest,
+        os.environ.get("GITHUB_SHA"), os.environ.get("GITHUB_RUN_ID")))
     print("Deployment, Fargate rollout verification and integration smoke succeeded.")

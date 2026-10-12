@@ -3,9 +3,10 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
-from common import PREVIOUS, REPOSITORY, ROOT, config, json_run, run, save_json, validate_manifest
+from common import predecessor, release_mode, REPOSITORY, ROOT, config, json_run, run, save_json, validate_manifest
 
 def validate_run(run_info, *, workflow, branch, commit=None):
     if (run_info.get("status") != "completed" or run_info.get("conclusion") != "success"
@@ -16,7 +17,7 @@ def validate_run(run_info, *, workflow, branch, commit=None):
         raise ValueError("Artifact source is not a successful trusted workflow run")
 
 def obtain(run_id, name, directory):
-    if not str(run_id).isdigit():
+    if not re.fullmatch(r"[1-9][0-9]*", str(run_id)):
         raise ValueError("Run ID must be numeric")
     run(["gh", "run", "download", str(run_id), "--repo", REPOSITORY,
          "--name", name, "--dir", directory])
@@ -24,15 +25,27 @@ def obtain(run_id, name, directory):
 def manifest_hash(manifest):
     return hashlib.sha256(json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
+
+def deployment_receipt(environment, manifest, commit, run_id):
+    if release_mode() != "shared-cluster-demo":
+        return {"environment": environment, "manifestHash": manifest_hash(manifest),
+                "publishRunId": manifest["publishRunId"]}
+    if environment not in {"dev", "prod"} or not re.fullmatch(r"[a-f0-9]{40}", str(commit)) or not re.fullmatch(r"[1-9][0-9]*", str(run_id)):
+        raise ValueError("Actual deployment commit/run required for demonstration evidence")
+    return {"version": 2, "environment": environment, "cluster": "banking-dev",
+            "namespace": "banking-" + environment, "releaseMode": "shared-cluster-demo",
+            "sourceCommit": manifest["sourceCommit"], "deploymentCommit": commit, "runId": str(run_id),
+            "manifestHash": manifest_hash(manifest), "publishRunId": manifest["publishRunId"]}
+
 def verify_publication(manifest):
     info = json_run(["gh", "api", f"repos/{REPOSITORY}/actions/runs/{manifest['publishRunId']}"])
     validate_run(info, workflow="app-publish.yml", branch="dev", commit=manifest["sourceCommit"])
     run(["git", "merge-base", "--is-ancestor", manifest["sourceCommit"], "HEAD"], cwd=ROOT)
 
 def verify_previous(environment, manifest):
-    if environment not in PREVIOUS:
+    previous = predecessor(environment)
+    if previous is None:
         return
-    previous = PREVIOUS[environment]
     branch = {"prod":"main"}.get(previous, previous)
     # Bounded, fail-closed search. Retain evidence artifacts across the promotion window.
     runs = json_run(["gh", "api", f"repos/{REPOSITORY}/actions/workflows/app-deploy.yml/runs?branch={branch}&status=success&per_page=100"])["workflow_runs"]
@@ -48,10 +61,9 @@ def verify_previous(environment, manifest):
         with tempfile.TemporaryDirectory() as directory:
             obtain(info["id"], name, directory)
             evidence = json.loads((Path(directory) / "deployment.json").read_text())
-            if evidence == {"environment": previous, "manifestHash": manifest_hash(manifest),
-                            "publishRunId": manifest["publishRunId"]}:
+            if evidence == deployment_receipt(previous, manifest, info.get("head_sha"), info["id"]):
                 return
-    raise ValueError("No successful predecessor deployment of this exact digest pair; promote sequentially")
+    raise ValueError("No successful predecessor deployment with the exact digest pair and reviewed release mode")
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
@@ -70,4 +82,4 @@ if __name__ == "__main__":
     verify_publication(manifest)
     verify_previous(args.environment, manifest)
     save_json(args.output, manifest)
-    print("Publication provenance, branch ancestry and sequential promotion passed.")
+    print("Publication provenance, branch ancestry and reviewed promotion evidence passed.")

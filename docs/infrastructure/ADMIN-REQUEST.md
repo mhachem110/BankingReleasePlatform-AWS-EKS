@@ -1,59 +1,77 @@
-# ONE Banking Fargate administrator request — proposals only
+# ONE Banking administrator handoff — shared EKS demonstration
 
-Account **866934333672**, Ohio **us-east-2**, cluster/namespace **banking-dev**.
-Updated after normal code-only integration of PRs #13/#14 into dev `f3afff4`
-on 12 October 2026. This remains the ONE administrator handoff for the project.
-The first EKS/Fargate plan needs sections 1–5 and the bootstrap configuration;
-controller/payment IRSA and the data rollout follow the actual cluster interface.
-Do not delay the first platform plan waiting for a guessed future issuer or database.
-Review the complete package together. It does not authorize live IAM changes,
-paid key creation or Terraform apply. The owner cannot create IAM roles.
-Obtain the owner's access-change approval before an administrator applies it;
-paid infrastructure requires separate approval of the actual saved resource plan.
+Account **866934333672**, Region **us-east-2**, ONE cluster **banking-dev**.
+Application namespaces **banking-dev** and **banking-prod**. This supersedes the
+older single-environment prerequisite narrative after the user's manual updates
+and normal PR #15 merge `d101fb7834b13596209d95c604a62eb4cb63f5e1` on 12 October 2026.
+No AWS plan/apply, IAM/KMS mutation or paid creation is authorized by this handoff.
 
-## Verified existing prerequisites
+## Current verification and minimum outstanding bundle
 
-Read-only inspections on 11 October 2026 confirmed the existing Banking S3 state
-bucket, SSE-S3, versioning, public-access blocking, owner-enforced ownership,
-90-day noncurrent retention, seven-day multipart cleanup and no current expiry.
-Successful Phase 2 recovery is the previous native-locking/both-roots no-change
-evidence; no state operation was repeated. Preserve bucket and Phase 2 keys.
+GitHub API verification confirms bootstrap/dev/stage/uat/prod exist. Dev selects
+only dev, prod only main, and both now require owner review with administrator
+bypass disabled. All expected non-secret dev/prod variables are configured;
+APP_DEPLOYMENTS_ENABLED and APP_DATA_OPERATIONS_ENABLED remain false. The approved
+shared-cluster release mode is selected, but cannot deploy with those switches off.
+Bootstrap protections, variables and its AWS_ROLE_ARN secret were preserved.
+AWS_OPERATIONS_ENABLED=false. No self-hosted banking-deployer runner is registered.
 
-Existing bootstrap role:
-arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap
-Its exactly two inline policies are CloudOpsTrackerBootstrap and
-BankingReleasePlatformState; no boundary. Preserve both and both current trusts:
+The user added Banking trusts/inline policies to the existing CloudOps dev/prod
+roles. Their ARNs are configured in GitHub; **do not request those additions again**.
+Fresh AWS verification is blocked: local STS returns NoCredentials and there is
+no signed-in browser session. Their full trusts, two Banking inline policies,
+six original managed-policy default versions, boundaries and applicable denies
+remain unverified. New allow policies cannot restrict older allow policies.
 
-```text
-repo:mhachem110@150286776/E-CommerceAWS_Terraform@1399001550:environment:bootstrap
-repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:bootstrap
-Federated provider: arn:aws:iam::866934333672:oidc-provider/token.actions.githubusercontent.com
-Action: sts:AssumeRoleWithWebIdentity
-Audience: sts.amazonaws.com
-```
+Run the prepared **Read-only Banking AWS reconciliation** workflow from merged dev
+with inspection=approved-read-only and approve its existing bootstrap environment,
+or authenticate an approved local read-only AWS CLI profile. It never runs
+Terraform, creates resources, reads secret values or changes IAM. Its STS session
+cap contains only metadata reads. Underlying denied reads are recorded as denied,
+not empty inventories. Full documents and version IDs are retained privately.
+Actual dev/prod OIDC token and namespace access tests follow approved deployment;
+the immutable GitHub subject prefix is verified configuration, not a captured token.
 
-GitHub immutable owner/repository IDs and the provider audience match. Protected
-bootstrap retains owner review, dev-only selected branch, no admin bypass.
-BOOTSTRAP_STATE_READY=true; AWS_OPERATIONS_ENABLED=false.
+For the first protected EKS plan, return ONE verified bundle:
 
-EKS/Fargate service-linked roles already exist:
-AWSServiceRoleForAmazonEKS and AWSServiceRoleForAmazonEKSForFargate. The Fargate
-service role trusts eks-fargate.amazonaws.com; Pod execution is a DIFFERENT role
-that trusts eks-fargate-pods.amazonaws.com. ELB's service-linked role was observed
-earlier; recheck at the later ALB gate. No recreation is requested.
+1. Full audit/authorization of the three service roles in section 1, plus the
+   actual human-assumable operator and both application role ARNs. Reuse the
+   user-configured CloudOps application roles only after effective-policy review.
+   If broad policies permit IAM/EKS administration or unrelated resources, propose
+   the dedicated Banking identities from section 2; preserve all shared trusts.
+2. Actual enabled symmetric Ohio KMS ARN, full approved policy/grants and exact-key
+   additive Phase 3 permission proposal. Preserve the existing state bucket,
+   bootstrap policies and unrelated resources. Confirm EKS/Fargate service-linked
+   roles; historical existence is not fresh proof.
+3. Approved non-overlapping VPC CIDR/all associations, two AZs and actual narrow
+   operator/runner endpoint CIDRs. Approve exact region-catalog EKS/CoreDNS/Metrics
+   Server compatibility and configuration schemas; source EKS 1.36 is not a verified
+   current catalog pin. No EC2 workers or second cluster.
+4. Fresh quota AND utilization evidence with **7.0 available Fargate vCPU** for
+   both namespaces' HPA/rollout envelope, plus EKS/NAT/EIP/ENI/private-IP headroom.
+   Current HPA switches remain off. Confirm organizational tags/optional CostCenter.
+5. Registered trusted Linux x64 banking-deployer runner with EKS API access and
+   restricted repository execution. Supply PLATFORM_INPUTS_JSON (including distinct
+   prod_deployer_role_arn), CAPACITY_REVIEW_JSON and actual budget/duration assumptions.
 
-Organizations identifies this as the organization's **management account**.
-[SCPs do not restrict its users/roles](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html).
-Do not request an SCP relaxation. Identity/session/boundary/key policies remain
-relevant; S3 connectivity does not prove EKS permissions.
+Only after these facts are verified and the shared-cluster code is approved/merged,
+request owner authorization for **infra-operations.yml, dev, operation=plan**.
+Do not dispatch it yet. Apply needs separate approval of the actual saved plan and
+costs plus the second bootstrap environment review.
 
-Fresh IAM inventory recheck found no cloudbatch818-mahmoud-banking roles. Existing
-CloudOps deployment roles are not approved for Banking reuse. No actual approved
-operator or KMS key ARN has been supplied. Earlier inspections found no banking-dev
-cluster/ECR names and no primary VPC collision with 10.70.0.0/16. Preflight rechecks
-all CIDR associations/AZs/collisions. Human quota Console inspection was denied
-on servicequotas:ListAWSDefaultServiceQuotas; capacity remains unverified, not zero.
-No self-hosted runner or application environment is configured.
+## Preserved historical evidence
+
+Phase 2 recovery on 11 October verified the existing bucket, native locks and
+repeated zero-resource-change plans. See ../phase2/COMPLETION.md. Existing bucket:
+`mhachem-banking-tfstate-866934333672`. Bootstrap/foundation state paths survive;
+platform and data have their own keys. The historical bootstrap identity is
+`arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap`.
+Preserve CloudOpsTrackerBootstrap and BankingReleasePlatformState, Retail and
+Banking GitHub trust statements, and token.actions.githubusercontent.com.
+Historical management-account status means SCPs do not restrict its identities;
+recheck organization status/visible denies rather than requesting SCP relaxation.
+Controller/Payment IRSA requires the actual future cluster issuer. Section 7 data,
+alerts and ingress approvals follow Phase 3 and do not block its first plan.
 
 ## Complete proposed files and one administrator work package
 
@@ -85,16 +103,28 @@ its trust. Confirm the actual human may assume it, add BankingOperatorDiscovery.
 only if needed, and return its approved ARN. Terraform assigns explicit cluster
 admin through an access entry. No human trust or extra operator role is guessed.
 
-Proposed new dedicated app role: cloudbatch818-mahmoud-banking-app-deploy-dev.
-Use BankingAppDev-new-role-trust.json and BankingAppDev-permissions.json. Exact
-immutable Banking/environment:dev GitHub subject, STS audience; ECR rights on
-only two Banking repos plus cluster discovery, no state/IAM/EC2/ELB permissions.
-Shared-role reuse needs complete policy review and additive full trust preserving
-authorized relationships; do not replace CloudOps trust with the new-role template.
-Terraform grants banking-dev namespace Edit plus banking-release-verifier mapping.
-After cluster creation the approved operator creates the namespace and applies
-iam/phase3/deployer-verification-rbac.yaml (Node get and banking-dev namespace get
-only). App containers do not inherit the Fargate execution role.
+The user-configured dev/prod identities are application identities, not EKS
+service roles. Inspect every effective document before approving reuse. Retained
+CloudOps permissions may exceed Banking needs. Restrictive workflow session caps
+limit each run to exact ECR repositories and banking-dev discovery, but do not
+remove broader permissions from the shared role outside those runs.
+
+If isolation is necessary, review NEW dedicated roles only:
+cloudbatch818-mahmoud-banking-app-deploy-dev and
+cloudbatch818-mahmoud-banking-app-deploy-prod. The complete BankingAppDev/BankingAppProd
+trust/permission proposals preserve exact immutable subjects and audience. Dev can
+publish. Prod has pull/discovery only. Do not paste a new-role trust over a shared
+role, detach CloudOps policies or modify other projects.
+
+Terraform creates two distinct EKS access entries mapped only to banking-release-dev
+and banking-release-prod. No managed Edit policy or implicit creator access is granted
+to either application identity. An approved operator installs both namespaces,
+quotas and iam/phase3/deployer-verification-rbac.yaml. Each Role/Binding allows
+release operations only in its namespace, with no RBAC administration. Cluster grants
+are read-only Node get and get of the identity's own namespace. Helm Secrets are
+readable within that namespace, so release reviewers/runner remain trusted. Application
+ServiceAccounts have no release-group binding. Live authorization checks must deny
+cross-namespace reads/writes and cluster mutations before any Helm operation.
 
 ### 3. Actual approved KMS key and resource tags
 
@@ -170,9 +200,9 @@ aws eks describe-addon-versions --region us-east-2 --kubernetes-version 1.36 --a
 
 For each actual selected name/version, return describe-addon-configuration.
 Return actual Fargate quota AND current utilization; approve EKS/NAT/EIP/ENI limits.
-Reserve 4.5 available vCPU beyond other account usage for the prepared worst case:
+Reserve 7.0 available vCPU beyond other account usage for the prepared worst case:
 8 API + 3 system + 2 controller Pods and 5 simultaneous surge Pods. Initially only
-3 system Pods run (0.75 vCPU); 4.5 is conservative rollout/HPA capacity, not current
+3 system Pods run (0.75 vCPU); 7.0 is conservative rollout/HPA capacity, not current
 usage. Do not broaden the workflow role merely to browse the quota page. Its gate
 uses recent administrator-reviewed evidence and explicitly labels that provenance.
 
@@ -224,19 +254,24 @@ Replace numeric string markers with actual JSON numbers. Missing/stale/future,
 wrong-account/Region, invalid or insufficient evidence fails. No claimed automated
 quota measurement. Owner deployment review remains mandatory.
 
-Before app publication/deployment, create protected dev environment: owner reviewer,
-dev-only branch, no admin bypass, APP_DEPLOYMENTS_ENABLED=false until separate approval.
+Protected dev/prod environments now exist and are verified as described above.
+Preserve their exact dev/main branches, owner reviewers, no bypass and disabled switches.
+Do not recreate environments or roles. Dev's variable set (prod shares cluster/ECR,
+but uses its own role and banking-prod namespace):
 Its COMPLETE variable set:
 
 ```text
 APP_DEPLOYMENTS_ENABLED=false
+APP_DATA_OPERATIONS_ENABLED=false
+APP_RUNTIME_VALUES_JSON={}
+APP_RELEASE_MODE=shared-cluster-demo
 AWS_ACCOUNT_ID=866934333672
 AWS_REGION=us-east-2
 EKS_CLUSTER_NAME=banking-dev
 K8S_NAMESPACE=banking-dev
 ECR_ACCOUNT_REPOSITORY=866934333672.dkr.ecr.us-east-2.amazonaws.com/banking-dev-account
 ECR_PAYMENT_REPOSITORY=866934333672.dkr.ecr.us-east-2.amazonaws.com/banking-dev-payment
-APP_DEPLOY_ROLE_ARN=ACTUAL_APPROVED_DISTINCT_APP_ROLE_ARN
+APP_DEPLOY_ROLE_ARN=arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-deploy-dev
 INFRA_ROLE_ARN=arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap
 BOOTSTRAP_ROLE_ARN=arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap
 ```
@@ -248,7 +283,7 @@ separate; working branch names never become new AWS trust subjects.
 
 The merged data root is `infra/environments/dev/data`; its separate state key is
 `banking-release-platform/dev/data/terraform.tfstate`. The original Phase 3
-resource inventory and plan/apply workflow stay unchanged. Review the new
+state and protections remain preserved. The shared-cluster platform changes are separate from data. Review the
 [protected data procedure](DATA-DEPLOYMENT.md) with this same handoff.
 
 | Requirement | Administrator/operator return |
@@ -277,6 +312,30 @@ DATA_SESSION_POLICY_ARN and DATA_SESSION_POLICY_SHA256. Existing AWS_ROLE_ARN an
 immutable bootstrap OIDC subject stay unchanged. Data plan/apply each require
 personal bootstrap review; apply uses the exact same-run saved plan and cost receipt.
 Do not run this workflow while obtaining the first platform prerequisites.
+
+### Production data isolation and IAM management choice
+
+The separate prepared prod root is infra/environments/prod/data, backend key
+banking-release-platform/prod/data/terraform.tfstate. It creates banking-prod-postgres,
+banking-prod-payments/DLQ and prod log/alarm names, with its own managed master secret,
+monitoring role, runtime logins and Payment IRSA. It still uses the ONE banking-dev
+cluster and approved isolated database subnets. It must never consume dev credentials,
+queues or records. Shared cluster SG/networking is a coarse reachability boundary;
+separate database/queue permissions and credentials are essential.
+
+The existing protected data workflow remains DEV ONLY. Production data operations
+stay blocked until separate actual resource/cost/IAM approval and a reviewed protected
+prod workflow/session cap. Do not point the dev workflow at prod state or enable prod
+runtime persistence as a shortcut. Initial prod application demonstration uses memory
+mode and does not satisfy durable production acceptance. See SHARED-CLUSTER.md.
+
+Three service roles could be managed by a separately reviewed Terraform prerequisite
+root only with explicit scoped creator authorization, its own state and exact trust/
+policy inventory, required boundary (if approved), tag/name conditions and bounded
+PassRole. Such permissions do not exist as verified prerequisites today. IAM cannot
+be safely automated merely by granting iam:*. Until that authorization exists,
+retain the current administrator-created role model and data.aws_iam_role references.
+No new IAM module, imports or creator permissions are applied in this workstream.
 
 ## Return ONE administrator bundle, in deployment order
 

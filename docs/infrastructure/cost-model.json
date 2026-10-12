@@ -10,10 +10,30 @@
   "cpu_sku": "UGSJ89BUWB7SMJ6A",
   "ram_sku": "HH5EE3ZFWSFKGKWM",
   "pods": [
-    {"component": "Account and Payment (two replicas each)", "replicas": 4, "billed_vcpu": "0.25", "billed_gb": "1"},
-    {"component": "CoreDNS", "replicas": 2, "billed_vcpu": "0.25", "billed_gb": "0.5"},
-    {"component": "Metrics Server", "replicas": 1, "billed_vcpu": "0.25", "billed_gb": "0.5"},
-    {"component": "Load Balancer Controller (planning assumption)", "replicas": 2, "billed_vcpu": "0.25", "billed_gb": "0.5"}
+    {
+      "component": "Account and Payment in dev/prod (two replicas each)",
+      "replicas": 8,
+      "billed_vcpu": "0.25",
+      "billed_gb": "1"
+    },
+    {
+      "component": "CoreDNS",
+      "replicas": 2,
+      "billed_vcpu": "0.25",
+      "billed_gb": "0.5"
+    },
+    {
+      "component": "Metrics Server",
+      "replicas": 1,
+      "billed_vcpu": "0.25",
+      "billed_gb": "0.5"
+    },
+    {
+      "component": "Load Balancer Controller (planning assumption)",
+      "replicas": 2,
+      "billed_vcpu": "0.25",
+      "billed_gb": "0.5"
+    }
   ],
   "fixed_monthly_usd": {
     "eks_standard_support": "73.00",
@@ -21,5 +41,14 @@
     "one_nat_public_ipv4_planning_rate_0_005_hour": "3.65",
     "one_customer_managed_kms_key": "1.00"
   },
-  "excluded": ["NAT processing and cross-AZ transfer", "CloudWatch ingestion/storage", "KMS requests/rotation increases", "ECR and S3 usage", "ALB/LCU/public IPv4 charges", "Database/messaging/full monitoring", "Taxes and credits"]
+  "excluded": [
+    "NAT processing and cross-AZ transfer",
+    "CloudWatch ingestion/storage",
+    "KMS requests/rotation increases",
+    "ECR and S3 usage",
+    "ALB/LCU/public IPv4 charges",
+    "Separate dev/prod RDS, SQS, secrets and full monitoring (own cost approval)",
+    "Taxes and credits"
+  ],
+  "architecture": "one banking-dev EKS control plane; separate dev/prod namespaces"
 }

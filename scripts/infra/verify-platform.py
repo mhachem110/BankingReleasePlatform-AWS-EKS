@@ -28,6 +28,7 @@ def verify(values, outputs, call=aws):
             {"namespace": "kube-system", "labels": {"app.kubernetes.io/name": "aws-load-balancer-controller"}},
             {"namespace": "kube-system", "labels": {"k8s-app": "metrics-server"}}],
         "banking-dev-app": [{"namespace": "banking-dev"}],
+        "banking-dev-prod-app": [{"namespace": "banking-prod"}],
     }
     names = call("eks", "list-fargate-profiles", "--cluster-name", "banking-dev")["fargateProfileNames"]
     if set(names) != set(expected):
@@ -56,16 +57,14 @@ def verify(values, outputs, call=aws):
     tags = {t["Key"]: t["Value"] for t in provider["Tags"]}
     if provider["Url"].removeprefix("https://") != issuer.removeprefix("https://") or provider["ClientIDList"] != ["sts.amazonaws.com"] or not provider["ThumbprintList"] or (tags.get("Project") != "BankingReleasePlatform" or tags.get("Environment") != "dev"):
         raise RuntimeError("Cluster OIDC provider protections mismatch.")
-    for field, policy, scope in [
-        ("operator_role_arn", "AmazonEKSClusterAdminPolicy", {"type": "cluster"}),
-        ("deployer_role_arn", "AmazonEKSEditPolicy", {"type": "namespace", "namespaces": ["banking-dev"]}),
-    ]:
-        entries = call("eks", "list-associated-access-policies", "--cluster-name", "banking-dev", "--principal-arn", values[field])["associatedAccessPolicies"]
-        if len(entries) != 1 or not entries[0]["policyArn"].endswith("/" + policy) or {k:v for k,v in entries[0]["accessScope"].items() if v != []} != scope:
-            raise RuntimeError("Approved operator/deployer access scope mismatch.")
-    deployer_entry = call("eks", "describe-access-entry", "--cluster-name", "banking-dev", "--principal-arn", values["deployer_role_arn"])["accessEntry"]
-    if deployer_entry.get("kubernetesGroups") != ["banking-release-verifier"]:
-        raise RuntimeError("Deployer verification group mismatch.")
+    operator_policies = call("eks", "list-associated-access-policies", "--cluster-name", "banking-dev", "--principal-arn", values["operator_role_arn"])["associatedAccessPolicies"]
+    if len(operator_policies) != 1 or operator_policies[0]["policyArn"] != "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" or operator_policies[0]["accessScope"]["type"] != "cluster":
+        raise RuntimeError("Approved operator access scope mismatch.")
+    for field, group in [("deployer_role_arn", "banking-release-dev"), ("prod_deployer_role_arn", "banking-release-prod")]:
+        policies = call("eks", "list-associated-access-policies", "--cluster-name", "banking-dev", "--principal-arn", values[field])["associatedAccessPolicies"]
+        entry = call("eks", "describe-access-entry", "--cluster-name", "banking-dev", "--principal-arn", values[field])["accessEntry"]
+        if policies or entry.get("kubernetesGroups") != [group] or entry.get("principalArn") != values[field] or entry.get("type") != "STANDARD":
+            raise RuntimeError("Release access must use only its reviewed namespace RBAC group.")
     for name in ["/aws/eks/banking-dev/cluster", "/banking/banking-dev/vpc-flow"]:
         logs = [g for g in call("logs", "describe-log-groups", "--log-group-name-prefix", name)["logGroups"] if g["logGroupName"] == name]
         if len(logs) != 1 or logs[0].get("kmsKeyId") != values["kms_key_arn"] or logs[0].get("retentionInDays") != 30:
@@ -74,7 +73,7 @@ def verify(values, outputs, call=aws):
         repo = call("ecr", "describe-repositories", "--repository-names", name)["repositories"][0]
         if repo["imageTagMutability"] != "IMMUTABLE" or not repo["imageScanningConfiguration"]["scanOnPush"]:
             raise RuntimeError("ECR immutable tags/scanning mismatch.")
-    print("Verified ACTIVE Fargate-only cluster, three profiles, two pinned healthy add-ons, IRSA provider, explicit access, encrypted logs and immutable ECR. Application/controller rollout remains separately authorized.")
+    print("Verified ACTIVE Fargate-only cluster, four profiles, two pinned healthy add-ons, IRSA provider, explicit access, encrypted logs and immutable ECR. Application/controller rollout remains separately authorized.")
 
 
 if __name__ == "__main__":

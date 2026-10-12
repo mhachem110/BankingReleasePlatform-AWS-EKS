@@ -20,3 +20,8 @@ No policy here has been applied. Use the single request in
 Preserve CloudOpsTrackerBootstrap, BankingReleasePlatformState and both current
 Retail/Banking bootstrap trust statements. The controller trust is exported only
 after the real Banking EKS issuer exists; never fabricate an issuer or key ARN.
+
+BankingAppProd-new-role-trust/permissions are conditional NEW-role proposals when
+full audit shows the retained CloudOps production identity is too broad. Pull and
+banking-dev discovery only; no publication, IAM or cluster administration. Shared
+role trusts and original CloudOps policies must remain intact.
