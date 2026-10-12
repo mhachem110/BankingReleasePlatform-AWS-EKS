@@ -37,7 +37,7 @@ or per-run security-group edits occur. Deployment jobs serialize per environment
 never cancel a running rollout/rollback.
 
 The administrator must review an OIDC role with audience sts.amazonaws.com and exact
-subjects repo:mhachem110/BankingReleasePlatform-AWS-EKS:environment:dev (and only
+subjects repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:dev (and only
 separately approved environment subjects for promotion). GitHub's environment branch
 rules independently enforce the source ref; OIDC environment subjects do not encode it.
 Do not trust feature/app, infra, bootstrap working branches or wildcard environment

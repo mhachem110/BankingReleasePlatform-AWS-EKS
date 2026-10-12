@@ -121,10 +121,16 @@ docker compose start account-api
 
 While Account API is stopped, Payment's `/health` stays healthy but payment requests return 503 with `account_service_unavailable` and no payment reference. After Account restarts, the ordinary checks should pass again. This is a local dependency check; the assignment's controlled EKS release failure and rollback demonstration remains Phase 7 work.
 
-## Feature branch and pull request
+## Working branches
 
-The implementation is on `feature/phase1-banking-apis`, tracking `origin/feature/phase1-banking-apis`. The initial `main` commit provides the PR base. Review [PR #1](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/1) before merging. The [Phase 1 report](docs/phase-1-report.md) records the original local checkpoint and subsequent publishing status. No GitHub Actions workflow or AWS secret is needed in this phase.
+Reuse `feature/app` for application work, `bootstrap` for backend/OIDC work and `infra` for infrastructure and governance; the proposed reviewed application scope also includes Helm and the four application workflows. Each opens a PR into `dev`; promote through `dev → stage → uat → main`. PR #1 is merged and historical branches are preserved. Follow [the reviewed branch rules](AGENTS.md) and [governance](docs/governance/reusable-branches.md).
 
-## Phase 2 preparation
+## Phase 2 complete
 
-Terraform state and GitHub OIDC preparation use the reusable bootstrap branch and PR into dev. Read [the execution plan](docs/phase2/BOOTSTRAP.md), [IAM review](docs/phase2/IAM.md) and [preparation report](docs/phase2/REPORT.md). No AWS configuration or connection is verified by an ordinary code merge. AWS operations require separate approval.
+GitHub OIDC and the dedicated Ohio S3 backend were verified through protected GitHub Actions. [Recovery 38175836629](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38175836629) passed bucket/state protections, both root validations, competing-lock tests and two consecutive zero-resource-change plans for each root. Development outputs remain unapplied. Read [the final evidence report](docs/phase2/COMPLETION.md). `BOOTSTRAP_STATE_READY=true`; `AWS_OPERATIONS_ENABLED=false`.
+
+## Phase 3 preparation
+
+The separate `infra/environments/dev/platform` root uses modules for two-AZ networking, immutable Account/Payment ECR repositories and EKS Fargate Pods. The existing bucket and Phase 2 roots remain separate. [Architecture](docs/infrastructure/ARCHITECTURE.md), [deployment steps](docs/infrastructure/DEPLOYMENT.md), [administrator request](docs/infrastructure/ADMIN-REQUEST.md), [cost estimate](docs/infrastructure/COSTS.md) and [remaining assignment coverage](docs/infrastructure/REQUIREMENTS.md) explain the reviewed scope.
+
+Terraform/Checkov/Helm CI runs without AWS credentials. The manually dispatched infrastructure workflow uses protected OIDC sessions, saved-plan hashes and a second environment review before apply. No paid Phase 3 resource has been created; real IAM prerequisites, plan/cost review and owner approval remain required. The prepared `helm/banking` chart deploys two APIs internally by immutable digest; ingress defaults off until Phase 4 authorization.
