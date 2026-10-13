@@ -9,10 +9,10 @@ reviews, saved binary hashes, backend locks and live verification remain intact.
 Destroy stays outside this entry. An apply cannot cancel an earlier project run.
 
 Select `target=project`, `operation=apply` and
-`APPLY-REVIEWED-BANKING-PROJECT` only after the complete deployment prerequisites
-below are implemented and verified. This is a development change, not evidence of
-a live cluster or a completed project. No project deployment has been dispatched
-for this change.
+`APPLY-REVIEWED-BANKING-PROJECT` during the jointly reviewed deployment run.
+The source implementation is prepared; this document is not evidence of a live
+cluster. Code inspection or a merged PR cannot replace the protected saved-plan
+reviews or live acceptance.
 
 The foundation returns its actual key/operator. The network returns its actual
 owned VPC/default group. These outputs replace stale dependency IDs for the next
@@ -49,11 +49,11 @@ Terraform and image publication. Only kubectl/Helm deployment and rollback use
 the private runner; the EKS public endpoint stays restricted to its reviewed
 operator CIDRs.
 
-Before the first full run, the account owner must authorize a GitHub App
-CodeConnections connection for this repository in us-east-2, set the actual
-connection ARN as `CODEBUILD_GITHUB_CONNECTION_ARN`, and add the exact CodeBuild
-bootstrap actions in `docs/deployment/codebuild-bootstrap-policy-additions.json`.
-The protected runner stage fails before planning if that ARN is missing. The
+The account owner reports that the GitHub App CodeConnections connection, the
+`CODEBUILD_GITHUB_CONNECTION_ARN` bootstrap variable, and the required bootstrap
+CodeBuild permissions have been configured. These account settings have not yet
+been checked by a deployment run. The protected runner stage fails before
+planning if that ARN is missing. The
 CodeBuild uses small, non-privileged compute. Standard GitHub-hosted jobs rescan
 the published digests with Docker/Trivy and pass the manifest hash to the private
 deployment job. Each private job consumes build minutes, while the project
@@ -86,8 +86,10 @@ the Kubernetes and ECR inventories before removal and publishes the cleanup
 receipt required by later targets. The S3 state bucket is never deleted.
 Retained encrypted RDS snapshots block the runtime KMS key retirement until
 an additional explicit retention decision is made. No cleanup has been run.
-App CD now combines publication/deployment, and App Rollback is a separate protected
-recovery entry. See [the presentation walkthrough](PIPELINE-PRESENTATION.md) for
-controls and the precise readiness limits. Existing required checks and protections
-stay in place. The complete offline suite and PR checks validate code only;
-no AWS apply or destroy has been dispatched for this change.
+App CD combines publication/deployment, and App Rollback is a separate protected
+recovery entry. The rollback receipt now follows both rollout and service smoke
+checks. Cleanup waits for the documented Kubernetes deletion timeouts and verifies
+that namespace, controller service account, and release RBAC objects are gone.
+See [the presentation walkthrough](PIPELINE-PRESENTATION.md) for controls and
+readiness limits. Existing required checks and protections stay in place. These
+latest changes were intentionally left untested and undeployed for the joint test.

@@ -48,8 +48,10 @@ RDS and SQS/DLQ pair for each namespace, the transactional payment outbox, and
 CloudWatch alarms to encrypted project alert queues. Explain that approval of a
 Terraform saved plan, a GitHub environment and the AWS role are separate gates.
 
-The current evidence is code and offline validation only. The CodeBuild GitHub
-App connection, permission boundary for Fargate log shipping, live deployment,
-production promotion, alert delivery and rollback demonstration need actual AWS
-evidence before the trainer can present them as working. A final RDS snapshot
-keeps the runtime KMS key in use; retirement must account for that dependency.
+The account owner reports that the CodeBuild GitHub App connection and bootstrap
+permissions are configured. That integration, the Fargate log boundary, live
+deployment, production promotion, alert delivery and rollback demonstration
+still need actual AWS evidence before presenting them as working. The latest
+cleanup/recovery edits were not tested at the owner's request. A final RDS
+snapshot keeps the runtime KMS key in use; retirement must account for that
+dependency.

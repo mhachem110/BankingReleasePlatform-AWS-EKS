@@ -8,9 +8,10 @@ import argparse
 import json
 import os
 import re
+import sys
 import tempfile
 from pathlib import Path
-from common import ROUTES, REPOSITORY, config, json_run, run, save_json, validate_manifest
+from common import ROOT, ROUTES, REPOSITORY, config, json_run, run, save_json, validate_manifest
 from provenance import deployment_receipt, obtain, validate_run, verify_publication
 from isolation import verify_access
 from verify import verify
@@ -64,6 +65,10 @@ def rollback(environment, revision, manifest):
         run(["helm", "rollback", "banking", str(revision), "-n", cfg["namespace"],
              "--wait", "--timeout", "10m", "--cleanup-on-fail"])
         verify(cfg["namespace"], "banking", manifest)
+        # Readiness alone is insufficient: verify Account/Payment communication
+        # before publishing a successful recovery receipt.
+        run([sys.executable, ROOT / "scripts/deploy/kube-smoke.py", "--namespace",
+             cfg["namespace"], "--release", "banking"])
     save_json("release/rollback.json", {"environment": environment, "namespace": cfg["namespace"],
         "restoredRevision": revision, "publishRunId": manifest["publishRunId"],
         "images": manifest["images"], "runId": os.environ["GITHUB_RUN_ID"], "verified": True})

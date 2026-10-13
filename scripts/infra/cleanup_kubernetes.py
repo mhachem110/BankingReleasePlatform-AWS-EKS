@@ -14,8 +14,8 @@ def require(ok, message):
         raise ValueError(message)
 
 
-def run(*args):
-    result = subprocess.run(args, capture_output=True, text=True, timeout=180)
+def run(*args, timeout=180):
+    result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
     if result.returncode:
         raise RuntimeError("Kubernetes cleanup command failed: " + " ".join(args[:3]))
     return result.stdout
@@ -86,9 +86,18 @@ def verify_absent():
     result = json.loads(run("helm", "list", "-n", "kube-system", "--all", "--filter",
                             "^aws-load-balancer-controller$", "-o", "json"))
     require(not result, "ALB controller Helm release remains")
-    for name in ("banking-release-verifier-dev", "banking-release-verifier-prod"):
-        result = subprocess.run(["kubectl", "get", "clusterrole", name], capture_output=True, text=True)
-        require(result.returncode != 0 and "NotFound" in result.stderr, "Cluster RBAC remains")
+    for kind in ("clusterrole", "clusterrolebinding"):
+        for name in ("banking-release-verifier-dev", "banking-release-verifier-prod"):
+            result = subprocess.run(["kubectl", "get", kind, name], capture_output=True, text=True)
+            require(result.returncode != 0 and "NotFound" in result.stderr, "Cluster RBAC remains")
+    for kind, name, namespace in (("serviceaccount", "aws-load-balancer-controller", "kube-system"),
+                                  ("namespace", "aws-observability", None)):
+        command = ["kubectl", "get", kind, name]
+        if namespace:
+            command.extend(["-n", namespace])
+        result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        require(result.returncode != 0 and "NotFound" in result.stderr,
+                "Project Kubernetes bootstrap resource remains: " + kind + "/" + name)
     return {"account": ACCOUNT, "cluster": "banking-dev", "workloads_removed": True,
             "load_balancers_removed": False, "verified": False,
             "run_id": os.environ.get("GITHUB_RUN_ID"), "commit": os.environ.get("GITHUB_SHA")}
@@ -107,15 +116,15 @@ if __name__ == "__main__":
         require(inventory() == reviewed, "Kubernetes inventory changed since review")
         for namespace in NAMESPACES:
             if "banking" in reviewed["namespaces"][namespace]["helm"]:
-                run("helm", "uninstall", "banking", "-n", namespace, "--wait", "--timeout", "10m")
+                run("helm", "uninstall", "banking", "-n", namespace, "--wait", "--timeout", "10m", timeout=900)
         if reviewed["controller"]:
             run("helm", "uninstall", "aws-load-balancer-controller", "-n", "kube-system",
-                "--wait", "--timeout", "10m")
+                "--wait", "--timeout", "10m", timeout=900)
         for namespace in NAMESPACES:
-            run("kubectl", "delete", "namespace", namespace, "--wait=true", "--timeout=10m")
+            run("kubectl", "delete", "namespace", namespace, "--wait=true", "--timeout=10m", timeout=900)
         for name in ("banking-release-verifier-dev", "banking-release-verifier-prod"):
             run("kubectl", "delete", "clusterrolebinding", name, "--ignore-not-found")
             run("kubectl", "delete", "clusterrole", name, "--ignore-not-found")
         run("kubectl", "delete", "serviceaccount", "aws-load-balancer-controller", "-n", "kube-system", "--ignore-not-found")
-        run("kubectl", "delete", "namespace", "aws-observability", "--ignore-not-found", "--wait=true")
+        run("kubectl", "delete", "namespace", "aws-observability", "--ignore-not-found", "--wait=true", timeout=900)
         Path("kubernetes-cleanup-verification.json").write_text(json.dumps(verify_absent(), indent=2))
