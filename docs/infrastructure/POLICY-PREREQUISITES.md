@@ -2,8 +2,11 @@
 
 Protected read-only run [38342975527](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38342975527)
 verified the owner's updated `terraform-policy`, repository-scoped immutable OIDC
-trust and allowed service-role creation/pass-role simulations. The new contract
-pins the observed permission document, trust, empty attached-policy inventory and
+trust and allowed service-role creation/pass-role simulations. A later protected
+[read-only audit](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38382778844)
+confirmed that the original 16 policy statements and trust are unchanged. Seven
+scoped alert, RDS and CodeBuild grants were added by the owner. The contract now
+pins that observed permission document, trust, empty attached-policy inventory and
 absent bootstrap boundary. It stops on subsequent drift and never changes this
 shared role. Historical original-policy checks remain available in the audit;
 the live owner-installed configuration supersedes that earlier baseline.
