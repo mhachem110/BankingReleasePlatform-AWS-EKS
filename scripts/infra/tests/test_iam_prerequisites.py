@@ -17,7 +17,7 @@ from platform_caps import review, verify
 
 
 def env():
-    boundary = json.loads((ROOT / "iam/provisioning/proposed/BankingServicePermissionsBoundary.json").read_text())
+    boundary = json.loads((ROOT / "infra/iam/provisioning/proposed/BankingServicePermissionsBoundary.json").read_text())
     return dict(GITHUB_REF="refs/heads/dev", IAM_PREREQUISITES_ENABLED="true", BOOTSTRAP_STATE_READY="true", ROLE_ARN=BOOTSTRAP,
         AWS_REGION="us-east-2", AWS_EXPECTED_ACCOUNT_ID=ACCOUNT, TF_STATE_BUCKET="mhachem-banking-tfstate-" + ACCOUNT,
         IAM_BOUNDARY_POLICY_SHA256=digest(boundary), OPERATION="plan")
@@ -87,13 +87,13 @@ class IamPlanTests(unittest.TestCase):
 class PolicyTests(unittest.TestCase):
     def test_proposals_are_reproducible_and_within_managed_quota(self):
         for name, doc in generate().items():
-            self.assertEqual(doc, json.loads((ROOT / "iam/provisioning/proposed" / name).read_text()))
+            self.assertEqual(doc, json.loads((ROOT / "infra/iam/provisioning/proposed" / name).read_text()))
             self.assertLessEqual(len(json.dumps(doc, separators=(",", ":"))), 6144)
 
     def test_aws_action_resource_compatibility_and_create_cluster_exception(self):
         spec = importlib.util.spec_from_file_location("sar_validator", ROOT / "scripts/infra/validate-provisioner-policies.py")
         validator = importlib.util.module_from_spec(spec); spec.loader.exec_module(validator)
-        metadata = json.loads((ROOT / "iam/provisioning/service-authorization-reference.json").read_text())
+        metadata = json.loads((ROOT / "infra/iam/provisioning/service-authorization-reference.json").read_text())
         docs = generate()
         self.assertGreater(validator.validate(docs, metadata)["aws_actions_checked"], 100)
         bad = copy.deepcopy(docs)
@@ -221,7 +221,7 @@ class BootstrapAuditTests(unittest.TestCase):
             self.assertFalse(result["awsOrAccountRequirementVerified"])
 
     def test_service_boundary_version_drift_is_visible_without_granting_rights(self):
-        source = json.loads((ROOT / "iam/provisioning/proposed/BankingServicePermissionsBoundary.json").read_text())
+        source = json.loads((ROOT / "infra/iam/provisioning/proposed/BankingServicePermissionsBoundary.json").read_text())
         for document, matches in ((source, True), ({"Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}, False)):
             calls = []
             def call(service, operation, *args):

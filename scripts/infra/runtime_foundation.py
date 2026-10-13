@@ -13,7 +13,7 @@ import tempfile
 KEY = 'banking-release-platform/shared/runtime-foundation/terraform.tfstate'
 OPERATOR = f'arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-operator'
 ALIAS = 'alias/banking-release-platform-runtime'
-FOLDER = Path(__file__).resolve().parents[2] / 'iam/runtime-foundation'
+FOLDER = Path(__file__).resolve().parents[2] / 'infra/iam/runtime-foundation'
 TAGS = dict(Project='BankingReleasePlatform', Environment='shared', ManagedBy='Terraform', Owner='MahmoudHachem', Purpose='CloudEngineerTraining', Component='runtime-foundation')
 
 

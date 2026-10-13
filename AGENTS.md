@@ -2,7 +2,7 @@
 
 ## Reuse these branches
 
-- `feature/app`: Account/Payment APIs, tests, Docker and application documentation. Owner-authored application releases may also change helm/banking/**, scripts/deploy/**, docs/deployment/** and exactly app-ci.yml, app-validation.yml, app-publish.yml, app-deploy.yml under .github/workflows. No Terraform/HCL, CODEOWNERS, IAM, shared infrastructure, governance or other GitHub configuration. These release exceptions retain cloud ownership and require the verified cloud-owner author.
+- `feature/app`: Account/Payment APIs, tests, Docker and application documentation. Owner-authored application releases may also change helm/banking/**, scripts/deploy/** and exactly app-ci.yml, app-validation.yml, app-publish.yml, app-deploy.yml under .github/workflows. No Terraform/HCL, CODEOWNERS, IAM, shared infrastructure, governance or other GitHub configuration. These release exceptions retain cloud ownership and require the verified cloud-owner author.
 - `bootstrap`: Terraform backend, S3 state, GitHub OIDC connectivity and bootstrap configuration.
 - `infra`: Terraform AWS networking, VPC, EKS, ECR, RDS and monitoring; Helm, GitHub workflows, IAM artifacts and shared repository governance. Cloud engineers may make reviewed cross-cutting application changes here alongside cloud changes.
 
@@ -12,7 +12,7 @@ Promotion PRs are only `dev -> stage`, `stage -> uat`, and `uat -> main`. `dev` 
 
 After a PR merge and before the next change, fetch origin, synchronize the working branch with its matching remote, then merge the latest `origin/dev` using ordinary Git merges. Stop on conflicts or command failures; preserve commits. No force pushes, history-rewriting rebases, destructive resets, or deletion of reusable branches. Keep automatic branch deletion disabled.
 
-The original Phase 1, governance and Phase 2 PRs (#1, #2, and #3) are merged; their temporary source branches were retired after ancestry verification and explicit user approval. Preserve their PR records. Use only `feature/app`, `bootstrap`, and `infra` for new work. See `docs/governance/reusable-branches.md` for synchronization and promotion rules. This file is not approval to merge a PR or perform AWS operations.
+The original Phase 1, governance and Phase 2 PRs (#1, #2, and #3) are merged; their temporary source branches were retired after ancestry verification and explicit user approval. Preserve their PR records. Use only `feature/app`, `bootstrap`, and `infra` for new work. See `.github/governance/reusable-branches.md` for synchronization and promotion rules. This file is not approval to merge a PR or perform AWS operations.
 
 ## Keep authorization separate
 

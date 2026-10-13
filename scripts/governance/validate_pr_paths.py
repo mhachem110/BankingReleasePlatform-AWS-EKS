@@ -13,22 +13,21 @@ ROUTES = {
     "uat": frozenset({"stage"}),
     "main": frozenset({"uat"}),
 }
-APP_PREFIXES = ("apps/", "tests/", "docs/application/")
+APP_PREFIXES = ("apps/",)
 APP_FILES = frozenset({
     "README.md", ".dockerignore", "compose.yaml", "compose.yml",
     "BankingReleasePlatform.sln", "Directory.Build.props", "global.json",
     "scripts/smoke-test.ps1", "scripts/test-local.ps1",
 })
 # Owner-authored application release changes only; shared cloud ownership remains.
-APP_RELEASE_PREFIXES = ("helm/banking/", "scripts/deploy/", "docs/deployment/")
+APP_RELEASE_PREFIXES = ("helm/banking/", "scripts/deploy/")
 APP_RELEASE_FILES = frozenset({
     ".github/workflows/app-ci.yml", ".github/workflows/app-validation.yml",
     ".github/workflows/app-publish.yml", ".github/workflows/app-deploy.yml",
 })
 BOOTSTRAP_PREFIXES = (
     "infra/bootstrap/", "infra/backend/", "infra/modules/state-bucket/",
-    "scripts/bootstrap/", "docs/phase2/",
-    "iam/bootstrap/", "policies/bootstrap/",
+    "scripts/bootstrap/", "infra/iam/bootstrap/", "policies/bootstrap/",
 )
 BOOTSTRAP_FILES = frozenset({
     "README.md", ".gitignore", ".github/workflows/terraform-operations.yml",
@@ -37,8 +36,7 @@ BOOTSTRAP_FILES = frozenset({
 })
 CLOUD_PREFIXES = (
     "infra/", "helm/", ".github/", "scripts/bootstrap/", "scripts/infra/",
-    "scripts/deploy/", "scripts/governance/", "docs/governance/", "docs/phase2/",
-    "docs/security/", "docs/infrastructure/", "iam/", "policies/",
+    "scripts/deploy/", "scripts/governance/", "policies/",
     "config/aws/", "config/iam/",
 )
 CLOUD_FILES = frozenset({"AGENTS.md", ".gitignore"})

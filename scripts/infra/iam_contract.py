@@ -13,7 +13,7 @@ ROLE_NAMES = {"cluster": "cloudbatch818-mahmoud-banking-eks-cluster", "fargate":
 ROLE_ARNS = {key: f"arn:aws:iam::{ACCOUNT}:role/{name}" for key, name in ROLE_NAMES.items()}
 ATTACHMENTS = {"cluster": "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy", "fargate": "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"}
 TAGS = {"Project": "BankingReleasePlatform", "Environment": "shared", "ManagedBy": "Terraform", "Owner": "MahmoudHachem", "Purpose": "CloudEngineerTraining", "Component": "service-iam"}
-PROPOSALS = Path(__file__).resolve().parents[2] / "iam/phase3/proposed"
+PROPOSALS = Path(__file__).resolve().parents[2] / "infra/iam/phase3/proposed"
 
 
 def canonical(document):

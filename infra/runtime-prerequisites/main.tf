@@ -115,7 +115,7 @@ resource "aws_iam_role" "controller" {
 resource "aws_iam_role_policy" "controller" {
   name   = "BankingAWSLoadBalancerController"
   role   = aws_iam_role.controller.id
-  policy = jsonencode(jsondecode(file("${path.module}/../../iam/phase3/aws-load-balancer-controller-v2.14.1.json")))
+  policy = jsonencode(jsondecode(file("${path.module}/../iam/phase3/aws-load-balancer-controller-v2.14.1.json")))
 }
 # Fargate's managed log router uses the pod execution identity, not workload
 # IRSA. The administrator-controlled boundary must allow these exact groups.

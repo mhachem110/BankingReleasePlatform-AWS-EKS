@@ -15,7 +15,7 @@ IMAGE = "amazon/aws-for-fluent-bit@sha256:32b8cbb1996d7f651d74d8970a0f7a74ddc207
 
 
 def validate():
-    source = ROOT/"docs/deployment/monitoring/aws-logging.yaml"
+    source = ROOT/"infra/monitoring/aws-logging.yaml"
     data = yaml.safe_load(source.read_text(encoding="utf-8"))["data"]
     if sum(len(v) for v in data.values()) > 5300 or "${" in "".join(data.values()):
         raise ValueError("Invalid Fargate configuration size or environment expansion")

@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-CONFIG = ROOT/'docs/deployment/monitoring'
+CONFIG = ROOT/'infra/monitoring'
 PROMETHEUS = 'prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996'
 
 if __name__ == '__main__':

@@ -63,7 +63,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--usage-json", help="Optional local JSON with actual approved usage assumptions")
     args = parser.parse_args()
-    model = json.loads(Path("docs/infrastructure/cost-model.json").read_text())
+    model = json.loads(Path("infra/cost/cost-model.json").read_text())
     output = {"scenarios": scenarios(model), "variable_usage": usage_estimate(
         json.loads(Path(args.usage_json).read_text()) if args.usage_json else {})}
     print(json.dumps(output, indent=2))

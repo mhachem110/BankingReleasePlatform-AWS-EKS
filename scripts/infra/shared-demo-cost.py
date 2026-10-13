@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def estimate(instance_class="db.t4g.micro", *, database_storage_gib=40):
-    prices = json.loads((ROOT/"docs/infrastructure/shared-demo-prices.json").read_text())["rates"]
+    prices = json.loads((ROOT/"infra/cost/shared-demo-prices.json").read_text())["rates"]
     suffix = instance_class.removeprefix("db.t4g.")
     if suffix not in {"micro", "small", "medium"} or instance_class != "db.t4g." + suffix or database_storage_gib not in {20, 40}:
         raise ValueError("Only reviewed design classes/storage envelopes are modeled")

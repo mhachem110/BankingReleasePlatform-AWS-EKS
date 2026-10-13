@@ -33,7 +33,7 @@ resource "aws_iam_policy" "project" {
   name        = each.value.name
   path        = "/"
   description = "Reviewed Banking ${each.key}; does not attach permissions to bootstrap"
-  policy      = file("${path.module}/../../iam/provisioning/proposed/${each.value.file}")
+  policy      = file("${path.module}/../iam/provisioning/proposed/${each.value.file}")
   tags        = merge(local.tags, { Name = each.value.name })
   depends_on  = [terraform_data.authorization]
   lifecycle { prevent_destroy = true }

@@ -5,12 +5,12 @@ on:
     branches: [dev, stage, uat, main]
     paths:
       - 'infra/**'
-      - 'iam/**'
-      - 'docs/infrastructure/**'
       - 'scripts/bootstrap/**'
       - 'scripts/infra/**'
       - 'scripts/governance/**'
-      - 'docs/governance/**'
+      - '.github/governance/**'
+      - '.github/rulesets/**'
+      - '.github/CODEOWNERS'
       - 'AGENTS.md'
       - 'helm/**'
       - '.github/workflows/infra-operations.yml'
@@ -30,12 +30,12 @@ on:
     branches: [dev, stage, uat, main]
     paths:
       - 'infra/**'
-      - 'iam/**'
-      - 'docs/infrastructure/**'
       - 'scripts/bootstrap/**'
       - 'scripts/infra/**'
       - 'scripts/governance/**'
-      - 'docs/governance/**'
+      - '.github/governance/**'
+      - '.github/rulesets/**'
+      - '.github/CODEOWNERS'
       - 'AGENTS.md'
       - 'helm/**'
       - '.github/workflows/infra-operations.yml'

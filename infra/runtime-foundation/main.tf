@@ -14,7 +14,7 @@ provider "aws" {
 }
 locals {
   tags      = { Project = "BankingReleasePlatform", Environment = "shared", ManagedBy = "Terraform", Owner = "MahmoudHachem", Purpose = "CloudEngineerTraining", Component = "runtime-foundation" }
-  documents = "${path.module}/../../iam/runtime-foundation"
+  documents = "${path.module}/../iam/runtime-foundation"
   operator  = "cloudbatch818-mahmoud-banking-operator"
 }
 data "aws_caller_identity" "current" {}

@@ -21,4 +21,4 @@ def estimate(model):
 
 
 if __name__ == "__main__":
-    print(json.dumps(estimate(json.loads(Path("docs/infrastructure/cost-model.json").read_text())), indent=2))
+    print(json.dumps(estimate(json.loads(Path("infra/cost/cost-model.json").read_text())), indent=2))
