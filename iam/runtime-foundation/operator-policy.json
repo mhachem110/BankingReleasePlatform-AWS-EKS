@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "eks:DescribeCluster",
+      "Resource": "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev"
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "iam:*",
+        "sts:AssumeRole*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

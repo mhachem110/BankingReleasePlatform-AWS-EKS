@@ -37,6 +37,12 @@ policy detachment and only the selected IAM state write. Its compact read-only
 scope covers project Terraform states; it cannot write those other states.
 Two reviews and the same-run state/binary checks apply before any deletes.
 
+The `runtime-foundation` target removes the unused project operator/alias and
+schedules the actual project KMS key for deletion after seven days. It rejects live
+operator cluster access, key grants and encrypted cluster/database/snapshot/EBS/log/
+queue use. [RUNTIME-FOUNDATION.md](RUNTIME-FOUNDATION.md) explains the restricted
+inventory, cost and pending-deletion verification. Existing/shared keys are retained.
+
 Full platform/data
 teardown must be implemented and reviewed before
 those deployments; Kubernetes ingress/controller cleanup, ECR image inventory,

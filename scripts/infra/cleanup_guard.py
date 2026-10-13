@@ -15,11 +15,12 @@ KEYS = {"vpc-seed": "banking-release-platform/dev/platform/terraform.tfstate",
         "dev-data": "banking-release-platform/dev/data/terraform.tfstate",
         "prod-data": "banking-release-platform/prod/data/terraform.tfstate",
         "iam-prerequisites": "banking-release-platform/shared/iam-prerequisites/terraform.tfstate",
-        "policy-prerequisites": "banking-release-platform/shared/policy-prerequisites/terraform.tfstate"}
+        "policy-prerequisites": "banking-release-platform/shared/policy-prerequisites/terraform.tfstate",
+        "runtime-foundation": "banking-release-platform/shared/runtime-foundation/terraform.tfstate"}
 LOCAL = {"terraform_data"}
 UNTAGGABLE = LOCAL | {"aws_route", "aws_route_table_association", "aws_ecr_lifecycle_policy",
     "aws_eks_access_policy_association", "aws_iam_role_policy", "aws_iam_role_policy_attachment",
-    "aws_sqs_queue_policy", "aws_sqs_queue_redrive_policy", "aws_sqs_queue_redrive_allow_policy", "aws_cloudwatch_log_metric_filter"}
+    "aws_sqs_queue_policy", "aws_sqs_queue_redrive_policy", "aws_sqs_queue_redrive_allow_policy", "aws_cloudwatch_log_metric_filter", "aws_kms_alias"}
 
 
 def inputs(env):
@@ -27,7 +28,7 @@ def inputs(env):
     require(env.get("CLEANUP_ENABLED") == "true" and env.get("AWS_OPERATIONS_ENABLED") == "false", "Explicit cleanup window; creation must be disabled")
     require(env.get("ROLE_ARN") == BOOTSTRAP and env.get("AWS_EXPECTED_ACCOUNT_ID") == ACCOUNT and env.get("AWS_REGION") == REGION and env.get("TF_STATE_BUCKET") == BUCKET, "Wrong cleanup identity/account/Region/backend")
     target = env.get("TARGET")
-    require(target in {"vpc-seed", "policy-prerequisites", "iam-prerequisites"} and env.get("OPERATION") in {"plan", "apply"}, "Only the verified VPC, project policies or project service roles are enabled")
+    require(target in {"vpc-seed", "policy-prerequisites", "iam-prerequisites", "runtime-foundation"} and env.get("OPERATION") in {"plan", "apply"}, "Only the verified project prerequisites are enabled")
     if env["OPERATION"] == "apply":
         require(env.get("APPROVAL") == "DESTROY-REVIEWED-BANKING-" + target.upper(), "Exact destroy phrase and separate environment review required")
     require(re.fullmatch(r"[1-9][0-9]*", env.get("GITHUB_RUN_ID", "")) and re.fullmatch(r"[1-9][0-9]*", env.get("GITHUB_RUN_ATTEMPT", "")), "Use an actual workflow run")
@@ -43,11 +44,15 @@ def backend(config):
 
 def read_policy(config):
     bucket = "arn:aws:s3:::" + BUCKET
+    dependency_keys = {config["key"], KEYS["dev-data"], KEYS["prod-data"]}
+    if config["target"] == "policy-prerequisites":
+        dependency_keys.update({KEYS["platform"], KEYS["iam-prerequisites"]})
     # Compact read-only project scope leaves enough room for exact role deletes
     # in the STS 2,048-character inline cap. Writes still name one selected state.
-    state_reads = (bucket + "/banking-release-platform/*/terraform.tfstate" if config["target"] == "iam-prerequisites" else
-                   [bucket + "/" + key for key in sorted(set(KEYS.values()))])
+    state_reads = (bucket + "/banking-release-platform/*/terraform.tfstate" if config["target"] in {"iam-prerequisites", "runtime-foundation"} else
+                   [bucket + "/" + key for key in sorted(dependency_keys)])
     actions = (["sts:GetCallerIdentity", "ec2:Describe*"] if config["target"] == "vpc-seed" else
+               ["sts:GetCallerIdentity", "iam:Get*", "iam:List*", "kms:DescribeKey", "kms:Get*", "kms:List*", "eks:Describe*", "eks:List*", "ec2:DescribeVolumes", "rds:Describe*", "logs:DescribeLogGroups", "sqs:ListQueues", "sqs:GetQueueAttributes"] if config["target"] == "runtime-foundation" else
                ["sts:GetCallerIdentity", "iam:Get*", "iam:List*", "eks:Describe*", "eks:List*", "ec2:DescribeFlowLogs"] if config["target"] == "iam-prerequisites" else
                ["sts:GetCallerIdentity", "iam:GetPolicy", "iam:GetPolicyVersion", "iam:ListPolicyVersions"])
     rows = [{"Effect": "Allow", "Action": actions, "Resource": "*"},
@@ -60,6 +65,8 @@ def read_policy(config):
 
 
 def inventory(target):
+    if target == "runtime-foundation":
+        return {"terraform_data.authorization", "aws_kms_key.runtime", "aws_kms_alias.runtime", "aws_iam_role.operator", "aws_iam_role_policy.operator"}
     if target == "vpc-seed":
         return SEED_ADDRESSES
     if target == "policy-prerequisites":
@@ -103,7 +110,10 @@ def state_review(state, config, env):
             if item["type"] in {"aws_iam_role_policy_attachment", "aws_iam_role_policy"}:
                 key = item["address"].rsplit(".", 1)[1]
                 require(f'aws_iam_role.service["{key}"]' in addresses, "Role policy cleanup requires its managed service role in the same state")
-    expected_env = "prod" if config["target"] == "prod-data" else "shared" if config["target"] in {"iam-prerequisites", "policy-prerequisites"} else "dev"
+    if config["target"] == "runtime-foundation":
+        require("aws_kms_alias.runtime" not in addresses or "aws_kms_key.runtime" in addresses, "Alias cleanup requires its managed key")
+        require("aws_iam_role_policy.operator" not in addresses or "aws_iam_role.operator" in addresses, "Inline cleanup requires its managed operator")
+    expected_env = "prod" if config["target"] == "prod-data" else "shared" if config["target"] in {"iam-prerequisites", "policy-prerequisites", "runtime-foundation"} else "dev"
     seed = interface(env) if config["target"] in {"vpc-seed", "platform"} else None
     for item in managed:
         value, kind = item["values"], item["type"]
@@ -119,9 +129,20 @@ def state_review(state, config, env):
         if kind == "aws_vpc":
             require(value["id"] == seed["vpc_id"] and value.get("cidr_block") == "10.70.0.0/16", "Wrong verified VPC")
         if kind == "aws_iam_role":
-            key = item["address"].split('"')[1]
-            require(value.get("arn") == ROLE_ARNS[key], "Never delete bootstrap/application/other service roles")
-            require(value.get("permissions_boundary") == BOUNDARY and json.loads(value.get("assume_role_policy") or "{}") == trust(key), "Service role boundary/trust differs from the reviewed source")
+            if config["target"] == "runtime-foundation":
+                from runtime_foundation import OPERATOR, document
+                require(value.get("arn") == OPERATOR and not value.get("permissions_boundary") and json.loads(value.get("assume_role_policy") or "{}") == document("operator-trust"), "Only the reviewed project operator may be removed")
+            else:
+                key = item["address"].split('"')[1]
+                require(value.get("arn") == ROLE_ARNS[key], "Never delete bootstrap/application/other service roles")
+                require(value.get("permissions_boundary") == BOUNDARY and json.loads(value.get("assume_role_policy") or "{}") == trust(key), "Service role boundary/trust differs from the reviewed source")
+        if kind == "aws_kms_key":
+            from runtime_foundation import document
+            require(value.get("arn") == f"arn:aws:kms:{REGION}:{ACCOUNT}:key/{value['id']}" and json.loads(value.get("policy") or "{}") == document("key-policy") and value.get("tags", {}).get("Name") == "banking-runtime" and value.get("deletion_window_in_days") == 7, "Never schedule an existing/shared/unknown key for deletion")
+        if kind == "aws_kms_alias":
+            from runtime_foundation import ALIAS
+            key = next(r["values"]["id"] for r in managed if r["type"] == "aws_kms_key")
+            require(value.get("name") == value["id"] == ALIAS and value.get("target_key_id") == key, "Only the reviewed runtime alias/key binding may be removed")
         if kind == "aws_iam_policy":
             from policy_prerequisites import POLICIES, document
             key = item["address"].split('"')[1]
@@ -130,7 +151,11 @@ def state_review(state, config, env):
             key = item["address"].rsplit(".", 1)[1]
             require(value.get("role") == ROLE_ARNS[key].split("/")[-1] and value.get("policy_arn") == ATTACHMENTS[key], "Unexpected role attachment")
         if kind == "aws_iam_role_policy":
-            require(value.get("role") == ROLE_ARNS["flow"].split("/")[-1] and value.get("name") == "BankingFlowLogs", "Unexpected inline policy")
+            if config["target"] == "runtime-foundation":
+                from runtime_foundation import OPERATOR, document
+                require(value.get("role") == OPERATOR.split("/")[-1] and value.get("name") == "BankingOperator" and json.loads(value.get("policy") or "{}") == document("operator-policy"), "Unexpected operator inline policy")
+            else:
+                require(value.get("role") == ROLE_ARNS["flow"].split("/")[-1] and value.get("name") == "BankingFlowLogs", "Unexpected inline policy")
         if kind == "aws_iam_openid_connect_provider":
             require(re.fullmatch(r"https://oidc\.eks\.us-east-2\.amazonaws\.com/id/[A-Za-z0-9]+", value.get("url", "")), "Never delete GitHub or another cluster's OIDC provider")
         if kind == "aws_eks_cluster":
@@ -182,7 +207,9 @@ def other_state_empty(key):
 
 def preflight(config, report, env):
     check_identity()
-    if config["target"] in {"platform", "vpc-seed", "iam-prerequisites", "policy-prerequisites"}:
+    if config["target"] == "runtime-foundation":
+        foundation_preflight(report)
+    if config["target"] in {"platform", "vpc-seed", "iam-prerequisites", "policy-prerequisites", "runtime-foundation"}:
         for name in ["dev-data", "prod-data"]:
             other_state_empty(KEYS[name])
     if config["target"] == "policy-prerequisites":
@@ -246,6 +273,55 @@ def preflight(config, report, env):
     return {"identity": check_identity(), "dependency_checks_passed": True}
 
 
+def foundation_preflight(report):
+    from runtime_foundation import OPERATOR, ALIAS, document
+    other_state_empty(KEYS["platform"])
+    names = aws("eks", "list-clusters")["clusters"]
+    for name in names:
+        require(OPERATOR not in aws("eks", "list-access-entries", "--cluster-name", name)["accessEntries"], "Live cluster access still references the operator")
+    role = next((r for r in report["inventory"] if r["type"] == "aws_iam_role"), None)
+    if role:
+        name = OPERATOR.split("/")[-1]; live = aws("iam", "get-role", "--role-name", name)["Role"]
+        require(live.get("Arn") == OPERATOR and live.get("Path") == "/" and live.get("AssumeRolePolicyDocument") == document("operator-trust") and not live.get("PermissionsBoundary"), "Operator identity/trust changed")
+        require({t["Key"]:t["Value"] for t in live.get("Tags",[])} == role["values"]["tags"], "Operator tags changed")
+        require(not aws("iam", "list-attached-role-policies", "--role-name", name)["AttachedPolicies"] and not aws("iam", "list-instance-profiles-for-role", "--role-name", name)["InstanceProfiles"], "Operator has unreviewed attachments/profile use")
+        inline = [r for r in report["inventory"] if r["type"] == "aws_iam_role_policy"]
+        require(set(aws("iam", "list-role-policies", "--role-name", name)["PolicyNames"]) == ({"BankingOperator"} if inline else set()), "Operator has unreviewed inline grants")
+        if inline: require(aws("iam", "get-role-policy", "--role-name", name, "--policy-name", "BankingOperator")["PolicyDocument"] == document("operator-policy"), "Operator inline document changed")
+    key = next((r for r in report["inventory"] if r["type"] == "aws_kms_key"), None)
+    if not key: return
+    arn = key["values"]["arn"]; meta = aws("kms", "describe-key", "--key-id", arn)["KeyMetadata"]
+    require(meta.get("Arn") == arn and meta.get("KeyState") == "Enabled" and meta.get("KeySpec") == "SYMMETRIC_DEFAULT" and meta.get("KeyUsage") == "ENCRYPT_DECRYPT", "Runtime key identity/state changed")
+    require(json.loads(aws("kms", "get-key-policy", "--key-id", arn, "--policy-name", "default")["Policy"]) == document("key-policy"), "Key policy changed")
+    require({t["TagKey"]:t["TagValue"] for t in aws("kms", "list-resource-tags", "--key-id", arn)["Tags"]} == key["values"]["tags"], "Key tags changed")
+    require(not aws("kms", "list-grants", "--key-id", arn)["Grants"], "Key still has grants; review their use before cleanup")
+    aliases = aws("kms", "list-aliases", "--key-id", arn)["Aliases"]
+    require({a["AliasName"] for a in aliases} == ({ALIAS} if any(r["type"] == "aws_kms_alias" for r in report["inventory"]) else set()), "Key has aliases outside the reviewed state")
+    for name in names:
+        cluster = aws("eks", "describe-cluster", "--name", name)["cluster"]
+        require(not any(c.get("provider",{}).get("keyArn") == arn for c in cluster.get("encryptionConfig",[])), "Key is used by a live cluster")
+    for operation, field in [("describe-db-instances","DBInstances"),("describe-db-snapshots","DBSnapshots")]:
+        require(not any(r.get("KmsKeyId") == arn for r in aws("rds", operation)[field]), "Key is used by a database or retained snapshot")
+    require(not any(r.get("KmsKeyId") == arn for r in aws("ec2", "describe-volumes")["Volumes"]), "Key is used by an EBS volume")
+    require(not any(r.get("kmsKeyId") == arn for r in aws("logs", "describe-log-groups")["logGroups"]), "Key is used by retained log groups")
+    identifiers = {arn, meta["KeyId"], ALIAS, f"arn:aws:kms:{REGION}:{ACCOUNT}:{ALIAS}"}
+    for url in aws("sqs", "list-queues").get("QueueUrls",[]):
+        require(aws("sqs", "get-queue-attributes", "--queue-url", url, "--attribute-names", "KmsMasterKeyId").get("Attributes",{}).get("KmsMasterKeyId") not in identifiers, "Key is used by a live queue")
+
+
+def foundation_delete_cap(config, report):
+    from runtime_foundation import OPERATOR
+    doc = json.loads(read_policy(config)); bucket = "arn:aws:s3:::" + BUCKET
+    doc["Statement"] += [{"Effect":"Allow", "Action":["iam:DeleteRole","iam:DeleteRolePolicy"], "Resource":OPERATOR, "Condition":{"StringEquals":{"aws:ResourceTag/Project":"BankingReleasePlatform","aws:ResourceTag/Environment":"shared"}}},
+                         {"Effect":"Allow", "Action":"s3:PutObject", "Resource":bucket + "/" + config["key"]}]
+    for item in report["inventory"]:
+        if item["type"] == "aws_kms_key":
+            doc["Statement"].append({"Effect":"Allow","Action":"kms:ScheduleKeyDeletion","Resource":item["values"]["arn"],"Condition":{"StringEquals":{"aws:ResourceTag/Project":"BankingReleasePlatform","aws:ResourceTag/Environment":"shared","aws:ResourceTag/Name":"banking-runtime"}}})
+        if item["type"] == "aws_kms_alias":
+            doc["Statement"].append({"Effect":"Allow","Action":"kms:DeleteAlias","Resource":item["values"]["arn"]})
+    value = json.dumps(doc,separators=(",",":")); require(len(value) <= 2048, "Foundation cleanup cap exceeds STS limit"); return value
+
+
 def vpc_delete_cap(config, env):
     doc = json.loads(read_policy(config)); seed = interface(env)
     doc["Statement"] += [{"Effect": "Allow", "Action": "ec2:DeleteVpc", "Resource": f"arn:aws:ec2:{REGION}:{ACCOUNT}:vpc/{seed['vpc_id']}", "Condition": {"StringEquals": {"aws:RequestedRegion": REGION, "aws:ResourceTag/Project": "BankingReleasePlatform", "aws:ResourceTag/Environment": "dev"}}},
@@ -288,6 +364,7 @@ if __name__ == "__main__":
             out.write("session_policy=" + read_policy(config) + "\n")
     elif args.command == "delete-cap":
         cap = (vpc_delete_cap(config, os.environ) if config["target"] == "vpc-seed" else
+               foundation_delete_cap(config, json.loads(Path("cleanup-state-review.json").read_text())) if config["target"] == "runtime-foundation" else
                role_delete_cap(config) if config["target"] == "iam-prerequisites" else policy_delete_cap(config))
         with open(os.environ["GITHUB_OUTPUT"], "a") as out:
             out.write("session_policy=" + cap + "\n")
@@ -321,6 +398,14 @@ if __name__ == "__main__":
             from policy_prerequisites import POLICIES
             for arn, _ in POLICIES.values():
                 require(aws("iam", "get-policy", "--policy-arn", arn, absent_codes=("NoSuchEntity",)).get("absent"), "Project policy still exists")
+        elif config["target"] == "runtime-foundation":
+            from runtime_foundation import OPERATOR, ALIAS
+            require(aws("iam", "get-role", "--role-name", OPERATOR.split("/")[-1], absent_codes=("NoSuchEntity",)).get("absent"), "Operator still exists")
+            for item in json.loads(Path("cleanup-state-review.json").read_text())["inventory"]:
+                if item["type"] == "aws_kms_key":
+                    meta = aws("kms", "describe-key", "--key-id", item["values"]["arn"])["KeyMetadata"]
+                    require(meta.get("KeyState") == "PendingDeletion" and meta.get("DeletionDate"), "Key was not scheduled for deletion")
+            require(not any(r.get("AliasName") == ALIAS for r in aws("kms", "list-aliases")["Aliases"]), "Runtime alias still exists")
         else:
             for arn in ROLE_ARNS.values():
                 require(aws("iam", "get-role", "--role-name", arn.split("/")[-1], absent_codes=("NoSuchEntity",)).get("absent"), "Project service role still exists")
