@@ -4,9 +4,9 @@ on:
     inputs:
       target:
         type: choice
-        options: [vpc-seed, policy-prerequisites]
+        options: [vpc-seed, policy-prerequisites, iam-prerequisites]
         default: vpc-seed
-        description: 'Only the verified test VPC or unused project policies'
+        description: 'Only the verified test VPC, unused project policies or unused project service roles'
       operation:
         type: choice
         options: [plan, apply]
@@ -15,11 +15,11 @@ on:
       approval:
         type: string
         default: ''
-        description: 'Apply only: DESTROY-REVIEWED-BANKING-VPC-SEED or DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES'
+        description: 'Apply only: DESTROY-REVIEWED-BANKING- followed by the uppercase target'
 permissions:
   contents: read
 concurrency:
-  group: ${{ inputs.target == 'policy-prerequisites' && 'banking-shared-iam-prerequisites' || 'banking-dev-platform' }}
+  group: ${{ inputs.target == 'vpc-seed' && 'banking-dev-platform' || 'banking-shared-iam-prerequisites' }}
   cancel-in-progress: false
 env:
   AWS_EC2_METADATA_DISABLED: 'true'
@@ -115,9 +115,9 @@ jobs:
           if-no-files-found: error
       - name: Publish destroy review instructions
         run: |
-          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership and dependent states before approving apply. Only the verified VPC seed or unused project policies may be deleted. Backend and unrelated/shared IAM remain intact.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership and live dependencies before approving apply. Only the verified VPC seed, unused project policies or unused project service roles may be deleted. Backend and unrelated/shared IAM remain intact.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && ((inputs.target == 'vpc-seed' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED') || (inputs.target == 'policy-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES'))
+    if: inputs.operation == 'apply' && ((inputs.target == 'vpc-seed' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED') || (inputs.target == 'policy-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES') || (inputs.target == 'iam-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-IAM-PREREQUISITES'))
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
