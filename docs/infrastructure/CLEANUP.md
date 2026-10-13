@@ -1,9 +1,42 @@
+# Reviewed test cleanup
+
+The `Reviewed Banking test VPC destroy` workflow removes the verified VPC seed
+from its native `dev/platform` state. It is enabled only on reviewed `dev`, with
+`CLEANUP_ENABLED=true` and `AWS_OPERATIONS_ENABLED=false`. Creation is disabled
+during cleanup. Both the plan and apply jobs retain the bootstrap reviewer gate.
+
+Dispatch `operation=apply` with `DESTROY-REVIEWED-BANKING-VPC-SEED`. Review the
+first deployment to permit read-only inspection and saved destroy-plan creation.
+Before the second review, inspect the saved plan, SHA256, actual VPC ID, tags and
+dependency checks. The apply job rechecks the state lineage, serial, inventory,
+backend, interface, run attempt and binary digest. It applies that saved binary
+and then confirms the state is empty and AWS reports the VPC absent.
+
+The teardown root has no resource creation blocks. It uses the same pinned AWS
+provider and exact backend key as the creation root; creation safeguards remain
+in the creation configuration. The session allows deletion of only the verified
+VPC with Banking/dev ownership tags, writes only its state, and deletes only its
+state lock. It retains the backend, state history and all shared IAM resources.
+No imports, state removal, force unlocks, targeted plans or forced deletes occur.
+
+The current workflow refuses full platform states, populated VPCs and dependent
+data states. Full platform/data teardown must be implemented and reviewed before
+those deployments; Kubernetes ingress/controller cleanup, ECR image inventory,
+EKS/RDS deletion protection and final snapshots require their own concrete
+handling. This workflow alone does not establish full-project teardown readiness.
+
+After a successful test destroy, set `CLEANUP_ENABLED=false` and remove the stale
+`NETWORK_SEED_REVIEW_JSON`. A later creation run must publish a fresh verified
+interface. Keep the final full deployment only after its acceptance tests pass,
+as requested by the project owner.
+
 # Reviewed Banking teardown and residual charges
 
-No destroy workflow or deletion authorization is supplied. EKS deletion protection
-is enabled. A separately approved Banking-only update must disable it before a
-reviewed destroy plan; the initial creation-only workflow cannot perform that
-update. Never change Retail/CloudOps, state or shared IAM/key resources to unblock it.
+The owner has authorized project cleanup. The protected test-VPC workflow above
+is implemented; full platform/data teardown remains to be implemented and tested.
+EKS deletion protection is enabled. A reviewed Banking-only update must disable it
+before the saved destroy plan is applied; the initial creation-only workflow cannot
+perform that update. Preserve Retail/CloudOps, state and shared IAM/key resources.
 
 1. Obtain owner approval of exact cleanup inventory. Remove approved ingress while
    controller and IRSA still work, and confirm ALB, target groups, controller-created
