@@ -46,6 +46,7 @@ jobs:
     if: inputs.target == 'project' || inputs.target == 'foundation'
     needs: ci
     uses: ./.github/workflows/runtime-foundation.yml
+    secrets: inherit # Pass bootstrap environment secrets into the reusable deployment workflow.
     permissions: &deployment-permissions
       contents: read
       actions: read
@@ -62,6 +63,7 @@ jobs:
       (inputs.target == 'network' || (inputs.target == 'project' && needs.foundation.result == 'success'))
     needs: [ci, foundation]
     uses: ./.github/workflows/network-prerequisites.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       enabled: true
@@ -77,6 +79,7 @@ jobs:
       fromJSON(needs.network.outputs.interface_json || '{}').verified == true
     needs: [ci, foundation, network]
     uses: ./.github/workflows/platform-caps.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       enabled: true
@@ -90,6 +93,7 @@ jobs:
       (inputs.target == 'platform' || (inputs.target == 'project' && needs.platform-caps.result == 'success'))
     needs: [ci, foundation, network, platform-caps]
     uses: ./.github/workflows/infra-operations.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       operation: ${{ inputs.operation }}
@@ -105,6 +109,7 @@ jobs:
       fromJSON(needs.platform.outputs.interface_json || '{}').verified == true
     needs: platform
     uses: ./.github/workflows/runner-operations.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       operation: ${{ inputs.operation }}
@@ -117,6 +122,7 @@ jobs:
       inputs.operation == 'apply' && fromJSON(needs.platform.outputs.interface_json || '{}').verified == true
     needs: [foundation, platform]
     uses: ./.github/workflows/runtime-prerequisites.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       enabled: true
@@ -130,6 +136,7 @@ jobs:
       (inputs.target == 'data' || (inputs.target == 'project' && needs.runtime.result == 'success' && inputs.operation == 'apply'))
     needs: [ci, foundation, platform, runtime]
     uses: ./.github/workflows/data-operations.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       operation: ${{ inputs.operation }}
@@ -145,6 +152,7 @@ jobs:
       needs.data.result == 'success' && needs.runtime.result == 'success'
     needs: [data, foundation, platform, runtime]
     uses: ./.github/workflows/data-operations.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       operation: ${{ inputs.operation }}
@@ -162,6 +170,7 @@ jobs:
       needs.runner.outputs.verified == 'true'
     needs: [data, data-prod, platform, runner, runtime]
     uses: ./.github/workflows/kubernetes-bootstrap.yml
+    secrets: inherit
     permissions: *deployment-permissions
     with:
       platform_interface_json: ${{ needs.platform.outputs.interface_json }}
