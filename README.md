@@ -10,6 +10,8 @@ Banking policies and bootstrap OIDC, but found three missing service roles and n
 Banking cluster. Quota/organization reads, operator/KMS nominations and runner
 access still block the first live plan.
 
+[The proposed single provisioning identity](docs/infrastructure/SINGLE-PROVISIONER.md) adds a separately protected Terraform stage for the three Banking service roles, an administrator-controlled boundary, exact state additions and scoped provisioning/session policies. PR #17 remains pending review; IAM changes and paid apply remain unauthorized.
+
 Phases 1 and 2 have implementation and execution evidence. Phase 3 infrastructure and Phase 4/5 Helm/CI/CD code are merged and offline validated; live EKS deployment, ECR publication and Helm releases remain pending administrator prerequisites and specific owner authorization. Phase 6 persistence/messaging/monitoring code is merged and locally tested; its actual AWS operation and Phase 7 live recovery/final demonstration remain incomplete. Read [final integration evidence](docs/infrastructure/FINAL-INTEGRATION.md), the [single administrator handoff](docs/infrastructure/ADMIN-REQUEST.md) and [requirements mapping](docs/infrastructure/ASSIGNMENT-MAPPING.md). No source merge authorizes a live Terraform plan or paid apply.
 
 The approved demonstration design uses **one banking-dev EKS Fargate cluster**

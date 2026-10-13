@@ -27,7 +27,14 @@ def configuration(env):
         raise ValueError("Verify account and approved Ohio Region.")
     if env["TF_STATE_BUCKET"] != "mhachem-banking-tfstate-" + account:
         raise ValueError("Only the existing dedicated Banking bucket is allowed.")
+    from iam_contract import BOOTSTRAP, ROLE_ARNS
+    if env.get("ROLE_ARN") != BOOTSTRAP or env.get("IAM_PREREQUISITES_READY") != "true":
+        raise ValueError("The single bootstrap identity and verified Terraform IAM stage are required.")
+    if not re.fullmatch(r"[a-f0-9]{64}", env.get("IAM_BOUNDARY_POLICY_SHA256", "")):
+        raise ValueError("Pin the reviewed service boundary digest.")
     inputs = json.loads(env["PLATFORM_INPUTS_JSON"])
+    for field, key in [("cluster_role_arn", "cluster"), ("fargate_execution_role_arn", "fargate"), ("flow_log_role_arn", "flow")]:
+        inputs.setdefault(field, ROLE_ARNS[key])
     allowed = set(ROLE_NAMES) | {"operator_role_arn", "deployer_role_arn", "prod_deployer_role_arn", "kms_key_arn",
         "availability_zones", "vpc_cidr", "endpoint_cidrs", "kubernetes_version", "addon_versions", "owner", "cost_center"}
     if set(inputs) - allowed:
@@ -39,7 +46,7 @@ def configuration(env):
         if (field == "owner" or value is not None) and (not isinstance(value, str) or not value.strip() or len(value) > 128 or value != value.strip() or "REPLACE" in value.upper()):
             raise ValueError("Use only an approved nonblank " + field + "; omit CostCenter until assigned.")
     for field, name in ROLE_NAMES.items():
-        if not re.fullmatch(r"arn:aws:iam::" + account + r":role/(?:[\w+=,.@-]+/)*" + name, inputs[field]):
+        if not re.fullmatch(r"arn:aws:iam::" + account + r":role/" + name, inputs[field]):
             raise ValueError("Administrator role ARN does not match " + field)
     if "/" in inputs["fargate_execution_role_arn"].split(":role/")[1]:
         raise ValueError("Fargate execution roles cannot have an IAM path.")
@@ -54,6 +61,7 @@ def configuration(env):
         raise ValueError("Use the administrator-approved symmetric KMS key.")
     if inputs.get("kubernetes_version", "1.36") != "1.36":
         raise ValueError("Only the reviewed Kubernetes baseline is allowed.")
+    inputs["iam_boundary_policy_sha256"] = env["IAM_BOUNDARY_POLICY_SHA256"]
     inputs.update(aws_region=env["AWS_REGION"], expected_account_id=account,
                   state_bucket_name=env["TF_STATE_BUCKET"])
     return inputs
@@ -101,27 +109,13 @@ def verify_plan(plan):
 
 
 def session_policy(inputs):
-    account, region, bucket = inputs["expected_account_id"], inputs["aws_region"], inputs["state_bucket_name"]
-    arn = "arn:aws:s3:::" + bucket
-    policy = {"Version": "2012-10-17", "Statement": [
-        {"Effect": "Allow", "Action": "sts:GetCallerIdentity", "Resource": "*"},
-        {"Effect": "Allow", "Action": ["ec2:*", "eks:*", "ecr:*", "logs:*"],
-         "Resource": "*", "Condition": {"StringEquals": {"aws:RequestedRegion": region}}},
-        {"Effect": "Allow", "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:GetRolePolicy", "iam:ListRolePolicies"],
-         "Resource": "*"},
-        {"Effect": "Allow", "Action": "iam:PassRole", "Resource": [inputs[k] for k in ROLE_NAMES],
-         "Condition": {"StringEquals": {"iam:PassedToService": ["eks.amazonaws.com", "eks-fargate-pods.amazonaws.com", "vpc-flow-logs.amazonaws.com"]}}},
-        {"Effect": "Allow", "Action": ["iam:CreateOpenIDConnectProvider", "iam:GetOpenIDConnectProvider", "iam:ListOpenIDConnectProviderTags", "iam:TagOpenIDConnectProvider"],
-         "Resource": f"arn:aws:iam::{account}:oidc-provider/oidc.eks.{region}.amazonaws.com/id/*"},
-        {"Effect": "Allow", "Action": ["kms:DescribeKey", "kms:CreateGrant", "kms:ListGrants"], "Resource": inputs["kms_key_arn"]},
-        {"Effect": "Allow", "Action": ["s3:ListBucket", "s3:GetBucket*", "s3:GetEncryptionConfiguration", "s3:GetLifecycleConfiguration"], "Resource": arn},
-        {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": arn + "/" + STATE_KEY},
-        {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": arn + "/" + STATE_KEY + ".tflock"},
-    ]}
-    result = json.dumps(policy, separators=(",", ":"))
-    if len(result) > 2048:
-        raise ValueError("STS session cap exceeds 2048 characters; use shorter verified role paths or separately review managed session policies.")
-    return result
+    # Managed stage caps provide the allows. Explicit denials keep ordinary
+    # platform runs out of IAM role administration and KMS key administration.
+    return json.dumps({"Version": "2012-10-17", "Statement": [{"Effect": "Deny",
+        "Action": ["iam:CreateRole", "iam:AttachRolePolicy", "iam:PutRolePolicy", "iam:UpdateAssumeRolePolicy",
+                   "iam:PutRolePermissionsBoundary", "iam:DeleteRolePermissionsBoundary", "iam:DeleteRole",
+                   "iam:CreatePolicy", "iam:CreatePolicyVersion", "iam:SetDefaultPolicyVersion",
+                   "kms:CreateKey", "kms:PutKeyPolicy", "kms:ScheduleKeyDeletion"], "Resource": "*"}]}, separators=(",", ":"))
 
 
 if __name__ == "__main__":
@@ -133,8 +127,11 @@ if __name__ == "__main__":
     if args.command == "inputs":
         values = configuration(os.environ)
         Path("platform.tfvars.json").write_text(json.dumps(values, indent=2), encoding="utf-8")
+        from platform_caps import review
+        policies = review(os.environ)
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             output.write("session_policy=" + session_policy(values) + "\n")
+            output.write("managed_session_policies<<BANKING_STAGE_POLICIES\n" + "\n".join(p["arn"] for p in policies) + "\nBANKING_STAGE_POLICIES\n")
     else:
         plan = json.loads(Path(args.path).read_text(encoding="utf-8"))
         report = verify_plan(plan)

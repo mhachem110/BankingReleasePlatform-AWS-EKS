@@ -48,6 +48,11 @@ jobs:
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
+      IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
+      NETWORK_SEED_REVIEW_JSON: ${{ vars.NETWORK_SEED_REVIEW_JSON }}
+      PLATFORM_POLICY_REVIEW_JSON: ${{ vars.PLATFORM_POLICY_REVIEW_JSON }}
       PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
       CAPACITY_REVIEW_JSON: ${{ vars.CAPACITY_REVIEW_JSON }}
       OPERATION: ${{ inputs.operation }}
@@ -70,8 +75,10 @@ jobs:
           audience: sts.amazonaws.com
           role-session-name: banking-phase3-plan
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          managed-session-policies: ${{ steps.config.outputs.managed_session_policies }}
           unset-current-credentials: true
           translate-env-variables: false
+      - run: python scripts/infra/platform_caps.py
       - run: python scripts/infra/preflight.py
       - name: Verify existing backend protections without repairs
         run: python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
@@ -105,6 +112,7 @@ jobs:
             plan-review.json
             plan.txt
             capacity-review.json
+            platform-policy-review.json
           retention-days: 1
           if-no-files-found: error
       - name: Publish review instructions
@@ -125,6 +133,11 @@ jobs:
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
+      IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
+      NETWORK_SEED_REVIEW_JSON: ${{ vars.NETWORK_SEED_REVIEW_JSON }}
+      PLATFORM_POLICY_REVIEW_JSON: ${{ vars.PLATFORM_POLICY_REVIEW_JSON }}
       PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
@@ -151,6 +164,8 @@ jobs:
           set -euo pipefail
           echo "$REVIEWED_DIGEST  reviewed/platform.tfplan" | sha256sum --check --strict
           cmp platform.tfvars.json reviewed/platform.tfvars.json
+          python scripts/infra/write-backend.py
+          cmp platform.tfbackend.json reviewed/platform.tfbackend.json
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -159,12 +174,16 @@ jobs:
           audience: sts.amazonaws.com
           role-session-name: banking-phase3-apply
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          managed-session-policies: ${{ steps.config.outputs.managed_session_policies }}
           unset-current-credentials: true
           translate-env-variables: false
       - name: Apply only the reviewed saved plan, then verify
         run: |
           set -euo pipefail
+          python scripts/infra/platform_caps.py
+          cmp platform-policy-review.json reviewed/platform-policy-review.json
           python scripts/infra/preflight.py
+          python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
           root=infra/environments/dev/platform
           terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/reviewed/platform.tfbackend.json"
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]

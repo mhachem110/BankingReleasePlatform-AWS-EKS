@@ -1,0 +1,153 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketOwnershipControls",
+        "s3:GetBucketTagging",
+        "s3:GetLifecycleConfiguration"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "banking-release-platform/dev/platform/terraform.tfstate",
+            "banking-release-platform/dev/platform/terraform.tfstate.tflock",
+            "banking-release-platform/_workspaces/*"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/platform/terraform.tfstate"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/platform/terraform.tfstate.tflock"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": [
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/shared/iam-prerequisites/terraform.tfstate"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeTags"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:DescribeVpcAttribute",
+      "Resource": "arn:aws:ec2:us-east-2:866934333672:vpc/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateVpc",
+      "Resource": "arn:aws:ec2:us-east-2:866934333672:vpc/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev",
+          "aws:RequestTag/Name": "banking-dev-vpc"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:us-east-2:866934333672:vpc/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:CreateAction": "CreateVpc",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:ModifyVpcAttribute",
+      "Resource": "arn:aws:ec2:us-east-2:866934333672:vpc/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": [
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion"
+      ],
+      "Resource": "arn:aws:iam::866934333672:policy/BankingTerraformProvisioner-VpcSeed"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "kms:DescribeKey",
+      "Resource": "arn:aws:kms:us-east-2:866934333672:key/__APPROVED_KMS_KEY_ID__",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    }
+  ]
+}

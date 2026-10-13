@@ -28,6 +28,7 @@ def environment():
     return {"GITHUB_REPOSITORY":"mhachem110/BankingReleasePlatform-AWS-EKS", "GITHUB_REF":"refs/heads/dev",
         "AWS_OPERATIONS_ENABLED":"true", "DATA_OPERATIONS_ENABLED":"true", "BOOTSTRAP_STATE_READY":"true",
         "AWS_EXPECTED_ACCOUNT_ID":guard.ACCOUNT, "AWS_REGION":guard.REGION, "TF_STATE_BUCKET":"mhachem-banking-tfstate-"+guard.ACCOUNT,
+        "ROLE_ARN":"arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap",
         "OPERATION":"plan", "DATA_INPUTS_JSON":json.dumps(values()),
         "DATA_SESSION_POLICY_ARN":"arn:aws:iam::866934333672:policy/BankingReleasePlatformPhase6Session", "DATA_SESSION_POLICY_SHA256":"a"*64}
 
@@ -41,6 +42,10 @@ def review():
 
 
 class DataSafetyTests(unittest.TestCase):
+    def test_data_provisioning_rejects_an_application_identity(self):
+        with self.assertRaisesRegex(ValueError, "single protected bootstrap"):
+            guard.configuration(dict(environment(), ROLE_ARN="arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-deploy-dev"))
+
     def test_post_apply_rejects_extra_db_group_before_claiming_isolation(self):
         # AWS-style metadata from a private DB can still carry a second open SG.
         database={"DBInstanceIdentifier":"banking-dev-postgres","DBInstanceStatus":"available","Engine":"postgres",

@@ -1,0 +1,181 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketOwnershipControls",
+        "s3:GetBucketTagging",
+        "s3:GetLifecycleConfiguration"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "banking-release-platform/shared/iam-prerequisites/terraform.tfstate",
+            "banking-release-platform/shared/iam-prerequisites/terraform.tfstate.tflock",
+            "banking-release-platform/_workspaces/*"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/shared/iam-prerequisites/terraform.tfstate"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/shared/iam-prerequisites/terraform.tfstate.tflock"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole",
+        "iam:ListRolePolicies",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRoleTags"
+      ],
+      "Resource": [
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion"
+      ],
+      "Resource": [
+        "arn:aws:iam::866934333672:policy/cloudbatch818-mahmoud-banking-service-boundary",
+        "arn:aws:iam::866934333672:policy/BankingTerraformProvisioner-IamPrerequisites",
+        "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+        "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateRole",
+      "Resource": [
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::866934333672:policy/cloudbatch818-mahmoud-banking-service-boundary",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "shared",
+          "aws:RequestTag/ManagedBy": "Terraform"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:TagRole",
+      "Resource": [
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "shared",
+          "aws:RequestTag/ManagedBy": "Terraform"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:AttachRolePolicy",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+        },
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::866934333672:policy/cloudbatch818-mahmoud-banking-service-boundary",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "shared"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:AttachRolePolicy",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
+        },
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::866934333672:policy/cloudbatch818-mahmoud-banking-service-boundary",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "shared"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PutRolePolicy",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs",
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::866934333672:policy/cloudbatch818-mahmoud-banking-service-boundary",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "shared"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:SimulatePrincipalPolicy",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap"
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "iam:PutRolePermissionsBoundary",
+        "iam:DeleteRolePermissionsBoundary",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:DeleteRole",
+        "iam:UntagRole",
+        "iam:DetachRolePolicy",
+        "iam:DeleteRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+        "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs"
+      ]
+    }
+  ]
+}

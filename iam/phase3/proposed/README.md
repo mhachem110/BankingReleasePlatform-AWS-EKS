@@ -1,4 +1,6 @@
-# Administrator proposals only
+# Reviewed service templates and historical administrator proposals
+
+The three service trust templates and BankingFlowLogs.json are consumed unchanged by the new Terraform IAM prerequisite root. [The current provisioning proposals](../../provisioning/README.md) supersede manual service-role creation and the broad BankingReleasePlatformPhase3 review template. Do not install that legacy wildcard template for the new single-role design. Other conditional proposals below remain subject to their own future scope/authorization review.
 
 No policy here has been applied. Use the single request in
 `docs/infrastructure/ADMIN-REQUEST.md` after owner authorization.

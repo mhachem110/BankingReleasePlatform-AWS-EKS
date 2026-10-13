@@ -15,7 +15,22 @@ override_data {
   target = data.aws_iam_role.flow
   values = { arn = "arn:aws:iam::123456789012:role/cloudbatch818-mahmoud-banking-flow-logs" }
 }
+override_data {
+  target = data.terraform_remote_state.iam
+  values = { outputs = {
+    service_roles = {
+      cluster = "arn:aws:iam::123456789012:role/cloudbatch818-mahmoud-banking-eks-cluster"
+      fargate = "arn:aws:iam::123456789012:role/cloudbatch818-mahmoud-banking-fargate-execution"
+      flow    = "arn:aws:iam::123456789012:role/cloudbatch818-mahmoud-banking-flow-logs"
+    }
+    contract_version         = 1
+    permissions_boundary_arn = "arn:aws:iam::123456789012:policy/cloudbatch818-mahmoud-banking-service-boundary"
+    boundary_policy_sha256   = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    state_key                = "banking-release-platform/shared/iam-prerequisites/terraform.tfstate"
+  } }
+}
 variables {
+  iam_boundary_policy_sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   aws_region                 = "us-east-2"
   expected_account_id        = "123456789012"
   state_bucket_name          = "mhachem-banking-tfstate-123456789012"
@@ -65,4 +80,17 @@ run "shared_application_principal_rejected" {
   command = plan
   variables { prod_deployer_role_arn = "arn:aws:iam::123456789012:role/test-deployer" }
   expect_failures = [terraform_data.prerequisites]
+}
+
+run "iam_state_contract_drift_rejected" {
+  command = plan
+  variables { iam_boundary_policy_sha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+  expect_failures = [terraform_data.prerequisites]
+}
+
+run "vpc_seed_only" {
+  command = plan
+  plan_options { target = [module.network.aws_vpc.this] }
+  # The Python guard tests inspect this actual targeted plan's entire inventory.
+  # Plan assertions cannot depend on values unknown until the VPC is created.
 }

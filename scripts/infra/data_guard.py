@@ -44,6 +44,8 @@ def configuration(env):
     require(env.get("OPERATION") in {"plan", "apply"}, "No destroy or recovery operation is authorized")
     if env["OPERATION"] == "apply":
         require(env.get("APPROVAL") == "APPLY-REVIEWED-PHASE6-PLAN", "Require explicit Phase 6 apply phrase and second review")
+    from iam_contract import BOOTSTRAP
+    require(env.get("ROLE_ARN") == BOOTSTRAP, "Data Terraform must use the single protected bootstrap identity")
     values = json.loads(env["DATA_INPUTS_JSON"], object_pairs_hook=unique)
     fields = {"vpc_id", "database_subnet_ids", "cluster_security_group_id", "kms_key_arn",
               "engine_version", "instance_class", "monitoring_role_arn", "alert_topic_arn", "cost_center"}

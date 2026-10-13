@@ -55,7 +55,7 @@ class RoleAuditTests(unittest.TestCase):
             if policy:
                 cap = json.loads(policy)
                 self.assertLessEqual(len(policy), 2048)
-                self.assertTrue(all(a.split(":",1)[1].startswith(("Get", "List", "Describe")) for s in cap["Statement"] for a in s["Action"]))
+                self.assertTrue(all((a == "iam:SimulatePrincipalPolicy" or a.split(":",1)[1].startswith(("Get", "List", "Describe"))) for s in cap["Statement"] for a in s["Action"]))
         for forbidden in ("terraform plan", "terraform apply", "aws-access-key-id", "pull_request_target"):
             self.assertNotIn(forbidden, workflow)
 

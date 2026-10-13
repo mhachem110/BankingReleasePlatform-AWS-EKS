@@ -1,0 +1,55 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::mhachem-banking-tfstate-866934333672",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "banking-release-platform/dev/platform/terraform.tfstate",
+            "banking-release-platform/dev/data/terraform.tfstate",
+            "banking-release-platform/prod/data/terraform.tfstate",
+            "banking-release-platform/shared/iam-prerequisites/terraform.tfstate",
+            "banking-release-platform/dev/platform/terraform.tfstate.tflock",
+            "banking-release-platform/dev/data/terraform.tfstate.tflock",
+            "banking-release-platform/prod/data/terraform.tfstate.tflock",
+            "banking-release-platform/shared/iam-prerequisites/terraform.tfstate.tflock",
+            "banking-release-platform/_workspaces/*"
+          ]
+        }
+      },
+      "Sid": "BankingAdditionalStateList"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/platform/terraform.tfstate",
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/data/terraform.tfstate",
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/prod/data/terraform.tfstate",
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/shared/iam-prerequisites/terraform.tfstate"
+      ],
+      "Sid": "BankingAdditionalStateReadWrite"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/platform/terraform.tfstate.tflock",
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/dev/data/terraform.tfstate.tflock",
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/prod/data/terraform.tfstate.tflock",
+        "arn:aws:s3:::mhachem-banking-tfstate-866934333672/banking-release-platform/shared/iam-prerequisites/terraform.tfstate.tflock"
+      ],
+      "Sid": "BankingAdditionalLockReadWriteDelete"
+    }
+  ]
+}

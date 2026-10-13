@@ -1,0 +1,66 @@
+{
+  "status": "PROPOSAL_ONLY",
+  "source": "Reviewed Terraform source and offline inventory; no live plan authorization claimed",
+  "files": {
+    "BankingTerraformAdditionalState.json": {
+      "sha256": "1b468a50a8bb9f6848f29b40fa576fd4567b8bb1186baa257efd390dacab1eea",
+      "characters": 1917,
+      "containsUnresolvedInputs": false
+    },
+    "BankingServicePermissionsBoundary.json": {
+      "sha256": "7d660bf8760ca51f01c3b49ac2ba2e74e7eedd0850fc60d1f73184b5592ce0fd",
+      "characters": 2498,
+      "containsUnresolvedInputs": false
+    },
+    "BankingTerraformProvisioner-IamPrerequisites.json": {
+      "sha256": "9006b268fa4afc7eef0e85cf2837f370ecef7c5b501be1f4f47cc30f21618a3e",
+      "characters": 4831,
+      "containsUnresolvedInputs": false
+    },
+    "BankingTerraformReadOnlyReconciliation.json": {
+      "sha256": "7dab0fdce6f78c7fbce8271160378bc5aee415bc4f10a0d1fcd9fb6db8886301",
+      "characters": 181,
+      "containsUnresolvedInputs": false
+    },
+    "BankingTerraformProvisioner-VpcSeed.json": {
+      "sha256": "0c0f3627ee1cd1aaf00aa62c9eee6c02b2bdc1cb210b59bc74bdb1dd98a3a6d6",
+      "characters": 3176,
+      "containsUnresolvedInputs": true
+    },
+    "BankingTerraformProvisioner-Platform-1.json": {
+      "sha256": "219e0e6ae70cab351e64a2171c0c3769f8e688010afe85141e770b98db5fde0d",
+      "characters": 5953,
+      "containsUnresolvedInputs": true
+    },
+    "BankingTerraformProvisioner-Platform-2.json": {
+      "sha256": "5a283be3cc35783df92ec15f5f9ca4af714ded5f30f0bfc622d19d5898aef5bf",
+      "characters": 5651,
+      "containsUnresolvedInputs": true
+    },
+    "BankingTerraformProvisioner-Platform-3.json": {
+      "sha256": "7aa4a8a499aa55654c6e4fd89e6c51618e3486638d4dad0b959790855f239425",
+      "characters": 5121,
+      "containsUnresolvedInputs": true
+    },
+    "BankingTerraformProvisioner-DataDev-1.json": {
+      "sha256": "59bc227190da82b69841e482638475e8b135a194563565fe90980a8ca54f7bb9",
+      "characters": 5816,
+      "containsUnresolvedInputs": true
+    },
+    "BankingTerraformProvisioner-DataDev-2.json": {
+      "sha256": "714fe11ba6ac19335ebac3615035cefff796c2e897473efea47be031fbf191f6",
+      "characters": 937,
+      "containsUnresolvedInputs": true
+    },
+    "BankingTerraformProvisioner-DataProd-1.json": {
+      "sha256": "ff1c40b40fb9ef72e5eab077e1c6720edeb98626fa8d1aa81d11b22547e0dc67",
+      "characters": 5845,
+      "containsUnresolvedInputs": true
+    },
+    "BankingTerraformProvisioner-DataProd-2.json": {
+      "sha256": "714fe11ba6ac19335ebac3615035cefff796c2e897473efea47be031fbf191f6",
+      "characters": 937,
+      "containsUnresolvedInputs": true
+    }
+  }
+}
