@@ -1,13 +1,10 @@
 # Governance verification evidence
 
-> Historical checkpoint evidence/instructions. For current merged PRs, active
-> controls and AWS evidence limits, read [the 12 October reconciliation](../infrastructure/RECONCILIATION.md).
-> Earlier pending approvals and EC2 worker-role references below are superseded;
-> the current approved compute is EKS Fargate. Do not repeat completed setup.
+This page preserves the 11 October 2026 migration validation. For current controls and project status, see the [dated infrastructure reconciliation](../infrastructure/RECONCILIATION.md) and [branch workflow](reusable-branches.md). The migration is complete; the instructions from that checkpoint are retired.
 
 ## Historical migration progress
 
-PR #1 merged at e0beff1, PR #3 at ab58a7f, and PR #2 at 3db5bcc, each after individual owner approval. PR #4 is synchronized normally with dev and remains unmerged. The trusted governance workflow is installed in dev. [Run 38158307904](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38158307904) completed successfully on PR #4 head b67e38e: Branch promotion policy, File ownership and path validation, and Repository security policy all passed. GitHub Actions is the observed source (App ID 15368). Recheck the latest head after any additional commit. Required-status activation is still pending the owner's manual action using the instructions below. No AWS operation or GitHub environment configuration ran.
+PRs #1, #2, and #3 merged; their historical source branches were later retired after ancestry verification. PR #4 merged at `3dd4d7e` ([PR record](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/4)). [Run 38158307904](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38158307904) passed the branch-promotion, path-validation, and repository-security checks on the PR #4 head. These are historical migration results, not evidence of current deployment or AWS state.
 
 ## Earlier preparation evidence (historical snapshot)
 
@@ -32,14 +29,6 @@ Verified on 2026-10-11. This evidence describes repository governance, not an AW
 | GitHub environment inventory | Empty; no environments/secrets/variables created by this task |
 | History ancestry | Original application, bootstrap, governance and migration commits preserved |
 | dev/stage/uat/main branch refs | Unchanged initial baseline 43a9ddba5b965b96fb9a5535cb67604e3b85ff1c |
-| PR #1/#2/#3/#4 | Open into dev; #3 still draft; none merged |
+| PR #1/#2/#3/#4 | All merged into dev; see links above and the merge records |
 
-GitHub REST reported `mergeable_state: blocked` for these PRs at the final read. The authority ruleset independently reports the authenticated owner as authorized **for pull requests only**. No merge was attempted to test that authorization. At an approved merge, inspect the owner-visible merge requirements; do not disable or bypass the separate original protections. A generic REST merge state is not evidence that all actors may merge, nor proof that a merge succeeded.
-
-The policy workflow is not yet installed in the empty default dev, so its final jobs have not executed as required GitHub checks. Required-status activation must follow an actual successful current-PR run after the approved migration. CODEOWNERS review requests likewise need the file on each destination branch; independent required review needs another eligible reviewer. Tests were local, except for API readback, GitHub syntax validation and ordinary branch push.
-
-Not performed: negative update attempt by another real identity, destructive push/deletion tests, PR merges, application/Helm CI implementation, environment creation, AWS calls, IAM changes, Terraform apply, deployment or charge-incurring infrastructure. The API snapshots and test harness remain in ignored artifacts; no credentials are written to evidence files or committed.
-
-## Manual required-status activation
-
-After a successful current PR #4 run, open Settings > Rules > Rulesets > banking-dev-governance. Keep enforcement Active, exact refs/heads/dev targeting and the empty bypass list. Enable Require status checks to pass and add exactly Repository security policy, choosing GitHub Actions as expected source. Leave Require branches to be up to date before merging unchecked for the documented promotion model. Retain PR, conversation-resolution, no-delete and no-force rules. Do not globally require the path-filtered Terraform validate job, or enable independent code-owner review while there is no second eligible reviewer. Save, reopen the ruleset and verify the entry. On PR #4 verify the aggregate is both successful and required. Do not merge until the owner separately approves PR #4. Add the check to stage, uat and main only after observing it on actual promotion PRs.
+The old readback and test snapshots are retained only as migration evidence. Do not follow the original manual activation steps below this checkpoint; current repository settings are controlled in GitHub and are not changed by these historical test results. No AWS deployment claim is made here.

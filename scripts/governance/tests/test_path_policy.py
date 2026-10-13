@@ -34,7 +34,8 @@ class ScopeTests(unittest.TestCase):
         paths = ["infra/bootstrap/main.tf", "helm/payment/values.yaml",
                  ".github/workflows/terraform-operations.yml", ".github/CODEOWNERS",
                  "scripts/bootstrap/write-backend-config.py", "scripts/governance/validate_pr_paths.py",
-                 "docs/governance/README.md", "iam/bootstrap/trust.json", ".gitignore",
+                 "docs/governance/README.md", "docs/architecture.md", "docs/phase-1-pr.md",
+                 "docs/phase-1-report.md", "iam/bootstrap/trust.json", ".gitignore",
                  "AGENTS.md", "unknown/new-script.ps1", "apps/Account.Api/main.tf",
                  "tests/CODEOWNERS", "apps/Account.Api/config.tf.json"]
         for path in paths:
@@ -97,6 +98,13 @@ class ScopeTests(unittest.TestCase):
     def test_cloud_can_make_cross_cutting_infra_change(self):
         files = [file("infra/modules/eks/main.tf"), file("apps/Account.Api/Program.cs")]
         policy.validate(pull_request("infra", cloud=True, count=2), files, REPO)
+
+    def test_archived_phase_one_documents_are_cloud_owned(self):
+        for path in ["docs/architecture.md", "docs/phase-1-pr.md", "docs/phase-1-report.md"]:
+            with self.subTest(path=path):
+                policy.validate(pull_request("infra", cloud=True), [file(path, "removed")], REPO)
+                with self.assertRaises(policy.PolicyError):
+                    policy.validate(pull_request(cloud=True), [file(path, "removed")], REPO)
 
     def test_app_only_infra_pr_is_rejected(self):
         with self.assertRaises(policy.PolicyError):

@@ -10,9 +10,9 @@ All three submit PRs into `dev`. Do not create per-phase branches or other featu
 
 Promotion PRs are only `dev -> stage`, `stage -> uat`, and `uat -> main`. `dev` is the default branch; `main` is production-approved code. Never push development changes directly to these environment branches.
 
-After a PR merge and before the next change, fetch origin, synchronize the working branch with its matching remote, then merge the latest `origin/dev` using ordinary Git merges. Stop on conflicts or command failures; preserve commits. No force pushes, history-rewriting rebases, destructive resets, or branch deletion. Keep automatic branch deletion disabled.
+After a PR merge and before the next change, fetch origin, synchronize the working branch with its matching remote, then merge the latest `origin/dev` using ordinary Git merges. Stop on conflicts or command failures; preserve commits. No force pushes, history-rewriting rebases, destructive resets, or deletion of reusable branches. Keep automatic branch deletion disabled.
 
-The original Phase 1, governance and Phase 2 PR heads are temporary migration references. Do not rename, delete, close or replace their PRs without the user's explicit approval. The approved migration sequence must be reviewed in `docs/governance/reusable-branches.md` before any merges. Do not interpret this file as approval to merge.
+The original Phase 1, governance and Phase 2 PRs (#1, #2, and #3) are merged; their temporary source branches were retired after ancestry verification and explicit user approval. Preserve their PR records. Use only `feature/app`, `bootstrap`, and `infra` for new work. See `docs/governance/reusable-branches.md` for synchronization and promotion rules. This file is not approval to merge a PR or perform AWS operations.
 
 ## Keep authorization separate
 

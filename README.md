@@ -1,27 +1,8 @@
 # Banking Release Platform
 
-AWS Week 4 Financial Services CI/CD and Kubernetes Release Platform, by Mahmoud Hachem. Phase 1 implements two ASP.NET Core APIs using .NET 10 LTS and local Docker containers. All customers and payments are fictional.
+AWS Week 4 Financial Services CI/CD and Kubernetes Release Platform. The repository contains .NET Account and Payment APIs, container and Helm deployment code, Terraform AWS infrastructure, GitHub Actions workflows, security/governance controls, and operational runbooks. All sample customers and payments are fictional.
 
-The existing repository is [mhachem110/BankingReleasePlatform-AWS-EKS](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS), with `dev` as its development default. PRs #1–#16 are merged, including shared EKS Fargate infrastructure, Helm/application pipelines, governance and PostgreSQL/SQS implementation. The earlier CloudOpsTracker repository remains a read-only reference.
-
-[Current verified readiness](docs/infrastructure/READINESS-2026-10-12.md) is
-**40% across twenty acceptance milestones**. The approved AWS inspection verified
-Banking policies and bootstrap OIDC, but found three missing service roles and no
-Banking cluster. Quota/organization reads, operator/KMS nominations and runner
-access still block the first live plan.
-
-[The proposed single provisioning identity](docs/infrastructure/SINGLE-PROVISIONER.md) adds a separately protected Terraform stage for the three Banking service roles, an administrator-controlled boundary, exact state additions and scoped provisioning/session policies. PR #17 remains pending review; IAM changes and paid apply remain unauthorized.
-
-Phases 1 and 2 have implementation and execution evidence. Phase 3 infrastructure and Phase 4/5 Helm/CI/CD code are merged and offline validated; live EKS deployment, ECR publication and Helm releases remain pending administrator prerequisites and specific owner authorization. Phase 6 persistence/messaging/monitoring code is merged and locally tested; its actual AWS operation and Phase 7 live recovery/final demonstration remain incomplete. Read [final integration evidence](docs/infrastructure/FINAL-INTEGRATION.md), the [single administrator handoff](docs/infrastructure/ADMIN-REQUEST.md) and [requirements mapping](docs/infrastructure/ASSIGNMENT-MAPPING.md). No source merge authorizes a live Terraform plan or paid apply.
-
-The approved demonstration design uses **one banking-dev EKS Fargate cluster**
-with **banking-dev and banking-prod namespaces**. Dev publishes the scanned digest
-pair; protected prod deploys that same pair only after successful dev evidence.
-Shared-cluster code is merged; live acceptance remains blocked by verified
-administrator prerequisites. Read [shared architecture and execution order](docs/infrastructure/SHARED-CLUSTER.md),
-[PASS/BLOCKED acceptance matrix](docs/infrastructure/ACCEPTANCE.md) and [updated cost assumptions](docs/infrastructure/COSTS.md).
-GitHub environments exist with deployments disabled; adding an inline allow policy
-does not restrict older CloudOps permissions. No live plan/apply is authorized.
+The development default is [`dev`](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS). Use the [documentation index](docs/infrastructure/INDEX.md) to find architecture, deployment, infrastructure, security, cleanup, and historical evidence guides. Deployment and AWS status are time-sensitive; check the dated [infrastructure reconciliation](docs/infrastructure/RECONCILIATION.md) and linked GitHub run records rather than inferring live state from source code or an old report.
 
 ## Prerequisites
 
@@ -149,16 +130,8 @@ While Account API is stopped, Payment's `/health` stays healthy but payment requ
 
 ## Working branches
 
-Reuse `feature/app` for application work, `bootstrap` for backend/OIDC work and `infra` for infrastructure and governance; the approved application release scope also includes Helm and the four application workflows. Each opens a PR into `dev`; promote through `dev → stage → uat → main`. PR #1 is merged and historical branches are preserved. Follow [the reviewed branch rules](AGENTS.md) and [governance](docs/governance/reusable-branches.md).
+Reuse `feature/app` for application work, `bootstrap` for backend/OIDC work, and `infra` for infrastructure and governance. Each change goes through a PR into `dev`; environment promotion uses `dev` → `stage` → `uat` → `main`. The three historical phase branches have been retired after their PRs merged. See [branch workflow](docs/governance/reusable-branches.md) and [repository instructions](AGENTS.md).
 
-## Phase 2 complete
+## Infrastructure and operations
 
-GitHub OIDC and the dedicated Ohio S3 backend were verified through protected GitHub Actions. [Recovery 38175836629](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/actions/runs/38175836629) passed bucket/state protections, both root validations, competing-lock tests and two consecutive zero-resource-change plans for each root. Development outputs remain unapplied. Read [the final evidence report](docs/phase2/COMPLETION.md). `BOOTSTRAP_STATE_READY=true`; `AWS_OPERATIONS_ENABLED=false`.
-
-## Phase 3 preparation
-
-The separate `infra/environments/dev/platform` root uses modules for two-AZ networking, immutable Account/Payment ECR repositories and EKS Fargate Pods. The existing bucket and Phase 2 roots remain separate. [Architecture](docs/infrastructure/ARCHITECTURE.md), [deployment steps](docs/infrastructure/DEPLOYMENT.md), [administrator request](docs/infrastructure/ADMIN-REQUEST.md), [cost estimate](docs/infrastructure/COSTS.md) and [remaining assignment coverage](docs/infrastructure/REQUIREMENTS.md) explain the reviewed scope.
-
-Terraform/Checkov/Helm CI runs without AWS credentials. The manually dispatched infrastructure workflow uses protected OIDC sessions, saved-plan hashes and a second environment review before apply. No paid Phase 3 resource has been created; real IAM prerequisites, plan/cost review and owner approval remain required. The prepared `helm/banking` chart deploys two APIs internally by immutable digest; ingress defaults off until Phase 4 authorization.
-
-Final Phase 3 preparation: [readiness](docs/infrastructure/PREPARATION-REPORT.md), [approved tag convention](docs/infrastructure/TAGGING.md), [exact source inventory](docs/infrastructure/RESOURCE-INVENTORY.md) and [safe cleanup](docs/infrastructure/CLEANUP.md). CostCenter is optional until assigned; live planning requires administrator-approved inputs and protected review.
+The repository includes Terraform roots and modules, the `helm/banking` chart, deployment and rollback workflows, monitoring configuration, and protected cleanup procedures. Find the canonical guides in the [documentation index](docs/infrastructure/INDEX.md). The [dated reconciliation](docs/infrastructure/RECONCILIATION.md) and actual GitHub Actions runs are the sources for time-sensitive deployment evidence; old phase reports are retained as historical records only.
