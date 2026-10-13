@@ -41,3 +41,9 @@ Use each root's committed provider lock file and the backend configuration suppl
 - [IAM proposals and ownership](iam/README.md)
 - [Monitoring configuration](monitoring/README.md)
 - Cost assumptions consumed by scripts are in `infra/cost/`.
+
+## Automation scripts
+
+Invoke scripts from the repository root unless a workflow changes directories. `scripts/bootstrap/` checks the GitHub/AWS bootstrap contract, state bucket and reviewed plans. `scripts/infra/` validates scoped inputs, IAM contracts, saved plans and outputs, estimates cost, prepares handoffs and checks cleanup inventories. `scripts/deploy/` builds and scans images, validates Helm and monitoring, verifies immutable release provenance, deploys, runs local integration checks and rolls back. `scripts/governance/` validates trusted PR metadata and repository path ownership; it reads GitHub metadata and must never execute PR-provided code.
+
+Run the offline application suite with `python scripts/deploy/offline.py`, infrastructure Python tests with `python -m unittest discover -s scripts/infra/tests -v`, bootstrap tests with `python -m unittest discover -s scripts/bootstrap/tests -v`, and governance tests with `python -m unittest discover -s scripts/governance/tests -v`. Read [operations](OPERATIONS.md) before protected deployment or cleanup workflows.
