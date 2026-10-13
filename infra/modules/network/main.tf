@@ -148,3 +148,5 @@ output "vpc_id" { value = aws_vpc.this.id }
 output "public_subnet_ids" { value = [for subnet in aws_subnet.public : subnet.id] }
 output "application_subnet_ids" { value = [for subnet in aws_subnet.application : subnet.id] }
 output "database_subnet_ids" { value = [for subnet in aws_subnet.database : subnet.id] }
+
+output "default_security_group_id" { value = aws_vpc.this.default_security_group_id }

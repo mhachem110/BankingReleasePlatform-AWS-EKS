@@ -1,0 +1,7 @@
+bucket = "mhachem-banking-tfstate-866934333672"
+key = "banking-release-platform/shared/iam-prerequisites/terraform.tfstate"
+region = "us-east-2"
+encrypt = true
+use_lockfile = true
+allowed_account_ids = ["866934333672"]
+workspace_key_prefix = "banking-release-platform/_workspaces"

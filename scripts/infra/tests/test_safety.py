@@ -21,7 +21,7 @@ def fixture():
                   deployer_role_arn=f"arn:aws:iam::{account}:role/deployer",
                   prod_deployer_role_arn=f"arn:aws:iam::{account}:role/prod-deployer",
                   kms_key_arn=f"arn:aws:kms:us-east-2:{account}:key/00000000-0000-0000-0000-000000000000")
-    return dict(GITHUB_REF="refs/heads/dev", AWS_OPERATIONS_ENABLED="true", BOOTSTRAP_STATE_READY="true",
+    return dict(ROLE_ARN="arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap", IAM_PREREQUISITES_READY="true", IAM_BOUNDARY_POLICY_SHA256="a"*64, GITHUB_REF="refs/heads/dev", AWS_OPERATIONS_ENABLED="true", BOOTSTRAP_STATE_READY="true",
                 OPERATION="plan", AWS_EXPECTED_ACCOUNT_ID=account, AWS_REGION="us-east-2",
                 TF_STATE_BUCKET="mhachem-banking-tfstate-" + account, PLATFORM_INPUTS_JSON=json.dumps(inputs))
 
@@ -107,9 +107,9 @@ class SafetyTests(unittest.TestCase):
             actions = statement["Action"]
             if isinstance(actions, str):
                 actions = [actions]
-            self.assertFalse(any(action in ["iam:*", "iam:CreateRole", "iam:PutRolePolicy", "s3:CreateBucket"] for action in actions))
-        objects = [statement for statement in statements if statement["Action"] == ["s3:GetObject", "s3:PutObject"]]
-        self.assertEqual(objects[0]["Resource"].split("/", 3)[-1], "platform/terraform.tfstate")
+            self.assertEqual(statement["Effect"], "Deny")
+            self.assertIn("iam:CreateRole", actions)
+        self.assertTrue(all(row["Effect"] == "Deny" for row in statements))
 
     def test_gates_fail_closed(self):
         for key, value in [("GITHUB_REF", "refs/heads/infra"), ("AWS_OPERATIONS_ENABLED", "false"),
@@ -168,7 +168,7 @@ class SafetyTests(unittest.TestCase):
         values = configuration(fixture())
         files = admin.policies(values["expected_account_id"], "us-east-2", values["state_bucket_name"], values["kms_key_arn"])
         policy = files[ROLE_NAMES["fargate_execution_role_arn"] + "-trust.json"]
-        role = {"Arn": values["fargate_execution_role_arn"], "AssumeRolePolicyDocument": policy}
+        role = {"Arn": values["fargate_execution_role_arn"], "AssumeRolePolicyDocument": policy, "PermissionsBoundary": {"PermissionsBoundaryArn": "arn:aws:iam::866934333672:policy/cloudbatch818-mahmoud-banking-service-boundary"}}
         verify_service_role("fargate_execution_role_arn", role, values)
         invalid = copy.deepcopy(role)
         invalid["AssumeRolePolicyDocument"]["Statement"][0]["Condition"]["ArnLike"]["aws:SourceArn"] = "*"

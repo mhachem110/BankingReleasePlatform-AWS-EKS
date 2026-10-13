@@ -1,5 +1,10 @@
 # ONE Banking administrator handoff — shared EKS demonstration
 
+The current provisioning design is [SINGLE-PROVISIONER.md](SINGLE-PROVISIONER.md).
+It uses the existing bootstrap role and a separately approved Terraform IAM stage
+to create the three service roles. The administrator authorizes bounded grants and
+publishes the reviewed boundary; the user does not manually create these roles.
+
 Account **866934333672**, Region **us-east-2**, ONE cluster **banking-dev**.
 Application namespaces **banking-dev** and **banking-prod**. This supersedes the
 older single-environment prerequisite narrative after the user's manual updates
@@ -18,10 +23,14 @@ AWS_OPERATIONS_ENABLED=false. No self-hosted banking-deployer runner is register
 
 The user added Banking trusts/inline policies to the existing CloudOps dev/prod
 roles. Their ARNs are configured in GitHub; **do not request those additions again**.
-Fresh AWS verification is blocked: local STS returns NoCredentials and there is
-no signed-in browser session. Their full trusts, two Banking inline policies,
-six original managed-policy default versions, boundaries and applicable denies
-remain unverified. New allow policies cannot restrict older allow policies.
+Protected read-only run 38318982706 completed after owner approval. Both Banking
+trusts/inline policies and all six retained managed-policy versions were read.
+Neither deployment role has a boundary; each retains broad CloudOps permissions.
+The three dedicated service roles below are confirmed absent by NoSuchEntity;
+both EKS service-linked roles exist. Quota/Organizations reads are denied, and no
+operator/KMS key was nominated. New allow policies cannot restrict older allows.
+Read [the verified findings and 40% acceptance tracker](READINESS-2026-10-12.md)
+before requesting any action already completed by the user.
 
 Run the prepared **Read-only Banking AWS reconciliation** workflow from merged dev
 with inspection=approved-read-only and approve its existing bootstrap environment,
@@ -68,8 +77,7 @@ platform and data have their own keys. The historical bootstrap identity is
 `arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap`.
 Preserve CloudOpsTrackerBootstrap and BankingReleasePlatformState, Retail and
 Banking GitHub trust statements, and token.actions.githubusercontent.com.
-Historical management-account status means SCPs do not restrict its identities;
-recheck organization status/visible denies rather than requesting SCP relaxation.
+Historical management-account status is not current authorization proof; recheck organization position and visible restrictions without requesting SCP relaxation.
 Controller/Payment IRSA requires the actual future cluster issuer. Section 7 data,
 alerts and ingress approvals follow Phase 3 and do not block its first plan.
 
@@ -80,9 +88,7 @@ No new-role or new-key template may overwrite a shared resource's policy.
 
 ### 1. Three distinct service roles
 
-IAM -> Roles -> Create role -> Custom trust policy: paste the named complete trust
-below, use the exact name, attach the indicated managed/inline policy. Return full
-actual ARNs and any boundaries. Fargate execution MUST have no IAM path.
+Review the separate Terraform IAM prerequisite plan described in SINGLE-PROVISIONER.md. An authorized administrator publishes the fixed boundary and grants the exact scoped provisioning/state permissions; Terraform creates the roles. The user is not responsible for console role creation. Fargate execution remains pathless.
 
 | Exact role | Complete trust file | Permissions |
 | --- | --- | --- |
@@ -90,11 +96,7 @@ actual ARNs and any boundaries. Fargate execution MUST have no IAM path.
 | cloudbatch818-mahmoud-banking-fargate-execution | cloudbatch818-mahmoud-banking-fargate-execution-trust.json | AWS-managed AmazonEKSFargatePodExecutionRolePolicy |
 | cloudbatch818-mahmoud-banking-flow-logs | cloudbatch818-mahmoud-banking-flow-logs-trust.json | BankingFlowLogs.json inline |
 
-Flow role -> Permissions -> Add permissions -> Create inline policy -> JSON ->
-paste BankingFlowLogs.json. Trusts scope execution to Banking profiles and flow
-logs to this account/Region. No EC2 node role, instance profile, generic IAM admin
-or bootstrap-role service reuse. The current guard expects these exact names;
-different authorized reuse would require a reviewed input-contract change.
+Terraform attaches the two exact AWS-managed policies and writes the exact BankingFlowLogs document. No EC2 node role, instance profile, bootstrap-role service reuse or unrelated IAM resource is included. The first protected Terraform plan is the IAM prerequisite plan; the EKS platform plan follows verified IAM state outputs and its own readiness/approval checkpoint.
 
 ### 2. Existing approved operator and distinct application identity
 
@@ -134,45 +136,30 @@ add only reviewed Banking contexts/grant delegation. BankingKeyPolicy.json is a
 COMPLETE policy for a NEW dedicated key only. New paid key creation still needs
 owner approval. Do not select another project's key or fabricate an ARN.
 
-IAM -> new role -> Tags / KMS -> new dedicated key -> Tags: use COMPLETE maps in
+For separately authorized administrator-owned operator/key prerequisites, use maps in
 BankingAdministratorTags.json. Approved common values: Project=BankingReleasePlatform,
 Environment=dev, ManagedBy=Administrator, Owner=MahmoudHachem,
 Purpose=CloudEngineerTraining, plus file-specific Name/Component. Administrator
 must confirm this manual-management designation against organizational tagging
 requirements; another approved value can be supplied through
 --administrator-managed-by (Terraform is rejected). Actual Terraform-owned
-resources retain ManagedBy=Terraform. Administrator-owned roles/key stay outside
+resources retain ManagedBy=Terraform. The three Terraform service roles instead use the fixed shared/ManagedBy=Terraform
+contract. Other administrator-owned operator/key prerequisites stay outside
 Terraform state; tags do not authorize alteration or teardown. Shared/bootstrap identities are not retagged. CostCenter
 is absent until assigned; confirm whether effective tag policy requires a real code.
 Cost allocation tag activation is a separate billing-admin proposal in TAGGING.md.
 
-### 4. Separate additive bootstrap policy — actual key pending
+### 4. Current additive single-provisioner policy family
 
-CloudOpsTrackerBootstrap already grants broad EC2/EKS/ECR/Logs Resource=*; Retail
-statement names do not scope them. Preserve these rights; do not claim the shared
-role is least privilege. Add BankingReleasePlatformPhase3 only for missing exact
-PassRole, new platform state, exact-key grants and new cluster OIDC creation.
-Temporary session caps services to Ohio, state writes to platform key and PassRole
-to three approved service roles. No IAM role creation or state-bucket write.
-
-BankingReleasePlatformPhase3.REVIEW-TEMPLATE.json is the COMPLETE review shape
-with an explicit inert key marker, NOT ready to paste. With the actual approved
-ARN, generate the COMPLETE exact-key copy-and-paste policy locally (no AWS calls):
-
-```powershell
-$approvedBankingKeyArn = Read-Host 'Actual approved Ohio KMS key ARN'
-python scripts/infra/prepare-admin-request.py --account 866934333672 --region us-east-2 --bucket mhachem-banking-tfstate-866934333672 --kms-key-arn $approvedBankingKeyArn --owner MahmoudHachem --output artifacts/phase3-admin
-```
-
-For approved cluster/flow IAM paths, also pass full --cluster-role-arn /
---flow-log-role-arn. Optional --cost-center is only a real approved value; --administrator-managed-by accepts an approved external-management designation.
-IAM -> bootstrap role -> Permissions -> Add permissions -> Create inline policy
--> JSON -> generated BankingReleasePlatformPhase3.json; name BankingReleasePlatformPhase3.
-Check aggregate inline-policy quota. It grants precisely three service-conditioned
-PassRole ARNs, platform Get/Put and lock Get/Put/Delete, exact-key Describe/ListGrants/
-AWS-resource CreateGrant, tagged NEW Ohio EKS OIDC create/tag/read. No old-state
-write, state-object deletion, GitHub provider edit, role/trust change or OIDC delete.
-Read back both ORIGINAL policies and both ORIGINAL trusts unchanged.
+Use iam/provisioning/proposed and SINGLE-PROVISIONER.md. The state addition preserves
+every original S3 resource; the separate IAM cap creates only three bounded roles.
+The VPC seed records the actual default group before the reviewed platform caps
+authorize tagging that exact group. Routine sessions exclude role/key administration.
+The older BankingReleasePlatformPhase3 review template and prepare-admin-request.py
+outputs are historical design references and must not be installed for this design.
+Finalize actual KMS/operator/resource inputs, check quotas and AWS controls, and
+review each current stage before an authorized administrator publishes its policies.
+No broader allow may be used to defeat an explicit deny.
 
 ### 5. Network, versions, capacity and deployment runner
 
@@ -329,18 +316,15 @@ prod workflow/session cap. Do not point the dev workflow at prod state or enable
 runtime persistence as a shortcut. Initial prod application demonstration uses memory
 mode and does not satisfy durable production acceptance. See SHARED-CLUSTER.md.
 
-Three service roles could be managed by a separately reviewed Terraform prerequisite
-root only with explicit scoped creator authorization, its own state and exact trust/
-policy inventory, required boundary (if approved), tag/name conditions and bounded
-PassRole. Such permissions do not exist as verified prerequisites today. IAM cannot
-be safely automated merely by granting iam:*. Until that authorization exists,
-retain the current administrator-created role model and data.aws_iam_role references.
-No new IAM module, imports or creator permissions are applied in this workstream.
+The three initial service roles are now defined in infra/iam-prerequisites. The
+separate protected workflow, fixed boundary, exact trust/policy inventory and state
+contract are implemented in SINGLE-PROVISIONER.md. Their first live plan remains
+blocked until administrator authorization; no permissions or roles were installed.
 
 ## Return ONE administrator bundle, in deployment order
 
 Owner-authorized actual service/operator/app ARNs and trusts/policies/boundaries,
-actual approved KMS ARN/key policy, rendered additional Phase3 policy, unchanged
+actual approved KMS ARN/key policy, finalized single-provisioner stage policies, unchanged
 original policies/trust confirmation, AZs/all-CIDR/endpoint approvals, actual add-on
 pins/schemas, recent capacity report and runner/network arrangement. Confirm
 optional CostCenter is accepted or supply the actually required approved code.

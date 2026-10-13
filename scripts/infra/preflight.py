@@ -23,7 +23,8 @@ def overlaps(cidr, vpcs):
 
 
 def verify_service_role(field, role, values):
-    if role["Arn"] != values[field] or role.get("PermissionsBoundary"):
+    from iam_contract import BOUNDARY
+    if role["Arn"] != values[field] or role.get("PermissionsBoundary", {}).get("PermissionsBoundaryArn") != BOUNDARY:
         raise ValueError("Role identity/boundary requires administrator review: " + field)
     service = {"cluster_role_arn": "eks.amazonaws.com",
                "fargate_execution_role_arn": "eks-fargate-pods.amazonaws.com",
@@ -78,13 +79,18 @@ def main():
     identity = aws("sts", "get-caller-identity")
     if identity["Account"] != values["expected_account_id"]:
         raise ValueError("Wrong account.")
-    overlaps(values.get("vpc_cidr", "10.70.0.0/16"), aws("ec2", "describe-vpcs")["Vpcs"])
+    from iam_contract import verify_live_roles
+    verify_live_roles(aws, values["iam_boundary_policy_sha256"])
+    from network_seed import verify_seed
+    seed = verify_seed(os.environ, values)
+    overlaps(values.get("vpc_cidr", "10.70.0.0/16"), [v for v in aws("ec2", "describe-vpcs")["Vpcs"] if v["VpcId"] != seed["vpc_id"]])
     names = aws("eks", "list-clusters")["clusters"]
     if "banking-dev" in names:
         raise ValueError("A Banking cluster already exists; initial deployment must be reviewed separately.")
-    repos = aws("ecr", "describe-repositories")["repositories"]
-    if any(repo["repositoryName"] in {"banking-dev-account", "banking-dev-payment"} for repo in repos):
-        raise ValueError("Banking ECR name already exists; never adopt another resource automatically.")
+    for name in ("banking-dev-account", "banking-dev-payment"):
+        result = subprocess.run(["aws", "ecr", "describe-repositories", "--repository-names", name, "--region", "us-east-2", "--output", "json"], capture_output=True, text=True)
+        if result.returncode == 0 or "RepositoryNotFoundException" not in result.stderr:
+            raise ValueError("ECR collision or denied inspection; never adopt/repair: " + name + ": " + result.stderr.strip())
     active_zones = {zone["ZoneName"] for zone in aws("ec2", "describe-availability-zones")["AvailabilityZones"] if zone["State"] == "available"}
     if len(set(values["availability_zones"])) != 2 or not set(values["availability_zones"]) <= active_zones:
         raise ValueError("Exactly two available AZs are required.")

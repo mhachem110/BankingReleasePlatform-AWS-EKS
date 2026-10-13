@@ -1,0 +1,6270 @@
+{
+  "s3": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/s3/s3.json",
+    "actions": [
+      {
+        "Name": "DeleteObject",
+        "ActionConditionKeys": [
+          "s3:AccessGrantsInstanceArn",
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:if-match",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "accesspointobject"
+          },
+          {
+            "Name": "object"
+          }
+        ]
+      },
+      {
+        "Name": "GetBucketLocation",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "accesspoint"
+          },
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetBucketOwnershipControls",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetBucketPolicy",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "accesspoint"
+          },
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetBucketPublicAccessBlock",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetBucketTagging",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetBucketVersioning",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetEncryptionConfiguration",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetLifecycleConfiguration",
+        "ActionConditionKeys": [
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "GetObject",
+        "ActionConditionKeys": [
+          "s3:AccessGrantsInstanceArn",
+          "s3:ExistingObjectTag/<key>",
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "accesspointobject"
+          },
+          {
+            "Name": "object"
+          }
+        ]
+      },
+      {
+        "Name": "ListBucket",
+        "ActionConditionKeys": [
+          "s3:AccessGrantsInstanceArn",
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:delimiter",
+          "s3:max-keys",
+          "s3:prefix",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-content-sha256"
+        ],
+        "Resources": [
+          {
+            "Name": "accesspoint"
+          },
+          {
+            "Name": "bucket"
+          }
+        ]
+      },
+      {
+        "Name": "PutObject",
+        "ActionConditionKeys": [
+          "s3:AccessGrantsInstanceArn",
+          "s3:ObjectCreationOperation",
+          "s3:RequestObjectTag/<key>",
+          "s3:RequestObjectTagKeys",
+          "s3:ResourceAccount",
+          "s3:TlsVersion",
+          "s3:authType",
+          "s3:if-match",
+          "s3:if-none-match",
+          "s3:object-lock-event-hold",
+          "s3:object-lock-event-hold-duration-days",
+          "s3:object-lock-legal-hold",
+          "s3:object-lock-mode",
+          "s3:object-lock-remaining-retention-days",
+          "s3:object-lock-retain-until-date",
+          "s3:signatureAge",
+          "s3:signatureversion",
+          "s3:x-amz-acl",
+          "s3:x-amz-content-sha256",
+          "s3:x-amz-copy-source",
+          "s3:x-amz-grant-full-control",
+          "s3:x-amz-grant-read",
+          "s3:x-amz-grant-read-acp",
+          "s3:x-amz-grant-write",
+          "s3:x-amz-grant-write-acp",
+          "s3:x-amz-metadata-directive",
+          "s3:x-amz-object-annotation-directive",
+          "s3:x-amz-server-side-encryption",
+          "s3:x-amz-server-side-encryption-aws-kms-key-id",
+          "s3:x-amz-server-side-encryption-customer-algorithm",
+          "s3:x-amz-storage-class",
+          "s3:x-amz-website-redirect-location"
+        ],
+        "Resources": [
+          {
+            "Name": "accesspointobject"
+          },
+          {
+            "Name": "object"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "accessgrant",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:access-grants/default/grant/${Token}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys"
+        ]
+      },
+      {
+        "Name": "accessgrantsinstance",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:access-grants/default"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys"
+        ]
+      },
+      {
+        "Name": "accessgrantslocation",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:access-grants/default/location/${Token}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys"
+        ]
+      },
+      {
+        "Name": "accesspoint",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:accesspoint/${AccessPointName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "s3:AccessPointNetworkOrigin",
+          "s3:AccessPointTag/${TagKey}",
+          "s3:DataAccessPointAccount",
+          "s3:DataAccessPointArn"
+        ]
+      },
+      {
+        "Name": "accesspointobject",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:accesspoint/${AccessPointName}/object/${ObjectName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "s3:AccessPointNetworkOrigin",
+          "s3:AccessPointTag/${TagKey}",
+          "s3:BucketTag/${TagKey}",
+          "s3:DataAccessPointAccount",
+          "s3:DataAccessPointArn"
+        ]
+      },
+      {
+        "Name": "bucket",
+        "ARNFormats": [
+          "arn:${Partition}:s3:::${BucketName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "s3:BucketTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "job",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:job/${JobId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys"
+        ]
+      },
+      {
+        "Name": "multiregionaccesspoint",
+        "ARNFormats": [
+          "arn:${Partition}:s3::${Account}:accesspoint/${AccessPointAlias}"
+        ]
+      },
+      {
+        "Name": "multiregionaccesspointrequestarn",
+        "ARNFormats": [
+          "arn:${Partition}:s3:us-west-2:${Account}:async-request/mrap/${Operation}/${Token}"
+        ]
+      },
+      {
+        "Name": "object",
+        "ARNFormats": [
+          "arn:${Partition}:s3:::${BucketName}/${ObjectName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "s3:BucketTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "objectlambdaaccesspoint",
+        "ARNFormats": [
+          "arn:${Partition}:s3-object-lambda:${Region}:${Account}:accesspoint/${AccessPointName}"
+        ]
+      },
+      {
+        "Name": "storagelensconfiguration",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:storage-lens/${ConfigId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys"
+        ]
+      },
+      {
+        "Name": "storagelensgroup",
+        "ARNFormats": [
+          "arn:${Partition}:s3:${Region}:${Account}:storage-lens-group/${Name}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys"
+        ]
+      }
+    ]
+  },
+  "ec2": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/ec2/ec2.json",
+    "actions": [
+      {
+        "Name": "AllocateAddress",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "elastic-ip",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys"
+            ]
+          },
+          {
+            "Name": "ipam-pool",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipv4pool-ec2",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "AssociateRouteTable",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "internet-gateway",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:InternetGatewayID",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipv4pool-ec2",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "route-table",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:RouteTableID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "subnet",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:AvailabilityZone",
+              "ec2:AvailabilityZoneId",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SubnetID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "vpn-gateway",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "AttachInternetGateway",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "internet-gateway",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:InternetGatewayID",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "AuthorizeSecurityGroupIngress",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "security-group",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SecurityGroupID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "security-group-rule",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateFlowLogs",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "natgateway",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "network-interface",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:AvailabilityZone",
+              "ec2:NetworkInterfaceID",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Subnet",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "subnet",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:AvailabilityZone",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SubnetID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "transit-gateway",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-attachment",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayAttachmentId"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          },
+          {
+            "Name": "vpc-flow-log",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateInternetGateway",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "internet-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:InternetGatewayID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateNatGateway",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "elastic-ip",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:AllocationId",
+              "ec2:Domain",
+              "ec2:PublicIpAddress",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "natgateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys"
+            ]
+          },
+          {
+            "Name": "subnet",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:AvailabilityZone",
+              "ec2:AvailabilityZoneId",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SubnetID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateRoute",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "route-table",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:RouteTableID",
+              "ec2:Vpc"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateRouteTable",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "route-table",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:RouteTableID"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateSecurityGroup",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "security-group",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:SecurityGroupID"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateSubnet",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "ipam-pool",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "subnet",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:Ipv4IpamPoolId",
+              "ec2:Ipv6IpamPoolId",
+              "ec2:SubnetID"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateTags",
+        "ActionConditionKeys": [
+          "ec2:CreateAction",
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "application-status-check",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "capacity-block",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "capacity-manager-data-export",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "capacity-reservation",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys"
+            ]
+          },
+          {
+            "Name": "capacity-reservation-cancellation-quote",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "capacity-reservation-fleet",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "carrier-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "client-vpn-endpoint",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ClientRootCertificateChainArn",
+              "ec2:CloudwatchLogGroupArn",
+              "ec2:CloudwatchLogStreamArn",
+              "ec2:DirectoryArn",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SamlProviderArn",
+              "ec2:ServerCertificateArn"
+            ]
+          },
+          {
+            "Name": "coip-pool",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "customer-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "declarative-policies-report",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "dedicated-host",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AutoPlacement",
+              "ec2:AvailabilityZone",
+              "ec2:HostRecovery",
+              "ec2:InstanceType",
+              "ec2:Quantity",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "dhcp-options",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:DhcpOptionsID",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "egress-only-internet-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "elastic-gpu",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ElasticGpuType",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "elastic-ip",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AllocationId",
+              "ec2:Domain",
+              "ec2:PublicIpAddress",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "export-image-task",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "export-instance-task",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "fleet",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "fpga-image",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:Owner",
+              "ec2:Public",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "host-reservation",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "image",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ImageID",
+              "ec2:ImageType",
+              "ec2:Owner",
+              "ec2:Public",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:RootDeviceType"
+            ]
+          },
+          {
+            "Name": "image-usage-report",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "import-image-task",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "import-snapshot-task",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "instance",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AvailabilityZone",
+              "ec2:AvailabilityZoneId",
+              "ec2:CpuOptionsAmdSevSnp",
+              "ec2:EbsOptimized",
+              "ec2:InstanceAutoRecovery",
+              "ec2:InstanceBandwidthWeighting",
+              "ec2:InstanceID",
+              "ec2:InstanceMarketType",
+              "ec2:InstanceMetadataTags",
+              "ec2:InstanceProfile",
+              "ec2:InstanceType",
+              "ec2:ManagedResourceOperator",
+              "ec2:MetadataHttpEndpoint",
+              "ec2:MetadataHttpPutResponseHopLimit",
+              "ec2:MetadataHttpTokens",
+              "ec2:PlacementGroup",
+              "ec2:ProductCode",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:RootDeviceType",
+              "ec2:Tenancy"
+            ]
+          },
+          {
+            "Name": "instance-connect-endpoint",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SubnetID"
+            ]
+          },
+          {
+            "Name": "instance-event-window",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "internet-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:InternetGatewayID",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-external-resource-verification-token",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-internet-registry-association",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-policy",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-pool",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-pool-allocation",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-prefix-list-resolver",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-prefix-list-resolver-target",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-resource-discovery",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-resource-discovery-association",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipam-scope",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipv4pool-ec2",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipv6pool-ec2",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "key-pair",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:KeyPairName",
+              "ec2:KeyPairType",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "launch-template",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ManagedResourceOperator",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "local-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "local-gateway-route-table",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "local-gateway-route-table-virtual-interface-group-association",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "local-gateway-route-table-vpc-association",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "local-gateway-virtual-interface",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "local-gateway-virtual-interface-group",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "natgateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "network-acl",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:NetworkAclID",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "network-insights-access-scope",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "network-insights-access-scope-analysis",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "network-insights-analysis",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "network-insights-path",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "network-interface",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AuthorizedUser",
+              "ec2:AvailabilityZone",
+              "ec2:ManagedResourceOperator",
+              "ec2:NetworkInterfaceID",
+              "ec2:Permission",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Subnet",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "placement-group",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:PlacementGroupName",
+              "ec2:PlacementGroupStrategy",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "prefix-list",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:IpamPrefixListResolverTargetId",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "replace-root-volume-task",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "reserved-instances",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AvailabilityZone",
+              "ec2:InstanceType",
+              "ec2:ReservedInstancesOfferingType",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy"
+            ]
+          },
+          {
+            "Name": "route-server",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "route-server-endpoint",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "route-server-peer",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "route-table",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:RouteTableID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "secondary-interface",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AvailabilityZone",
+              "ec2:AvailabilityZoneId",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "secondary-network",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "secondary-subnet",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "security-group",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SecurityGroupID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "security-group-rule",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "snapshot",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:Encrypted",
+              "ec2:Owner",
+              "ec2:ParentVolume",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SnapshotID",
+              "ec2:SnapshotTime",
+              "ec2:VolumeSize"
+            ]
+          },
+          {
+            "Name": "spot-fleet-request",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "spot-instances-request",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "subnet",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AvailabilityZone",
+              "ec2:AvailabilityZoneId",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SubnetID",
+              "ec2:Vpc"
+            ]
+          },
+          {
+            "Name": "subnet-cidr-reservation",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "traffic-mirror-filter",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "traffic-mirror-filter-rule",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "traffic-mirror-session",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "traffic-mirror-target",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "transit-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-attachment",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayAttachmentId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-connect-peer",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayConnectPeerId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-metering-policy",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayMeteringPolicyId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-multicast-domain",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayMulticastDomainId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-policy-table",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayPolicyTableId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-route-table",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayRouteTableId"
+            ]
+          },
+          {
+            "Name": "transit-gateway-route-table-announcement",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:transitGatewayRouteTableAnnouncementId"
+            ]
+          },
+          {
+            "Name": "verified-access-endpoint",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "verified-access-endpoint-target",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "verified-access-group",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "verified-access-instance",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "verified-access-policy",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "verified-access-trust-provider",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "volume",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AvailabilityZone",
+              "ec2:AvailabilityZoneId",
+              "ec2:Encrypted",
+              "ec2:ManagedResourceOperator",
+              "ec2:ParentSnapshot",
+              "ec2:ParentVolume",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:VolumeID",
+              "ec2:VolumeInitializationRate",
+              "ec2:VolumeIops",
+              "ec2:VolumeSize",
+              "ec2:VolumeThroughput",
+              "ec2:VolumeType"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          },
+          {
+            "Name": "vpc-block-public-access-exclusion",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc-encryption-control",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc-endpoint",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc-endpoint-connection",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc-endpoint-service",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:VpceMultiRegion",
+              "ec2:VpceServiceRegion",
+              "ec2:VpceSupportedRegion"
+            ]
+          },
+          {
+            "Name": "vpc-endpoint-service-permission",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc-flow-log",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc-peering-connection",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AccepterVpc",
+              "ec2:RequesterVpc",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:VpcPeeringConnectionID"
+            ]
+          },
+          {
+            "Name": "vpn-concentrator",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpn-connection",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:AuthenticationType",
+              "ec2:DPDTimeoutSeconds",
+              "ec2:GatewayType",
+              "ec2:IKEVersions",
+              "ec2:InsideTunnelCidr",
+              "ec2:InsideTunnelIpv6Cidr",
+              "ec2:Phase1DHGroup",
+              "ec2:Phase1EncryptionAlgorithms",
+              "ec2:Phase1IntegrityAlgorithms",
+              "ec2:Phase1LifetimeSeconds",
+              "ec2:Phase2DHGroup",
+              "ec2:Phase2EncryptionAlgorithms",
+              "ec2:Phase2IntegrityAlgorithms",
+              "ec2:Phase2LifetimeSeconds",
+              "ec2:RekeyFuzzPercentage",
+              "ec2:RekeyMarginTimeSeconds",
+              "ec2:ReplayWindowSizePackets",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:RoutingType"
+            ]
+          },
+          {
+            "Name": "vpn-gateway",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:ResourceTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateVpc",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "ipam-pool",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "ipv6pool-ec2",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:Ipv4IpamPoolId",
+              "ec2:Ipv6IpamPoolId",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "CreateVpcEndpoint",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "route-table",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:RouteTableID"
+            ]
+          },
+          {
+            "Name": "security-group",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SecurityGroupID"
+            ]
+          },
+          {
+            "Name": "subnet",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SubnetID"
+            ]
+          },
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:VpcID"
+            ]
+          },
+          {
+            "Name": "vpc-endpoint",
+            "ConditionKeys": [
+              "aws:RequestTag/${TagKey}",
+              "aws:TagKeys",
+              "ec2:VpceMultiRegion",
+              "ec2:VpcePrivateDnsPreference",
+              "ec2:VpcePrivateDnsSpecifiedDomains",
+              "ec2:VpceServiceName",
+              "ec2:VpceServiceOwner",
+              "ec2:VpceServiceRegion"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "DescribeAddresses",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeAvailabilityZones",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeDhcpOptions",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeFlowLogs",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeInstanceTopology",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeInstances",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeInternetGateways",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeNatGateways",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeNetworkInterfaces",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeRouteTables",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeSecurityGroupRules",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeSecurityGroups",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeSubnets",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeTags",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeVpcAttribute",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "DescribeVpcEndpoints",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "DescribeVpcs",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "ModifySubnetAttribute",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "subnet",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:Attribute",
+              "ec2:Attribute/${AttributeName}",
+              "ec2:AvailabilityZone",
+              "ec2:AvailabilityZoneId",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SubnetID",
+              "ec2:Vpc"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "ModifyVpcAttribute",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "vpc",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:Attribute",
+              "ec2:Attribute/${AttributeName}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:Tenancy",
+              "ec2:VpcID"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "RevokeSecurityGroupEgress",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "security-group",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SecurityGroupID",
+              "ec2:Vpc"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "RevokeSecurityGroupIngress",
+        "ActionConditionKeys": [
+          "ec2:Region"
+        ],
+        "Resources": [
+          {
+            "Name": "security-group",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}",
+              "ec2:ResourceTag/${TagKey}",
+              "ec2:SecurityGroupID",
+              "ec2:Vpc"
+            ]
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "application-status-check",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:application-status-check/${ApplicationStatusCheckId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "capacity-block",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:capacity-block/${CapacityBlockId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "capacity-manager-data-export",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:capacity-manager-data-export/${CapacityManagerDataExportId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "capacity-reservation",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:capacity-reservation/${CapacityReservationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AvailabilityZone",
+          "ec2:AvailabilityZoneId",
+          "ec2:CapacityReservationFleet",
+          "ec2:CommitmentDuration",
+          "ec2:CreateDate",
+          "ec2:DestinationCapacityReservationId",
+          "ec2:EbsOptimized",
+          "ec2:EndDate",
+          "ec2:EndDateType",
+          "ec2:EphemeralStorage",
+          "ec2:InstanceCount",
+          "ec2:InstanceMatchCriteria",
+          "ec2:InstancePlatform",
+          "ec2:InstanceType",
+          "ec2:InterruptibleCapacityReservationId",
+          "ec2:InterruptionType",
+          "ec2:IsInterruptible",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:OutpostArn",
+          "ec2:PlacementGroup",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:SourceCapacityReservationId",
+          "ec2:TargetInstanceCount",
+          "ec2:Tenancy"
+        ]
+      },
+      {
+        "Name": "capacity-reservation-cancellation-quote",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:capacity-reservation-cancellation-quote/${CapacityReservationCancellationQuoteId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "capacity-reservation-fleet",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:capacity-reservation-fleet/${CapacityReservationFleetId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "carrier-gateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:carrier-gateway/${CarrierGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:Tenancy",
+          "ec2:Vpc"
+        ]
+      },
+      {
+        "Name": "certificate",
+        "ARNFormats": [
+          "arn:${Partition}:acm:${Region}:${Account}:certificate/${CertificateId}"
+        ]
+      },
+      {
+        "Name": "client-vpn-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:client-vpn-endpoint/${ClientVpnEndpointId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:ClientRootCertificateChainArn",
+          "ec2:CloudwatchLogGroupArn",
+          "ec2:CloudwatchLogStreamArn",
+          "ec2:DirectoryArn",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:SamlProviderArn",
+          "ec2:ServerCertificateArn"
+        ]
+      },
+      {
+        "Name": "coip-pool",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:coip-pool/${Ipv4PoolCoipId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "customer-gateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:customer-gateway/${CustomerGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "declarative-policies-report",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:declarative-policies-report/${DeclarativePoliciesReportId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "dedicated-host",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:dedicated-host/${DedicatedHostId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AutoPlacement",
+          "ec2:AvailabilityZone",
+          "ec2:HostRecovery",
+          "ec2:InstanceType",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:Quantity",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "dhcp-options",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:dhcp-options/${DhcpOptionsId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:DhcpOptionsID",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "egress-only-internet-gateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:egress-only-internet-gateway/${EgressOnlyInternetGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "elastic-gpu",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:elastic-gpu/${ElasticGpuId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:ElasticGpuType",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "elastic-inference",
+        "ARNFormats": [
+          "arn:${Partition}:elastic-inference:${Region}:${Account}:elastic-inference-accelerator/${AcceleratorId}"
+        ]
+      },
+      {
+        "Name": "elastic-ip",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:elastic-ip/${AllocationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:AllocationId",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Domain",
+          "ec2:PublicIpAddress",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "export-image-task",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:export-image-task/${ExportImageTaskId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "export-instance-task",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:export-instance-task/${ExportTaskId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "fleet",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:fleet/${FleetId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "fpga-image",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:fpga-image/${FpgaImageId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Owner",
+          "ec2:Public",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "group",
+        "ARNFormats": [
+          "arn:${Partition}:resource-groups:${Region}:${Account}:group/${GroupName}"
+        ]
+      },
+      {
+        "Name": "host-reservation",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:host-reservation/${HostReservationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "image",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}::image/${ImageId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:BootModeOverride",
+          "ec2:ImageID",
+          "ec2:ImageType",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:Owner",
+          "ec2:Public",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:RootDeviceType"
+        ]
+      },
+      {
+        "Name": "image-usage-report",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:image-usage-report/${ImageUsageReportId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "import-image-task",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:import-image-task/${ImportImageTaskId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "import-snapshot-task",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:import-snapshot-task/${ImportSnapshotTaskId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "instance",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:instance/${InstanceId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AvailabilityZone",
+          "ec2:AvailabilityZoneId",
+          "ec2:CpuOptionsAmdSevSnp",
+          "ec2:EbsOptimized",
+          "ec2:InstanceAutoRecovery",
+          "ec2:InstanceBandwidthWeighting",
+          "ec2:InstanceID",
+          "ec2:InstanceMarketType",
+          "ec2:InstanceMetadataTags",
+          "ec2:InstanceProfile",
+          "ec2:InstanceType",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:ManagedResourceOperator",
+          "ec2:MetadataHttpEndpoint",
+          "ec2:MetadataHttpPutResponseHopLimit",
+          "ec2:MetadataHttpTokens",
+          "ec2:NewInstanceProfile",
+          "ec2:PlacementGroup",
+          "ec2:ProductCode",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:RootDeviceType",
+          "ec2:Tenancy"
+        ]
+      },
+      {
+        "Name": "instance-connect-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:instance-connect-endpoint/${InstanceConnectEndpointId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:SubnetID"
+        ]
+      },
+      {
+        "Name": "instance-event-window",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:instance-event-window/${InstanceEventWindowId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "internet-gateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:internet-gateway/${InternetGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:InternetGatewayID",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam/${IpamId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-external-resource-verification-token",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-external-resource-verification-token/${IpamExternalResourceVerificationTokenId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-internet-registry-association",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-internet-registry-association/${IpamInternetRegistryAssociationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-policy",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-policy/${IpamPolicyId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-pool",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-pool/${IpamPoolId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-pool-allocation",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:ipam-pool-allocation/${IpamPoolAllocationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-prefix-list-resolver",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-prefix-list-resolver/${IpamPrefixListResolverId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-prefix-list-resolver-target",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-prefix-list-resolver-target/${IpamPrefixListResolverTargetId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-resource-discovery",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-resource-discovery/${IpamResourceDiscoveryId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-resource-discovery-association",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-resource-discovery-association/${IpamResourceDiscoveryAssociationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipam-scope",
+        "ARNFormats": [
+          "arn:${Partition}:ec2::${Account}:ipam-scope/${IpamScopeId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipv4pool-ec2",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:ipv4pool-ec2/${Ipv4PoolEc2Id}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ipv6pool-ec2",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:ipv6pool-ec2/${Ipv6PoolEc2Id}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "key-pair",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:key-pair/${KeyPairName}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:KeyPairName",
+          "ec2:KeyPairType",
+          "ec2:LaunchTemplate",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "launch-template",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:launch-template/${LaunchTemplateId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:ManagedResourceOperator",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "license-configuration",
+        "ARNFormats": [
+          "arn:${Partition}:license-manager:${Region}:${Account}:license-configuration:${LicenseConfigurationId}"
+        ]
+      },
+      {
+        "Name": "local-gateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:local-gateway/${LocalGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "local-gateway-route-table",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:local-gateway-route-table/${LocalGatewayRoutetableId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "local-gateway-route-table-virtual-interface-group-association",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:local-gateway-route-table-virtual-interface-group-association/${LocalGatewayRouteTableVirtualInterfaceGroupAssociationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "local-gateway-route-table-vpc-association",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:local-gateway-route-table-vpc-association/${LocalGatewayRouteTableVpcAssociationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "local-gateway-virtual-interface",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:local-gateway-virtual-interface/${LocalGatewayVirtualInterfaceId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "local-gateway-virtual-interface-group",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:local-gateway-virtual-interface-group/${LocalGatewayVirtualInterfaceGroupId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "mac-modification-task",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:mac-modification-task/${MacModificationTaskId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "natgateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:natgateway/${NatGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:Vpc"
+        ]
+      },
+      {
+        "Name": "network-acl",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:network-acl/${NaclId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:NetworkAclID",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:Vpc"
+        ]
+      },
+      {
+        "Name": "network-insights-access-scope",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:network-insights-access-scope/${NetworkInsightsAccessScopeId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "network-insights-access-scope-analysis",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:network-insights-access-scope-analysis/${NetworkInsightsAccessScopeAnalysisId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "network-insights-analysis",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:network-insights-analysis/${NetworkInsightsAnalysisId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "network-insights-path",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:network-insights-path/${NetworkInsightsPathId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "network-interface",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:network-interface/${NetworkInterfaceId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:AssociatePublicIpAddress",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AuthorizedService",
+          "ec2:AuthorizedUser",
+          "ec2:AvailabilityZone",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:ManagedResourceOperator",
+          "ec2:NetworkInterfaceID",
+          "ec2:Permission",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:Subnet",
+          "ec2:Vpc"
+        ]
+      },
+      {
+        "Name": "outpost-lag",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:outpost-lag/${OutpostLagId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "placement-group",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:placement-group/${PlacementGroupName}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:PlacementGroupName",
+          "ec2:PlacementGroupStrategy",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "prefix-list",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:prefix-list/${PrefixListId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:IpamPrefixListResolverTargetId",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "replace-root-volume-task",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:replace-root-volume-task/${ReplaceRootVolumeTaskId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "reserved-instances",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:reserved-instances/${ReservationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AvailabilityZone",
+          "ec2:InstanceType",
+          "ec2:Region",
+          "ec2:ReservedInstancesOfferingType",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:Tenancy"
+        ]
+      },
+      {
+        "Name": "role",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:role/${RoleNameWithPath}"
+        ]
+      },
+      {
+        "Name": "route-server",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:route-server/${RouteServerId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "route-server-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:route-server-endpoint/${RouteServerEndpointId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:AvailabilityZone",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "route-server-peer",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:route-server-peer/${RouteServerPeerId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:AvailabilityZone",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "route-table",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:route-table/${RouteTableId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:RouteTableID",
+          "ec2:Vpc"
+        ]
+      },
+      {
+        "Name": "secondary-interface",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:secondary-interface/${SecondaryInterfaceId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:AvailabilityZone",
+          "ec2:AvailabilityZoneId",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "secondary-network",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:secondary-network/${SecondaryNetworkId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "secondary-subnet",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:secondary-subnet/${SecondarySubnetId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "security-group",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:security-group/${SecurityGroupId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:SecurityGroupID",
+          "ec2:Vpc"
+        ]
+      },
+      {
+        "Name": "security-group-rule",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:security-group-rule/${SecurityGroupRuleId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "snapshot",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}::snapshot/${SnapshotId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Add/group",
+          "ec2:Add/userId",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AvailabilityZone",
+          "ec2:Encrypted",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:Location",
+          "ec2:OutpostArn",
+          "ec2:Owner",
+          "ec2:ParentSnapshot",
+          "ec2:ParentVolume",
+          "ec2:ProductCode",
+          "ec2:Region",
+          "ec2:Remove/group",
+          "ec2:Remove/userId",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:SnapshotCoolOffPeriod",
+          "ec2:SnapshotID",
+          "ec2:SnapshotLockDuration",
+          "ec2:SnapshotTime",
+          "ec2:SourceAvailabilityZone",
+          "ec2:SourceOutpostArn",
+          "ec2:VolumeSize"
+        ]
+      },
+      {
+        "Name": "spot-fleet-request",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:spot-fleet-request/${SpotFleetRequestId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "spot-instances-request",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:spot-instances-request/${SpotInstanceRequestId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "subnet",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:subnet/${SubnetId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AvailabilityZone",
+          "ec2:AvailabilityZoneId",
+          "ec2:Ipv4IpamPoolId",
+          "ec2:Ipv6IpamPoolId",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:LaunchTemplate",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:SubnetID",
+          "ec2:Vpc"
+        ]
+      },
+      {
+        "Name": "subnet-cidr-reservation",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:subnet-cidr-reservation/${SubnetCidrReservationId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "traffic-mirror-filter",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:traffic-mirror-filter/${TrafficMirrorFilterId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "traffic-mirror-filter-rule",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:traffic-mirror-filter-rule/${TrafficMirrorFilterRuleId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "traffic-mirror-session",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:traffic-mirror-session/${TrafficMirrorSessionId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "traffic-mirror-target",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:traffic-mirror-target/${TrafficMirrorTargetId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "transit-gateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway/${TransitGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayId"
+        ]
+      },
+      {
+        "Name": "transit-gateway-attachment",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway-attachment/${TransitGatewayAttachmentId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayAttachmentId"
+        ]
+      },
+      {
+        "Name": "transit-gateway-connect-peer",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway-connect-peer/${TransitGatewayConnectPeerId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayConnectPeerId"
+        ]
+      },
+      {
+        "Name": "transit-gateway-metering-policy",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway-metering-policy/${TransitGatewayMeteringPolicyId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayMeteringPolicyId"
+        ]
+      },
+      {
+        "Name": "transit-gateway-multicast-domain",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway-multicast-domain/${TransitGatewayMulticastDomainId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayMulticastDomainId"
+        ]
+      },
+      {
+        "Name": "transit-gateway-policy-table",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway-policy-table/${TransitGatewayPolicyTableId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayPolicyTableId"
+        ]
+      },
+      {
+        "Name": "transit-gateway-route-table",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway-route-table/${TransitGatewayRouteTableId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayRouteTableId"
+        ]
+      },
+      {
+        "Name": "transit-gateway-route-table-announcement",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:transit-gateway-route-table-announcement/${TransitGatewayRouteTableAnnouncementId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:transitGatewayRouteTableAnnouncementId"
+        ]
+      },
+      {
+        "Name": "verified-access-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:verified-access-endpoint/${VerifiedAccessEndpointId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "verified-access-endpoint-target",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:verified-access-endpoint-target/${VerifiedAccessEndpointTargetId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "verified-access-group",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:verified-access-group/${VerifiedAccessGroupId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "verified-access-instance",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:verified-access-instance/${VerifiedAccessInstanceId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "verified-access-policy",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:verified-access-policy/${VerifiedAccessPolicyId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "verified-access-trust-provider",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:verified-access-trust-provider/${VerifiedAccessTrustProviderId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "volume",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:volume/${VolumeId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AvailabilityZone",
+          "ec2:AvailabilityZoneId",
+          "ec2:Encrypted",
+          "ec2:IsLaunchTemplateResource",
+          "ec2:KmsKeyId",
+          "ec2:LaunchTemplate",
+          "ec2:ManagedResourceOperator",
+          "ec2:ParentSnapshot",
+          "ec2:ParentVolume",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:VolumeID",
+          "ec2:VolumeInitializationRate",
+          "ec2:VolumeIops",
+          "ec2:VolumeSize",
+          "ec2:VolumeThroughput",
+          "ec2:VolumeType"
+        ]
+      },
+      {
+        "Name": "vpc",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc/${VpcId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Ipv4IpamPoolId",
+          "ec2:Ipv6IpamPoolId",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:Tenancy",
+          "ec2:VpcID"
+        ]
+      },
+      {
+        "Name": "vpc-block-public-access-exclusion",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-block-public-access-exclusion/${VpcBlockPublicAccessExclusionId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "vpc-encryption-control",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-encryption-control/${VpcEncryptionControlId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "vpc-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-endpoint/${VpcEndpointId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:VpceMultiRegion",
+          "ec2:VpcePrivateDnsPreference",
+          "ec2:VpcePrivateDnsSpecifiedDomains",
+          "ec2:VpceServiceName",
+          "ec2:VpceServiceOwner",
+          "ec2:VpceServiceRegion"
+        ]
+      },
+      {
+        "Name": "vpc-endpoint-connection",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-endpoint-connection/${VpcEndpointConnectionId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "vpc-endpoint-service",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-endpoint-service/${VpcEndpointServiceId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:VpceMultiRegion",
+          "ec2:VpceServicePrivateDnsName",
+          "ec2:VpceServiceRegion",
+          "ec2:VpceSupportedRegion"
+        ]
+      },
+      {
+        "Name": "vpc-endpoint-service-permission",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-endpoint-service-permission/${VpcEndpointServicePermissionId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "vpc-flow-log",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-flow-log/${VpcFlowLogId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "vpc-peering-connection",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpc-peering-connection/${VpcPeeringConnectionId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:AccepterVpc",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:Region",
+          "ec2:RequesterVpc",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:VpcPeeringConnectionID"
+        ]
+      },
+      {
+        "Name": "vpn-concentrator",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpn-concentrator/${VpnConcentratorId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "vpn-connection",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpn-connection/${VpnConnectionId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Attribute",
+          "ec2:Attribute/${AttributeName}",
+          "ec2:AuthenticationType",
+          "ec2:DPDTimeoutSeconds",
+          "ec2:GatewayType",
+          "ec2:IKEVersions",
+          "ec2:InsideTunnelCidr",
+          "ec2:InsideTunnelIpv6Cidr",
+          "ec2:Phase1DHGroup",
+          "ec2:Phase1EncryptionAlgorithms",
+          "ec2:Phase1IntegrityAlgorithms",
+          "ec2:Phase1LifetimeSeconds",
+          "ec2:Phase2DHGroup",
+          "ec2:Phase2EncryptionAlgorithms",
+          "ec2:Phase2IntegrityAlgorithms",
+          "ec2:Phase2LifetimeSeconds",
+          "ec2:Region",
+          "ec2:RekeyFuzzPercentage",
+          "ec2:RekeyMarginTimeSeconds",
+          "ec2:ReplayWindowSizePackets",
+          "ec2:ResourceTag/${TagKey}",
+          "ec2:RoutingType"
+        ]
+      },
+      {
+        "Name": "vpn-connection-device-type",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpn-connection-device-type/${VpnConnectionDeviceTypeId}"
+        ],
+        "ConditionKeys": [
+          "ec2:Region"
+        ]
+      },
+      {
+        "Name": "vpn-gateway",
+        "ARNFormats": [
+          "arn:${Partition}:ec2:${Region}:${Account}:vpn-gateway/${VpnGatewayId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "ec2:Region",
+          "ec2:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "kms": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/kms/kms.json",
+    "actions": [
+      {
+        "Name": "CreateGrant",
+        "ActionConditionKeys": [
+          "kms:CallerAccount",
+          "kms:EncryptionContext:${EncryptionContextKey}",
+          "kms:EncryptionContextKeys",
+          "kms:GrantConstraintSourceArn",
+          "kms:GrantConstraintType",
+          "kms:GrantIsForAWSResource",
+          "kms:GrantOperations",
+          "kms:GranteePrincipal",
+          "kms:GranteeServicePrincipal",
+          "kms:RetiringPrincipal",
+          "kms:RetiringServicePrincipal",
+          "kms:ViaService"
+        ],
+        "Resources": [
+          {
+            "Name": "key"
+          }
+        ]
+      },
+      {
+        "Name": "Decrypt",
+        "ActionConditionKeys": [
+          "kms:CallerAccount",
+          "kms:EncryptionAlgorithm",
+          "kms:EncryptionContext:${EncryptionContextKey}",
+          "kms:EncryptionContextKeys",
+          "kms:RecipientAttestation:ImageSha384",
+          "kms:RecipientAttestation:NitroTPMPCR0",
+          "kms:RecipientAttestation:NitroTPMPCR1",
+          "kms:RecipientAttestation:NitroTPMPCR10",
+          "kms:RecipientAttestation:NitroTPMPCR11",
+          "kms:RecipientAttestation:NitroTPMPCR12",
+          "kms:RecipientAttestation:NitroTPMPCR13",
+          "kms:RecipientAttestation:NitroTPMPCR14",
+          "kms:RecipientAttestation:NitroTPMPCR15",
+          "kms:RecipientAttestation:NitroTPMPCR16",
+          "kms:RecipientAttestation:NitroTPMPCR17",
+          "kms:RecipientAttestation:NitroTPMPCR18",
+          "kms:RecipientAttestation:NitroTPMPCR19",
+          "kms:RecipientAttestation:NitroTPMPCR2",
+          "kms:RecipientAttestation:NitroTPMPCR20",
+          "kms:RecipientAttestation:NitroTPMPCR21",
+          "kms:RecipientAttestation:NitroTPMPCR22",
+          "kms:RecipientAttestation:NitroTPMPCR23",
+          "kms:RecipientAttestation:NitroTPMPCR3",
+          "kms:RecipientAttestation:NitroTPMPCR4",
+          "kms:RecipientAttestation:NitroTPMPCR5",
+          "kms:RecipientAttestation:NitroTPMPCR6",
+          "kms:RecipientAttestation:NitroTPMPCR7",
+          "kms:RecipientAttestation:NitroTPMPCR8",
+          "kms:RecipientAttestation:NitroTPMPCR9",
+          "kms:RecipientAttestation:PCR0",
+          "kms:RecipientAttestation:PCR1",
+          "kms:RecipientAttestation:PCR10",
+          "kms:RecipientAttestation:PCR11",
+          "kms:RecipientAttestation:PCR12",
+          "kms:RecipientAttestation:PCR13",
+          "kms:RecipientAttestation:PCR14",
+          "kms:RecipientAttestation:PCR15",
+          "kms:RecipientAttestation:PCR16",
+          "kms:RecipientAttestation:PCR17",
+          "kms:RecipientAttestation:PCR18",
+          "kms:RecipientAttestation:PCR19",
+          "kms:RecipientAttestation:PCR2",
+          "kms:RecipientAttestation:PCR20",
+          "kms:RecipientAttestation:PCR21",
+          "kms:RecipientAttestation:PCR22",
+          "kms:RecipientAttestation:PCR23",
+          "kms:RecipientAttestation:PCR24",
+          "kms:RecipientAttestation:PCR25",
+          "kms:RecipientAttestation:PCR26",
+          "kms:RecipientAttestation:PCR27",
+          "kms:RecipientAttestation:PCR28",
+          "kms:RecipientAttestation:PCR29",
+          "kms:RecipientAttestation:PCR3",
+          "kms:RecipientAttestation:PCR30",
+          "kms:RecipientAttestation:PCR31",
+          "kms:RecipientAttestation:PCR4",
+          "kms:RecipientAttestation:PCR5",
+          "kms:RecipientAttestation:PCR6",
+          "kms:RecipientAttestation:PCR7",
+          "kms:RecipientAttestation:PCR8",
+          "kms:RecipientAttestation:PCR9",
+          "kms:RequestAlias",
+          "kms:ViaService"
+        ],
+        "Resources": [
+          {
+            "Name": "key"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeKey",
+        "ActionConditionKeys": [
+          "kms:CallerAccount",
+          "kms:RequestAlias",
+          "kms:ViaService"
+        ],
+        "Resources": [
+          {
+            "Name": "key"
+          }
+        ]
+      },
+      {
+        "Name": "Encrypt",
+        "ActionConditionKeys": [
+          "kms:CallerAccount",
+          "kms:EncryptionAlgorithm",
+          "kms:EncryptionContext:${EncryptionContextKey}",
+          "kms:EncryptionContextKeys",
+          "kms:RequestAlias",
+          "kms:ViaService"
+        ],
+        "Resources": [
+          {
+            "Name": "key"
+          }
+        ]
+      },
+      {
+        "Name": "GenerateDataKey",
+        "ActionConditionKeys": [
+          "kms:CallerAccount",
+          "kms:EncryptionAlgorithm",
+          "kms:EncryptionContext:${EncryptionContextKey}",
+          "kms:EncryptionContextKeys",
+          "kms:RecipientAttestation:ImageSha384",
+          "kms:RecipientAttestation:NitroTPMPCR0",
+          "kms:RecipientAttestation:NitroTPMPCR1",
+          "kms:RecipientAttestation:NitroTPMPCR10",
+          "kms:RecipientAttestation:NitroTPMPCR11",
+          "kms:RecipientAttestation:NitroTPMPCR12",
+          "kms:RecipientAttestation:NitroTPMPCR13",
+          "kms:RecipientAttestation:NitroTPMPCR14",
+          "kms:RecipientAttestation:NitroTPMPCR15",
+          "kms:RecipientAttestation:NitroTPMPCR16",
+          "kms:RecipientAttestation:NitroTPMPCR17",
+          "kms:RecipientAttestation:NitroTPMPCR18",
+          "kms:RecipientAttestation:NitroTPMPCR19",
+          "kms:RecipientAttestation:NitroTPMPCR2",
+          "kms:RecipientAttestation:NitroTPMPCR20",
+          "kms:RecipientAttestation:NitroTPMPCR21",
+          "kms:RecipientAttestation:NitroTPMPCR22",
+          "kms:RecipientAttestation:NitroTPMPCR23",
+          "kms:RecipientAttestation:NitroTPMPCR3",
+          "kms:RecipientAttestation:NitroTPMPCR4",
+          "kms:RecipientAttestation:NitroTPMPCR5",
+          "kms:RecipientAttestation:NitroTPMPCR6",
+          "kms:RecipientAttestation:NitroTPMPCR7",
+          "kms:RecipientAttestation:NitroTPMPCR8",
+          "kms:RecipientAttestation:NitroTPMPCR9",
+          "kms:RecipientAttestation:PCR0",
+          "kms:RecipientAttestation:PCR1",
+          "kms:RecipientAttestation:PCR10",
+          "kms:RecipientAttestation:PCR11",
+          "kms:RecipientAttestation:PCR12",
+          "kms:RecipientAttestation:PCR13",
+          "kms:RecipientAttestation:PCR14",
+          "kms:RecipientAttestation:PCR15",
+          "kms:RecipientAttestation:PCR16",
+          "kms:RecipientAttestation:PCR17",
+          "kms:RecipientAttestation:PCR18",
+          "kms:RecipientAttestation:PCR19",
+          "kms:RecipientAttestation:PCR2",
+          "kms:RecipientAttestation:PCR20",
+          "kms:RecipientAttestation:PCR21",
+          "kms:RecipientAttestation:PCR22",
+          "kms:RecipientAttestation:PCR23",
+          "kms:RecipientAttestation:PCR24",
+          "kms:RecipientAttestation:PCR25",
+          "kms:RecipientAttestation:PCR26",
+          "kms:RecipientAttestation:PCR27",
+          "kms:RecipientAttestation:PCR28",
+          "kms:RecipientAttestation:PCR29",
+          "kms:RecipientAttestation:PCR3",
+          "kms:RecipientAttestation:PCR30",
+          "kms:RecipientAttestation:PCR31",
+          "kms:RecipientAttestation:PCR4",
+          "kms:RecipientAttestation:PCR5",
+          "kms:RecipientAttestation:PCR6",
+          "kms:RecipientAttestation:PCR7",
+          "kms:RecipientAttestation:PCR8",
+          "kms:RecipientAttestation:PCR9",
+          "kms:RequestAlias",
+          "kms:ViaService"
+        ],
+        "Resources": [
+          {
+            "Name": "key"
+          }
+        ]
+      },
+      {
+        "Name": "GetKeyPolicy",
+        "ActionConditionKeys": [
+          "kms:CallerAccount",
+          "kms:ViaService"
+        ],
+        "Resources": [
+          {
+            "Name": "key"
+          }
+        ]
+      },
+      {
+        "Name": "ListGrants",
+        "ActionConditionKeys": [
+          "kms:CallerAccount",
+          "kms:GrantIsForAWSResource",
+          "kms:ViaService"
+        ],
+        "Resources": [
+          {
+            "Name": "key"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "alias",
+        "ARNFormats": [
+          "arn:${Partition}:kms:${Region}:${Account}:alias/${Alias}"
+        ]
+      },
+      {
+        "Name": "key",
+        "ARNFormats": [
+          "arn:${Partition}:kms:${Region}:${Account}:key/${KeyId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "kms:KeyOrigin",
+          "kms:KeySpec",
+          "kms:KeyUsage",
+          "kms:MultiRegion",
+          "kms:MultiRegionKeyType",
+          "kms:ResourceAliases"
+        ]
+      }
+    ]
+  },
+  "ecr": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/ecr/ecr.json",
+    "actions": [
+      {
+        "Name": "BatchCheckLayerAvailability",
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "BatchGetImage",
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "CreateRepository",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeRepositories",
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "GetAuthorizationToken"
+      },
+      {
+        "Name": "GetDownloadUrlForLayer",
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "GetLifecyclePolicy",
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "ListTagsForResource",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "PutLifecyclePolicy",
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      },
+      {
+        "Name": "TagResource",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "repository"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "repository",
+        "ARNFormats": [
+          "arn:${Partition}:ecr:${Region}:${Account}:repository/${RepositoryName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "ecr:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "logs": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/logs/logs.json",
+    "actions": [
+      {
+        "Name": "AssociateKmsKey",
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "CreateLogGroup",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "CreateLogStream",
+        "Resources": [
+          {
+            "Name": "log-stream"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeLogGroups"
+      },
+      {
+        "Name": "DescribeLogStreams",
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeMetricFilters",
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "ListTagsForResource",
+        "Resources": [
+          {
+            "Name": "anomaly-detector"
+          },
+          {
+            "Name": "delivery"
+          },
+          {
+            "Name": "delivery-destination"
+          },
+          {
+            "Name": "delivery-source"
+          },
+          {
+            "Name": "destination"
+          },
+          {
+            "Name": "log-group"
+          },
+          {
+            "Name": "lookup-table"
+          }
+        ]
+      },
+      {
+        "Name": "ListTagsLogGroup",
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "PutLogEvents",
+        "Resources": [
+          {
+            "Name": "log-stream"
+          }
+        ]
+      },
+      {
+        "Name": "PutMetricFilter",
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "PutRetentionPolicy",
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "TagLogGroup",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "log-group"
+          }
+        ]
+      },
+      {
+        "Name": "TagResource",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "anomaly-detector"
+          },
+          {
+            "Name": "delivery"
+          },
+          {
+            "Name": "delivery-destination"
+          },
+          {
+            "Name": "delivery-source"
+          },
+          {
+            "Name": "destination"
+          },
+          {
+            "Name": "log-group"
+          },
+          {
+            "Name": "lookup-table"
+          },
+          {
+            "Name": "scheduled-query"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "anomaly-detector",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:anomaly-detector:${DetectorId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "delivery",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:delivery:${DeliveryName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "delivery-destination",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:delivery-destination:${DeliveryDestinationName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "delivery-source",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:delivery-source:${DeliverySourceName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "destination",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:destination:${DestinationName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "log-group",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:log-group:${LogGroupName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "log-stream",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:log-group:${LogGroupName}:log-stream:${LogStreamName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "lookup-table",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:lookup-table:${LookupTableName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "scheduled-query",
+        "ARNFormats": [
+          "arn:${Partition}:logs:${Region}:${Account}:scheduled-query:${ScheduledQueryId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "sts": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/sts/sts.json",
+    "actions": [
+      {
+        "Name": "GetCallerIdentity"
+      }
+    ],
+    "resources": [
+      {
+        "Name": "context-provider",
+        "ARNFormats": [
+          "arn:${Partition}:iam::aws:contextProvider/${ContextProviderName}"
+        ]
+      },
+      {
+        "Name": "federated-user",
+        "ARNFormats": [
+          "arn:${Partition}:sts::${Account}:federated-user/${FederatedUserName}"
+        ]
+      },
+      {
+        "Name": "role",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:role/${RoleNameWithPath}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "iam:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "root-user",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:root"
+        ]
+      },
+      {
+        "Name": "self-session",
+        "ARNFormats": [
+          "arn:${Partition}:sts::${Account}:self"
+        ]
+      }
+    ]
+  },
+  "iam": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/iam/iam.json",
+    "actions": [
+      {
+        "Name": "AttachRolePolicy",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary",
+          "iam:PolicyARN",
+          "iam:RoleTemplateARN"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "CreateOpenIDConnectProvider",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "oidc-provider"
+          }
+        ]
+      },
+      {
+        "Name": "CreateRole",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "iam:PermissionsBoundary",
+          "iam:RoleTemplateARN"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "DeleteRole",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "DeleteRolePermissionsBoundary",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "DeleteRolePolicy",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "DetachRolePolicy",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary",
+          "iam:PolicyARN"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "GetOpenIDConnectProvider",
+        "Resources": [
+          {
+            "Name": "oidc-provider"
+          }
+        ]
+      },
+      {
+        "Name": "GetPolicy",
+        "Resources": [
+          {
+            "Name": "policy"
+          }
+        ]
+      },
+      {
+        "Name": "GetPolicyVersion",
+        "Resources": [
+          {
+            "Name": "policy"
+          }
+        ]
+      },
+      {
+        "Name": "GetRole",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary",
+          "iam:RoleTemplateARN"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "GetRolePolicy",
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "ListAttachedRolePolicies",
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "ListOpenIDConnectProviderTags",
+        "Resources": [
+          {
+            "Name": "oidc-provider"
+          }
+        ]
+      },
+      {
+        "Name": "ListRolePolicies",
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "ListRoleTags",
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "PassRole",
+        "ActionConditionKeys": [
+          "iam:AssociatedResourceArn",
+          "iam:PassedToService"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "PutRolePermissionsBoundary",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary",
+          "iam:RoleTemplateARN"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "PutRolePolicy",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary",
+          "iam:RoleTemplateARN"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "SimulatePrincipalPolicy",
+        "Resources": [
+          {
+            "Name": "group"
+          },
+          {
+            "Name": "role"
+          },
+          {
+            "Name": "user"
+          }
+        ]
+      },
+      {
+        "Name": "TagOpenIDConnectProvider",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "oidc-provider"
+          }
+        ]
+      },
+      {
+        "Name": "TagRole",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "iam:RoleTemplateARN"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "UntagRole",
+        "ActionConditionKeys": [
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      },
+      {
+        "Name": "UpdateAssumeRolePolicy",
+        "ActionConditionKeys": [
+          "iam:PermissionsBoundary"
+        ],
+        "Resources": [
+          {
+            "Name": "role"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "access-report",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:access-report/${EntityPath}"
+        ]
+      },
+      {
+        "Name": "assumed-role",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:assumed-role/${RoleName}/${RoleSessionName}"
+        ]
+      },
+      {
+        "Name": "delegation-request",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:delegation-request/${DelegationRequestId}"
+        ],
+        "ConditionKeys": [
+          "iam:DelegationRequestOwner"
+        ]
+      },
+      {
+        "Name": "federated-user",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:federated-user/${UserName}"
+        ]
+      },
+      {
+        "Name": "group",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:group/${GroupNameWithPath}"
+        ]
+      },
+      {
+        "Name": "instance-profile",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:instance-profile/${InstanceProfileNameWithPath}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "mfa",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:mfa/${MfaTokenIdWithPath}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "oidc-provider",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:oidc-provider/${OidcProviderName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "policy",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:policy/${PolicyNameWithPath}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "role",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:role/${RoleNameWithPath}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "iam:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "role-template",
+        "ARNFormats": [
+          "arn:${Partition}:iam::aws:role-template/${AWSServicePrincipal}/${RoleTemplateName}:${RoleTemplateMajorVersion}"
+        ]
+      },
+      {
+        "Name": "saml-provider",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:saml-provider/${SamlProviderName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "server-certificate",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:server-certificate/${CertificateNameWithPath}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "sms-mfa",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:sms-mfa/${MfaTokenIdWithPath}"
+        ]
+      },
+      {
+        "Name": "user",
+        "ARNFormats": [
+          "arn:${Partition}:iam::${Account}:user/${UserNameWithPath}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "iam:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "eks": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/eks/eks.json",
+    "actions": [
+      {
+        "Name": "AssociateAccessPolicy",
+        "ActionConditionKeys": [
+          "eks:accessScope",
+          "eks:namespaces",
+          "eks:policyArn"
+        ],
+        "Resources": [
+          {
+            "Name": "access-entry"
+          }
+        ]
+      },
+      {
+        "Name": "CreateAccessEntry",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "eks:accessEntryType",
+          "eks:kubernetesGroups",
+          "eks:principalArn",
+          "eks:username"
+        ],
+        "Resources": [
+          {
+            "Name": "cluster"
+          }
+        ]
+      },
+      {
+        "Name": "CreateAddon",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "podidentityassociation"
+          }
+        ]
+      },
+      {
+        "Name": "CreateCluster",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "eks:authenticationMode",
+          "eks:blockStorageEnabled",
+          "eks:bootstrapClusterCreatorAdminPermissions",
+          "eks:bootstrapSelfManagedAddons",
+          "eks:computeConfigEnabled",
+          "eks:controlPlaneEgressMode",
+          "eks:controlPlaneScalingTier",
+          "eks:deletionProtection",
+          "eks:elasticLoadBalancingEnabled",
+          "eks:encryptionConfigProviderKeyArns",
+          "eks:endpointPrivateAccess",
+          "eks:endpointPublicAccess",
+          "eks:kubeApiServerConfig",
+          "eks:kubeControllerManagerConfig",
+          "eks:kubeSchedulerConfig",
+          "eks:kubernetesVersion",
+          "eks:loggingType/${type}",
+          "eks:supportType",
+          "eks:zonalShiftEnabled"
+        ]
+      },
+      {
+        "Name": "CreateFargateProfile",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "cluster"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeAccessEntry",
+        "Resources": [
+          {
+            "Name": "access-entry"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeAddon",
+        "Resources": [
+          {
+            "Name": "addon"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeAddonConfiguration"
+      },
+      {
+        "Name": "DescribeAddonVersions"
+      },
+      {
+        "Name": "DescribeCluster",
+        "Resources": [
+          {
+            "Name": "cluster"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeClusterVersions"
+      },
+      {
+        "Name": "DescribeFargateProfile",
+        "Resources": [
+          {
+            "Name": "fargateprofile"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeUpdate",
+        "Resources": [
+          {
+            "Name": "addon"
+          },
+          {
+            "Name": "capability"
+          },
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "nodegroup"
+          }
+        ]
+      },
+      {
+        "Name": "ListAccessEntries",
+        "Resources": [
+          {
+            "Name": "cluster"
+          }
+        ]
+      },
+      {
+        "Name": "ListAddons",
+        "Resources": [
+          {
+            "Name": "cluster"
+          }
+        ]
+      },
+      {
+        "Name": "ListAssociatedAccessPolicies",
+        "Resources": [
+          {
+            "Name": "access-entry"
+          }
+        ]
+      },
+      {
+        "Name": "ListClusters"
+      },
+      {
+        "Name": "ListFargateProfiles",
+        "Resources": [
+          {
+            "Name": "cluster"
+          }
+        ]
+      },
+      {
+        "Name": "ListTagsForResource",
+        "Resources": [
+          {
+            "Name": "addon"
+          },
+          {
+            "Name": "capability"
+          },
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "dashboard"
+          },
+          {
+            "Name": "eks-anywhere-subscription"
+          },
+          {
+            "Name": "fargateprofile"
+          },
+          {
+            "Name": "identityproviderconfig"
+          },
+          {
+            "Name": "nodegroup"
+          }
+        ]
+      },
+      {
+        "Name": "ListUpdates",
+        "Resources": [
+          {
+            "Name": "addon"
+          },
+          {
+            "Name": "capability"
+          },
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "nodegroup"
+          }
+        ]
+      },
+      {
+        "Name": "TagResource",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "access-entry"
+          },
+          {
+            "Name": "addon"
+          },
+          {
+            "Name": "capability"
+          },
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "dashboard"
+          },
+          {
+            "Name": "eks-anywhere-subscription"
+          },
+          {
+            "Name": "fargateprofile"
+          },
+          {
+            "Name": "identityproviderconfig"
+          },
+          {
+            "Name": "nodegroup"
+          },
+          {
+            "Name": "podidentityassociation"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "access-entry",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:access-entry/${ClusterName}/${IamIdentityType}/${IamIdentityAccountID}/${IamIdentityName}/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "eks:accessEntryType",
+          "eks:clusterName",
+          "eks:kubernetesGroups",
+          "eks:principalArn",
+          "eks:username"
+        ]
+      },
+      {
+        "Name": "access-policy",
+        "ARNFormats": [
+          "arn:${Partition}:eks::aws:cluster-access-policy/${AccessPolicyName}"
+        ]
+      },
+      {
+        "Name": "addon",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:addon/${ClusterName}/${AddonName}/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "capability",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:capability/${ClusterName}/${CapabilityType}/${CapabilityName}/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "cluster",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:cluster/${ClusterName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "dashboard",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:dashboard/${DashboardName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "eks-anywhere-subscription",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:eks-anywhere-subscription/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "fargateprofile",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:fargateprofile/${ClusterName}/${FargateProfileName}/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "identityproviderconfig",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:identityproviderconfig/${ClusterName}/${IdentityProviderType}/${IdentityProviderConfigName}/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "nodegroup",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:nodegroup/${ClusterName}/${NodegroupName}/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "podidentityassociation",
+        "ARNFormats": [
+          "arn:${Partition}:eks:${Region}:${Account}:podidentityassociation/${ClusterName}/${UUID}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "rds": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/rds/rds.json",
+    "actions": [
+      {
+        "Name": "AddTagsToResource",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "rds:TagsFromRequest",
+          "rds:req-tag/${TagKey}"
+        ],
+        "Resources": [
+          {
+            "Name": "auto-backup"
+          },
+          {
+            "Name": "cev"
+          },
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "cluster-auto-backup"
+          },
+          {
+            "Name": "cluster-endpoint"
+          },
+          {
+            "Name": "cluster-pg"
+          },
+          {
+            "Name": "cluster-snapshot"
+          },
+          {
+            "Name": "db"
+          },
+          {
+            "Name": "deployment"
+          },
+          {
+            "Name": "es"
+          },
+          {
+            "Name": "global-cluster"
+          },
+          {
+            "Name": "integration"
+          },
+          {
+            "Name": "og"
+          },
+          {
+            "Name": "pg"
+          },
+          {
+            "Name": "proxy"
+          },
+          {
+            "Name": "proxy-endpoint"
+          },
+          {
+            "Name": "ri"
+          },
+          {
+            "Name": "secgrp"
+          },
+          {
+            "Name": "shardgrp"
+          },
+          {
+            "Name": "snapshot"
+          },
+          {
+            "Name": "snapshot-tenant-database"
+          },
+          {
+            "Name": "subgrp"
+          },
+          {
+            "Name": "target-group"
+          },
+          {
+            "Name": "tenant-database"
+          }
+        ]
+      },
+      {
+        "Name": "CreateDBInstance",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "rds:BackupTarget",
+          "rds:ManageMasterUserPassword",
+          "rds:PubliclyAccessible",
+          "rds:req-tag/${TagKey}"
+        ],
+        "Resources": [
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "db"
+          },
+          {
+            "Name": "og"
+          },
+          {
+            "Name": "pg"
+          },
+          {
+            "Name": "secgrp"
+          },
+          {
+            "Name": "subgrp"
+          }
+        ]
+      },
+      {
+        "Name": "CreateDBParameterGroup",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "rds:req-tag/${TagKey}"
+        ],
+        "Resources": [
+          {
+            "Name": "pg"
+          }
+        ]
+      },
+      {
+        "Name": "CreateDBSubnetGroup",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "rds:req-tag/${TagKey}"
+        ],
+        "Resources": [
+          {
+            "Name": "subgrp"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeDBEngineVersions"
+      },
+      {
+        "Name": "DescribeDBInstances",
+        "Resources": [
+          {
+            "Name": "db"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeDBParameterGroups",
+        "Resources": [
+          {
+            "Name": "pg"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeDBParameters",
+        "Resources": [
+          {
+            "Name": "pg"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeDBSubnetGroups",
+        "Resources": [
+          {
+            "Name": "subgrp"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeOrderableDBInstanceOptions"
+      },
+      {
+        "Name": "ListTagsForResource",
+        "Resources": [
+          {
+            "Name": "auto-backup"
+          },
+          {
+            "Name": "cev"
+          },
+          {
+            "Name": "cluster"
+          },
+          {
+            "Name": "cluster-auto-backup"
+          },
+          {
+            "Name": "cluster-endpoint"
+          },
+          {
+            "Name": "cluster-pg"
+          },
+          {
+            "Name": "cluster-snapshot"
+          },
+          {
+            "Name": "db"
+          },
+          {
+            "Name": "es"
+          },
+          {
+            "Name": "global-cluster"
+          },
+          {
+            "Name": "integration"
+          },
+          {
+            "Name": "og"
+          },
+          {
+            "Name": "pg"
+          },
+          {
+            "Name": "proxy"
+          },
+          {
+            "Name": "proxy-endpoint"
+          },
+          {
+            "Name": "ri"
+          },
+          {
+            "Name": "secgrp"
+          },
+          {
+            "Name": "shardgrp"
+          },
+          {
+            "Name": "snapshot"
+          },
+          {
+            "Name": "snapshot-tenant-database"
+          },
+          {
+            "Name": "subgrp"
+          },
+          {
+            "Name": "target-group"
+          },
+          {
+            "Name": "tenant-database"
+          }
+        ]
+      },
+      {
+        "Name": "ModifyDBParameterGroup",
+        "Resources": [
+          {
+            "Name": "pg"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeDBSnapshots",
+        "Resources": [
+          {
+            "Name": "db"
+          },
+          {
+            "Name": "snapshot"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "auto-backup",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:auto-backup:${DbInstanceAutomatedBackupId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "cev",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:cev:${Engine}/${EngineVersion}/${CustomDbEngineVersionId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "cluster",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:cluster:${DbClusterInstanceName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:cluster-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "cluster-auto-backup",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:cluster-auto-backup:${DbClusterAutomatedBackupId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "cluster-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:cluster-endpoint:${DbClusterEndpoint}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "cluster-pg",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:cluster-pg:${ClusterParameterGroupName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:cluster-pg-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "cluster-snapshot",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:cluster-snapshot:${ClusterSnapshotName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:cluster-snapshot-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "db",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:db:${DbInstanceName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:DatabaseClass",
+          "rds:DatabaseEngine",
+          "rds:DatabaseName",
+          "rds:MultiAz",
+          "rds:Piops",
+          "rds:StorageEncrypted",
+          "rds:StorageSize",
+          "rds:Vpc",
+          "rds:db-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "deployment",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:deployment:${BlueGreenDeploymentIdentifier}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "es",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:es:${SubscriptionName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:es-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "global-cluster",
+        "ARNFormats": [
+          "arn:${Partition}:rds::${Account}:global-cluster:${GlobalCluster}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "integration",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:integration:${IntegrationIdentifier}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "og",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:og:${OptionGroupName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:og-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "pg",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:pg:${ParameterGroupName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:pg-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "proxy",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:db-proxy:${DbProxyId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "proxy-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:db-proxy-endpoint:${DbProxyEndpointId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ri",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:ri:${ReservedDbInstanceName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:ri-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "secgrp",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:secgrp:${SecurityGroupName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:secgrp-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "shardgrp",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:shard-group:${DbShardGroupResourceId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "snapshot",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:snapshot:${SnapshotName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:snapshot-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "snapshot-tenant-database",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:snapshot-tenant-database:${SnapshotName}:${TenantResourceId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "subgrp",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:subgrp:${SubnetGroupName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "rds:subgrp-tag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "target-group",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:target-group:${TargetGroupId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "tenant-database",
+        "ARNFormats": [
+          "arn:${Partition}:rds:${Region}:${Account}:tenant-database:${TenantResourceId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "cloudwatch": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/cloudwatch/cloudwatch.json",
+    "actions": [
+      {
+        "Name": "DescribeAlarms",
+        "Resources": [
+          {
+            "Name": "alarm"
+          }
+        ]
+      },
+      {
+        "Name": "ListTagsForResource",
+        "ActionConditionKeys": [
+          "cloudwatch:HasAccessGrant"
+        ],
+        "Resources": [
+          {
+            "Name": "alarm",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "alarm-mute-rule",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "dashboard",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "dataset",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "insight-rule",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "metric-stream",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "service",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "slo",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "PutMetricAlarm",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "cloudwatch:AlarmActions"
+        ],
+        "Resources": [
+          {
+            "Name": "alarm"
+          },
+          {
+            "Name": "dataset",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "TagResource",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys",
+          "cloudwatch:HasAccessGrant"
+        ],
+        "Resources": [
+          {
+            "Name": "alarm",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "alarm-mute-rule",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "dashboard",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "dataset",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "insight-rule",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "metric-stream",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "service",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          },
+          {
+            "Name": "slo",
+            "ConditionKeys": [
+              "aws:ResourceTag/${TagKey}"
+            ]
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "access-grant",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:access-grant/${GrantId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "access-profile",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:access-profile/${ProfileId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "alarm",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:alarm:${AlarmName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "alarm-mute-rule",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:alarm-mute-rule:${AlarmMuteRuleName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "alert",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:alert/${AlertId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "dashboard",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch::${Account}:dashboard/${DashboardName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "dataset",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:dataset/${DatasetId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "domain",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:domain/${DomainId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "ingestion-endpoint",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:ingestion-endpoint/${IngestionEndpointName}/${IngestionEndpointId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "insight-rule",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:insight-rule/${InsightRuleName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "integration",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:integration/${IntegrationId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "metric-stream",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:metric-stream/${MetricStreamName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "omni-dashboard",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:omni-dashboard/${DashboardId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "organization-access-grant",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:organization-access-grant/${GrantId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "organization-domain",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:organization-domain/${DomainId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "service",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:service/${ServiceName}-${UniqueAttributesHex}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "slo",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:slo/${SloName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "space",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:space/${SpaceId}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      },
+      {
+        "Name": "view",
+        "ARNFormats": [
+          "arn:${Partition}:cloudwatch:${Region}:${Account}:view/${ViewName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "sqs": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/sqs/sqs.json",
+    "actions": [
+      {
+        "Name": "CreateQueue",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "queue"
+          }
+        ]
+      },
+      {
+        "Name": "GetQueueAttributes",
+        "Resources": [
+          {
+            "Name": "queue"
+          }
+        ]
+      },
+      {
+        "Name": "GetQueueUrl",
+        "Resources": [
+          {
+            "Name": "queue"
+          }
+        ]
+      },
+      {
+        "Name": "ListQueueTags",
+        "Resources": [
+          {
+            "Name": "queue"
+          }
+        ]
+      },
+      {
+        "Name": "SetQueueAttributes",
+        "Resources": [
+          {
+            "Name": "queue"
+          }
+        ]
+      },
+      {
+        "Name": "TagQueue",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:TagKeys"
+        ],
+        "Resources": [
+          {
+            "Name": "queue"
+          }
+        ]
+      },
+      {
+        "Name": "ListQueues"
+      }
+    ],
+    "resources": [
+      {
+        "Name": "queue",
+        "ARNFormats": [
+          "arn:${Partition}:sqs:${Region}:${Account}:${QueueName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  },
+  "secretsmanager": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/secretsmanager/secretsmanager.json",
+    "actions": [
+      {
+        "Name": "CreateSecret",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "secretsmanager:AddReplicaRegions",
+          "secretsmanager:Description",
+          "secretsmanager:ForceOverwriteReplicaSecret",
+          "secretsmanager:KmsKeyArn",
+          "secretsmanager:KmsKeyId",
+          "secretsmanager:Name",
+          "secretsmanager:ResourceTag/tag-key",
+          "secretsmanager:Type"
+        ],
+        "Resources": [
+          {
+            "Name": "Secret"
+          }
+        ]
+      },
+      {
+        "Name": "DescribeSecret",
+        "ActionConditionKeys": [
+          "aws:ResourceTag/${TagKey}",
+          "secretsmanager:ResourceTag/tag-key",
+          "secretsmanager:SecretId",
+          "secretsmanager:SecretPrimaryRegion",
+          "secretsmanager:resource/AllowRotationLambdaArn",
+          "secretsmanager:resource/Type"
+        ],
+        "Resources": [
+          {
+            "Name": "Secret"
+          }
+        ]
+      },
+      {
+        "Name": "TagResource",
+        "ActionConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "secretsmanager:ResourceTag/tag-key",
+          "secretsmanager:SecretId",
+          "secretsmanager:SecretPrimaryRegion",
+          "secretsmanager:resource/AllowRotationLambdaArn",
+          "secretsmanager:resource/Type"
+        ],
+        "Resources": [
+          {
+            "Name": "Secret"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "Secret",
+        "ARNFormats": [
+          "arn:${Partition}:secretsmanager:${Region}:${Account}:secret:${SecretId}"
+        ],
+        "ConditionKeys": [
+          "aws:RequestTag/${TagKey}",
+          "aws:ResourceTag/${TagKey}",
+          "aws:TagKeys",
+          "secretsmanager:ResourceTag/tag-key",
+          "secretsmanager:resource/AllowRotationLambdaArn",
+          "secretsmanager:resource/Type"
+        ]
+      }
+    ]
+  },
+  "sns": {
+    "version": "v1.4",
+    "url": "https://servicereference.us-east-1.amazonaws.com/v1/sns/sns.json",
+    "actions": [
+      {
+        "Name": "GetTopicAttributes",
+        "Resources": [
+          {
+            "Name": "topic"
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "Name": "topic",
+        "ARNFormats": [
+          "arn:${Partition}:sns:${Region}:${Account}:${TopicName}"
+        ],
+        "ConditionKeys": [
+          "aws:ResourceTag/${TagKey}"
+        ]
+      }
+    ]
+  }
+}

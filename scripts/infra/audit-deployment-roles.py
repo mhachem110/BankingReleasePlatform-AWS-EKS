@@ -146,6 +146,19 @@ def collect(profile=None, call=read):
     return report
 
 
+def public_review(report):
+    """Keep full effective policies and trust documents out of public job logs."""
+    result = {}
+    for env, item in report["roles"].items():
+        review = item["review"]
+        result[env] = {k: review[k] for k in (
+            "exactBankingTrustFound", "originalManagedPolicyNamesPresent",
+            "documentsComplete", "bankingLeastPrivilegeEstablished", "verdict")}
+        result[env]["broadPermissionFindingCount"] = len(review["reviewFindings"])
+        result[env]["originalTrustPreservation"] = review["originalTrustPreservation"]
+    return result
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile")
@@ -156,4 +169,4 @@ if __name__ == "__main__":
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print("Full read-only role/policy evidence saved; no IAM changes or resource provisioning.")
-    print(json.dumps({env: item["review"] for env, item in report["roles"].items()}, indent=2))
+    print(json.dumps(public_review(report), indent=2))

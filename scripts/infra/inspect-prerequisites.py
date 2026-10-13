@@ -13,11 +13,15 @@ OPERATIONS = {("sts", "get-caller-identity"), ("eks", "list-clusters"), ("eks", 
               ("kms", "describe-key"), ("kms", "get-key-policy"), ("kms", "list-grants")}
 
 
-def inspect(profile=None):
+def inspect(profile=None, *, reader=None, inputs=None):
     report = {"readOnly": True, "observedAt": datetime.now(timezone.utc).isoformat(), "checks": {}}
     def call(label, service, operation, *args):
         if (service, operation) not in OPERATIONS:
             raise ValueError("Mutation is outside this inspector")
+        if reader is not None:
+            value = reader(service, operation, *args)
+            report["checks"][label] = value
+            return value
         command = ["aws", service, operation, *args, "--region", "us-east-2", "--output", "json", "--no-cli-pager"]
         if profile:
             command += ["--profile", profile]
@@ -35,11 +39,23 @@ def inspect(profile=None):
     call("vpcAssociations", "ec2", "describe-vpcs")
     call("availableZones", "ec2", "describe-availability-zones")
     call("clusterCatalog", "eks", "describe-cluster-versions", "--cluster-versions", "1.36")
-    inputs = json.loads(os.environ.get("PLATFORM_INPUTS_JSON") or "{}")
+    inputs = inputs if inputs is not None else json.loads(os.environ.get("PLATFORM_INPUTS_JSON") or "{}")
+    report["addonCandidates"] = {}
     for name in ("coredns", "metrics-server"):
-        call(name+"Catalog", "eks", "describe-addon-versions", "--addon-name", name, "--kubernetes-version", "1.36")
-        if inputs.get("addon_versions", {}).get(name):
-            call(name+"Schema", "eks", "describe-addon-configuration", "--addon-name", name, "--addon-version", inputs["addon_versions"][name])
+        catalog = call(name+"Catalog", "eks", "describe-addon-versions", "--addon-name", name, "--kubernetes-version", "1.36")
+        pinned = inputs.get("addon_versions", {}).get(name)
+        candidates = [v["addonVersion"] for addon in catalog.get("addons", [])
+                      if addon.get("addonName") == name for v in addon.get("addonVersions", [])
+                      if "amd64" in v.get("architecture", []) and "fargate" in v.get("computeTypes", [])
+                      and any(c.get("clusterVersion") == "1.36" and (pinned or c.get("defaultVersion"))
+                              for c in v.get("compatibilities", []))
+                      and (not pinned or v["addonVersion"] == pinned)]
+        if len(set(candidates)) == 1:
+            candidate = candidates[0]
+            report["addonCandidates"][name] = {"version": candidate, "administratorApproved": False}
+            call(name+"Schema", "eks", "describe-addon-configuration", "--addon-name", name, "--addon-version", candidate)
+        else:
+            report["addonCandidates"][name] = {"inspectionError": "No unique compatible amd64/Fargate catalog candidate; do not guess a version"}
     for service in ("eks", "fargate", "ec2", "vpc"):
         call(service+"Quota", "service-quotas", "list-service-quotas", "--service-code", service)
     if inputs.get("kms_key_arn"):

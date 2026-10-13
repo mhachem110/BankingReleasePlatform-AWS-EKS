@@ -30,7 +30,8 @@ def main():
     env = os.environ
     values = configuration(env)
     cost_review(json.loads(env["DATA_COST_REVIEW_JSON"]), values)
-    require(aws("sts", "get-caller-identity")["Account"] == ACCOUNT, "Wrong account")
+    identity = aws("sts", "get-caller-identity")
+    require(identity["Account"] == ACCOUNT and identity["Arn"].startswith(f"arn:aws:sts::{ACCOUNT}:assumed-role/cloudbatch818-mahmoud-cloudops-bootstrap/"), "Wrong provisioning identity/account")
     role = aws("iam", "get-role", "--role-name", values["monitoring_role_arn"].split("/")[-1])["Role"]
     attached = aws("iam", "list-attached-role-policies", "--role-name", role["RoleName"])["AttachedPolicies"]
     key = aws("kms", "describe-key", "--key-id", values["kms_key_arn"])["KeyMetadata"]

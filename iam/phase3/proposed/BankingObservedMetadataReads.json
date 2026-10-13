@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ObservedReadOnlyReconciliationDenials",
+      "Effect": "Allow",
+      "Action": [
+        "servicequotas:ListServiceQuotas",
+        "organizations:ListPoliciesForTarget",
+        "organizations:ListParents"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

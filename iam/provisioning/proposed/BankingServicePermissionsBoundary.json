@@ -1,0 +1,131 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeDhcpOptions",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeInstanceTopology"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:us-east-2:866934333672:instance/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": [
+            "kubernetes.io/cluster/banking-dev"
+          ]
+        },
+        "Null": {
+          "aws:TagKeys": "false"
+        },
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "kms:DescribeKey",
+      "Resource": "arn:aws:kms:us-east-2:866934333672:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+      ],
+      "Resource": [
+        "arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-account",
+        "arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-payment",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": "arn:aws:logs:us-east-2:866934333672:log-group:/banking/banking-dev/vpc-flow:*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs"
+        }
+      }
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "iam:*",
+        "sts:AssumeRole*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

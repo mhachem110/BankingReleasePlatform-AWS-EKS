@@ -9,6 +9,17 @@ spec.loader.exec_module(audit)
 
 
 class RoleAuditTests(unittest.TestCase):
+    def test_public_summary_keeps_effective_policy_documents_in_artifact_only(self):
+        import json
+        review = audit.review_role({}, {}, {"policy": {"effectiveVersion": {"PolicyVersion": {
+            "Document": {"Statement": [{"Effect": "Allow", "Action": "iam:*", "Resource": "sensitive-private-resource"}]}}}}}, "dev")
+        report = {"roles": {"dev": {"review": review}}}
+        public = audit.public_review(report)
+        self.assertEqual(public["dev"]["broadPermissionFindingCount"], 1)
+        self.assertNotIn("sensitive-private-resource", json.dumps(public))
+        self.assertNotIn("reviewFindings", public["dev"])
+        self.assertIn("sensitive-private-resource", json.dumps(report))
+
     def test_banking_inline_policy_never_masks_broad_original_permissions(self):
         role = {"AssumeRolePolicyDocument":{"Statement":[{"Effect":"Allow", "Principal":{"Federated":f"arn:aws:iam::{audit.ACCOUNT}:oidc-provider/token.actions.githubusercontent.com"},
             "Action":"sts:AssumeRoleWithWebIdentity", "Condition":{"StringEquals":{"token.actions.githubusercontent.com:aud":"sts.amazonaws.com", "token.actions.githubusercontent.com:sub":audit.PREFIX+"dev"}}}]}}
@@ -55,7 +66,7 @@ class RoleAuditTests(unittest.TestCase):
             if policy:
                 cap = json.loads(policy)
                 self.assertLessEqual(len(policy), 2048)
-                self.assertTrue(all(a.split(":",1)[1].startswith(("Get", "List", "Describe")) for s in cap["Statement"] for a in s["Action"]))
+                self.assertTrue(all((a == "iam:SimulatePrincipalPolicy" or a.split(":",1)[1].startswith(("Get", "List", "Describe"))) for s in cap["Statement"] for a in s["Action"]))
         for forbidden in ("terraform plan", "terraform apply", "aws-access-key-id", "pull_request_target"):
             self.assertNotIn(forbidden, workflow)
 

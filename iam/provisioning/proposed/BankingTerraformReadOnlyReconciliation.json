@@ -1,0 +1,10 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:SimulatePrincipalPolicy",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-bootstrap"
+    }
+  ]
+}

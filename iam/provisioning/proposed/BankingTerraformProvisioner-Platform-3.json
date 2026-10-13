@@ -1,0 +1,237 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "eks:CreateAccessEntry",
+      "Resource": "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "prod",
+          "eks:principalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-deploy-prod",
+          "eks:accessEntryType": "STANDARD"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "eks:TagResource",
+      "Resource": [
+        "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev",
+        "arn:aws:eks:us-east-2:866934333672:fargateprofile/banking-dev/*",
+        "arn:aws:eks:us-east-2:866934333672:addon/banking-dev/*",
+        "arn:aws:eks:us-east-2:866934333672:access-entry/banking-dev/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": [
+            "dev",
+            "prod"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "eks:CreateCluster",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev",
+          "aws:RequestTag/Name": "banking-dev",
+          "eks:kubernetesVersion": "1.36"
+        },
+        "Bool": {
+          "eks:bootstrapClusterCreatorAdminPermissions": "false",
+          "eks:bootstrapSelfManagedAddons": "false",
+          "eks:deletionProtection": "true"
+        },
+        "ForAllValues:ArnEquals": {
+          "eks:encryptionConfigProviderKeyArns": "arn:aws:kms:us-east-2:866934333672:key/__APPROVED_KMS_KEY_ID__"
+        },
+        "Null": {
+          "eks:encryptionConfigProviderKeyArns": "false"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "eks:AssociateAccessPolicy",
+      "Resource": "arn:aws:eks:us-east-2:866934333672:access-entry/banking-dev/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "eks:accessScope": "cluster"
+        },
+        "ArnEquals": {
+          "eks:policyArn": "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "eks:DescribeCluster",
+        "eks:DescribeFargateProfile",
+        "eks:ListFargateProfiles",
+        "eks:DescribeAddon",
+        "eks:ListAddons",
+        "eks:DescribeAccessEntry",
+        "eks:ListAccessEntries",
+        "eks:ListAssociatedAccessPolicies",
+        "eks:ListTagsForResource",
+        "eks:DescribeUpdate",
+        "eks:ListUpdates"
+      ],
+      "Resource": [
+        "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev",
+        "arn:aws:eks:us-east-2:866934333672:fargateprofile/banking-dev/*",
+        "arn:aws:eks:us-east-2:866934333672:addon/banking-dev/*",
+        "arn:aws:eks:us-east-2:866934333672:access-entry/banking-dev/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DescribeRepositories",
+        "ecr:GetLifecyclePolicy",
+        "ecr:PutLifecyclePolicy",
+        "ecr:ListTagsForResource",
+        "ecr:TagResource"
+      ],
+      "Resource": [
+        "arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-account",
+        "arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-payment"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:AssociateKmsKey",
+        "logs:PutRetentionPolicy",
+        "logs:TagResource",
+        "logs:TagLogGroup",
+        "logs:ListTagsForResource",
+        "logs:ListTagsLogGroup"
+      ],
+      "Resource": [
+        "arn:aws:logs:us-east-2:866934333672:log-group:/aws/eks/banking-dev/cluster:*",
+        "arn:aws:logs:us-east-2:866934333672:log-group:/banking/banking-dev/vpc-flow:*",
+        "arn:aws:logs:us-east-2:866934333672:log-group:/aws/eks/banking-dev/cluster",
+        "arn:aws:logs:us-east-2:866934333672:log-group:/banking/banking-dev/vpc-flow"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "eks.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "eks-fargate-pods.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateOpenIDConnectProvider",
+        "iam:TagOpenIDConnectProvider"
+      ],
+      "Resource": "arn:aws:iam::866934333672:oidc-provider/oidc.eks.us-east-2.amazonaws.com/id/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetOpenIDConnectProvider",
+        "iam:ListOpenIDConnectProviderTags"
+      ],
+      "Resource": "arn:aws:iam::866934333672:oidc-provider/oidc.eks.us-east-2.amazonaws.com/id/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:ListGrants"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:866934333672:key/__APPROVED_KMS_KEY_ID__",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "kms:CreateGrant",
+      "Resource": "arn:aws:kms:us-east-2:866934333672:key/__APPROVED_KMS_KEY_ID__",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        }
+      }
+    }
+  ]
+}

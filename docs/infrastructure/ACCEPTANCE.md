@@ -1,7 +1,9 @@
 # Week 4 acceptance matrix
 
 As of 12 October 2026. PASS means evidence exists for the stated scope only.
-Live rows remain BLOCKED pending AWS verification, reviewed plans/costs and approvals.
+Live rows remain BLOCKED pending verified missing roles, approved operator/key/
+network/capacity inputs, reviewed plans/costs and approvals. The approved AWS
+inspection is complete; see [current findings and 40% tracker](READINESS-2026-10-12.md).
 Official source: Week4_Project_1_CI-CD_Engineering_Mahmoud_Hachem 1.docx,
 summarized in docs/assignment-requirements.md. See the source-linked run evidence
 in docs/infrastructure/SHARED-CLUSTER.md and the current PR description.
@@ -9,7 +11,7 @@ in docs/infrastructure/SHARED-CLUSTER.md and the current PR description.
 | Official requirement / project acceptance | Status | Evidence and next required proof |
 | --- | --- | --- |
 | Existing repository, backend/OIDC foundation | PASS (recorded baseline) | Merged bootstrap history and backend-checkpoint records; preserve mhachem-banking-tfstate-866934333672. Reverify live identity/state before operations. |
-| GitHub environments and OIDC configuration | PASS (GitHub settings) | Actual API audit: five environments; dev/main-only app branches, reviewer, no bypass, immutable repository subject. Both AWS role trusts/real OIDC sessions still BLOCKED. |
+| GitHub environments and OIDC configuration | PASS (configuration and bootstrap session) | Five protected environments; immutable subject and exact dev/prod role trusts observed. Current protected bootstrap OIDC succeeded. Actual dev/prod sessions and namespace RBAC remain BLOCKED. |
 | .NET APIs and container packaging | PASS (offline) | 70 API tests, Docker/DNS/recovery checks and Trivy reports; actual ECR/EKS execution BLOCKED. |
 | Terraform infrastructure and security validation | PASS (offline) | Backend-disabled validation, mocked tests, guards and Checkov. Actual saved live plan/apply/state/clean re-plan BLOCKED. |
 | One healthy EKS Fargate cluster, two namespaces | BLOCKED | Four profiles and separate release groups prepared; actual ACTIVE status, Fargate placement and admission/access denial evidence missing. |

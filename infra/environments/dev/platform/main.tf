@@ -79,6 +79,20 @@ data "aws_caller_identity" "current" {}
 data "aws_iam_role" "cluster" { name = "cloudbatch818-mahmoud-banking-eks-cluster" }
 data "aws_iam_role" "fargate" { name = "cloudbatch818-mahmoud-banking-fargate-execution" }
 data "aws_iam_role" "flow" { name = "cloudbatch818-mahmoud-banking-flow-logs" }
+# Read the actual Terraform-managed IAM stage outputs. No administrator role
+# ARN is a substitute for this independently locked state contract.
+data "terraform_remote_state" "iam" {
+  backend = "s3"
+  config = {
+    bucket              = var.state_bucket_name
+    key                 = "banking-release-platform/shared/iam-prerequisites/terraform.tfstate"
+    region              = var.aws_region
+    encrypt             = true
+    allowed_account_ids = [var.expected_account_id]
+  }
+}
+variable "iam_boundary_policy_sha256" { type = string }
+locals { service_roles = data.terraform_remote_state.iam.outputs.service_roles }
 data "aws_kms_key" "this" { key_id = var.kms_key_arn }
 resource "terraform_data" "prerequisites" {
   lifecycle {
@@ -86,6 +100,11 @@ resource "terraform_data" "prerequisites" {
       condition = (var.aws_region == "us-east-2" && data.aws_caller_identity.current.account_id == var.expected_account_id &&
         data.aws_iam_role.cluster.arn == var.cluster_role_arn && data.aws_iam_role.fargate.arn == var.fargate_execution_role_arn &&
         data.aws_iam_role.flow.arn == var.flow_log_role_arn &&
+        data.terraform_remote_state.iam.outputs.contract_version == 1 &&
+        data.terraform_remote_state.iam.outputs.state_key == "banking-release-platform/shared/iam-prerequisites/terraform.tfstate" &&
+        data.terraform_remote_state.iam.outputs.permissions_boundary_arn == "arn:aws:iam::${var.expected_account_id}:policy/cloudbatch818-mahmoud-banking-service-boundary" &&
+        data.terraform_remote_state.iam.outputs.boundary_policy_sha256 == var.iam_boundary_policy_sha256 &&
+        local.service_roles == { cluster = var.cluster_role_arn, fargate = var.fargate_execution_role_arn, flow = var.flow_log_role_arn } &&
         length(distinct([var.cluster_role_arn, var.fargate_execution_role_arn, var.flow_log_role_arn, var.operator_role_arn, var.deployer_role_arn, var.prod_deployer_role_arn])) == 6 &&
         var.operator_role_arn != var.deployer_role_arn &&
         !endswith(var.operator_role_arn, "/cloudbatch818-mahmoud-cloudops-bootstrap") &&
@@ -94,7 +113,7 @@ resource "terraform_data" "prerequisites" {
         alltrue([for arn in [var.operator_role_arn, var.deployer_role_arn, var.prod_deployer_role_arn] : startswith(arn, "arn:aws:iam::${var.expected_account_id}:role/")]) &&
         startswith(var.kms_key_arn, "arn:aws:kms:${var.aws_region}:${var.expected_account_id}:key/") &&
       data.aws_kms_key.this.key_state == "Enabled")
-      error_message = "Administrator-provided distinct roles, enabled key and account must match verified inputs."
+      error_message = "Terraform-managed IAM outputs, reviewed boundary, distinct access roles, enabled key and account must match verified inputs."
     }
   }
 }
@@ -105,7 +124,7 @@ module "network" {
   name               = local.name
   cidr               = var.vpc_cidr
   availability_zones = var.availability_zones
-  flow_log_role_arn  = var.flow_log_role_arn
+  flow_log_role_arn  = local.service_roles.flow
   logs_kms_key_arn   = var.kms_key_arn
   depends_on         = [terraform_data.prerequisites]
 }
@@ -121,8 +140,8 @@ module "eks" {
   name                       = local.name
   vpc_id                     = module.network.vpc_id
   subnet_ids                 = module.network.application_subnet_ids
-  cluster_role_arn           = var.cluster_role_arn
-  fargate_execution_role_arn = var.fargate_execution_role_arn
+  cluster_role_arn           = local.service_roles.cluster
+  fargate_execution_role_arn = local.service_roles.fargate
   kms_key_arn                = var.kms_key_arn
   kubernetes_version         = var.kubernetes_version
   endpoint_cidrs             = var.endpoint_cidrs
@@ -149,3 +168,5 @@ output "dev_platform_state_key" { value = "banking-release-platform/dev/platform
 
 output "application_namespaces" { value = ["banking-dev", "banking-prod"] }
 output "common_resource_tags" { value = local.common_tags }
+
+output "default_security_group_id" { value = module.network.default_security_group_id }

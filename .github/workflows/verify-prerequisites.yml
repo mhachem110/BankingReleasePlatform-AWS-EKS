@@ -39,13 +39,19 @@ jobs:
           unset-current-credentials: true
           translate-env-variables: false
           inline-session-policy: >-
-            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["sts:GetCallerIdentity","iam:GetRole","iam:ListRolePolicies","iam:GetRolePolicy","iam:ListAttachedRolePolicies","iam:GetPolicy","iam:GetPolicyVersion","organizations:ListPoliciesForTarget","organizations:ListParents","organizations:DescribePolicy","eks:DescribeCluster","eks:ListClusters","eks:DescribeClusterVersions","eks:DescribeAddonVersions","eks:DescribeAddonConfiguration","ec2:DescribeVpcs","ec2:DescribeAvailabilityZones","servicequotas:ListServiceQuotas","kms:DescribeKey","kms:GetKeyPolicy","kms:ListGrants"],"Resource":"*"}]}
+            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["sts:GetCallerIdentity","iam:GetRole","iam:ListRolePolicies","iam:GetRolePolicy","iam:ListAttachedRolePolicies","iam:GetPolicy","iam:GetPolicyVersion","iam:SimulatePrincipalPolicy","organizations:ListPoliciesForTarget","organizations:ListParents","organizations:DescribePolicy","eks:DescribeCluster","eks:ListClusters","eks:DescribeClusterVersions","eks:DescribeAddonVersions","eks:DescribeAddonConfiguration","ec2:DescribeVpcs","ec2:DescribeAvailabilityZones","servicequotas:ListServiceQuotas","kms:DescribeKey","kms:GetKeyPolicy","kms:ListGrants"],"Resource":"*"}]}
+      - name: Inspect bootstrap trusts, both original policies, boundary and scoped permission simulations
+        env:
+          PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+        run: python scripts/infra/audit-bootstrap-role.py
       - name: Collect complete role policy versions and denies visible to the auditor
         run: python scripts/infra/audit-deployment-roles.py
       - name: Inspect existing service and catalog prerequisites without a Terraform operation
         env:
           PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
         run: python scripts/infra/inspect-prerequisites.py
+      - name: Report denied reads and unresolved deployment gates
+        run: python scripts/infra/reconcile-evidence.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

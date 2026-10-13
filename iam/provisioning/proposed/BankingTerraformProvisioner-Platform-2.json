@@ -1,0 +1,266 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateVpcEndpoint",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:vpc/*",
+        "arn:aws:ec2:us-east-2:866934333672:route-table/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateSecurityGroup",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:vpc/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:vpc/*",
+        "arn:aws:ec2:us-east-2:866934333672:subnet/*",
+        "arn:aws:ec2:us-east-2:866934333672:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:866934333672:elastic-ip/*",
+        "arn:aws:ec2:us-east-2:866934333672:natgateway/*",
+        "arn:aws:ec2:us-east-2:866934333672:route-table/*",
+        "arn:aws:ec2:us-east-2:866934333672:vpc-endpoint/*",
+        "arn:aws:ec2:us-east-2:866934333672:security-group/*",
+        "arn:aws:ec2:us-east-2:866934333672:vpc-flow-log/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": [
+            "CreateVpc",
+            "CreateSubnet",
+            "CreateInternetGateway",
+            "AllocateAddress",
+            "CreateNatGateway",
+            "CreateRouteTable",
+            "CreateVpcEndpoint",
+            "CreateSecurityGroup",
+            "CreateFlowLogs"
+          ],
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev",
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:ModifyVpcAttribute",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:vpc/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:ModifySubnetAttribute",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:subnet/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:AttachInternetGateway",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:vpc/*",
+        "arn:aws:ec2:us-east-2:866934333672:internet-gateway/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateRoute",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:route-table/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:AssociateRouteTable",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:route-table/*",
+        "arn:aws:ec2:us-east-2:866934333672:subnet/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateFlowLogs",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:vpc/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:AuthorizeSecurityGroupIngress",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:security-group/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:RevokeSecurityGroupIngress",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:security-group/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:RevokeSecurityGroupEgress",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:866934333672:security-group/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "BankingReleasePlatform",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateFlowLogs",
+      "Resource": "arn:aws:ec2:us-east-2:866934333672:vpc-flow-log/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:us-east-2:866934333672:security-group/__NEW_VPC_DEFAULT_SG_ID__",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev"
+        }
+      },
+      "Sid": "ExactNewVpcDefaultGroupTagging"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "eks:CreateFargateProfile",
+        "eks:CreateAddon"
+      ],
+      "Resource": "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": [
+            "dev",
+            "prod"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "eks:CreateAccessEntry",
+      "Resource": "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev",
+          "eks:principalArn": "arn:aws:iam::866934333672:role/__APPROVED_OPERATOR_ROLE__",
+          "eks:accessEntryType": "STANDARD"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "eks:CreateAccessEntry",
+      "Resource": "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "BankingReleasePlatform",
+          "aws:RequestTag/Environment": "dev",
+          "eks:principalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-deploy-dev",
+          "eks:accessEntryType": "STANDARD"
+        }
+      }
+    }
+  ]
+}

@@ -5,9 +5,9 @@ state_bucket_name   = "REPLACE_WITH_APPROVED_BANKING_BUCKET"
 availability_zones  = ["us-east-2a", "us-east-2b"]
 vpc_cidr            = "10.70.0.0/16"
 endpoint_cidrs      = ["REPLACE_WITH_APPROVED_OPERATOR_OR_RUNNER_IPV4_CIDR"]
-cluster_role_arn    = "REPLACE_WITH_ADMINISTRATOR_CLUSTER_ROLE_ARN"
-fargate_execution_role_arn       = "REPLACE_WITH_ADMINISTRATOR_PATHLESS_FARGATE_EXECUTION_ROLE_ARN"
-flow_log_role_arn   = "REPLACE_WITH_ADMINISTRATOR_FLOW_LOG_ROLE_ARN"
+cluster_role_arn    = "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-eks-cluster"
+fargate_execution_role_arn       = "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution"
+flow_log_role_arn   = "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-flow-logs"
 operator_role_arn   = "REPLACE_WITH_VERIFIED_EXISTING_OPERATOR_IAM_ROLE_ARN"
 deployer_role_arn   = "REPLACE_WITH_VERIFIED_EXISTING_APPLICATION_DEPLOY_ROLE_ARN"
 kms_key_arn         = "REPLACE_WITH_APPROVED_ENABLED_SYMMETRIC_KEY_ARN"
@@ -23,3 +23,6 @@ owner = "MahmoudHachem"
 
 # Full shared-role audit is required before approving reuse.
 prod_deployer_role_arn = "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-cloudops-deploy-prod"
+
+# Must match the verified Terraform IAM prerequisite state outputs.
+iam_boundary_policy_sha256 = "REPLACE_WITH_REVIEWED_BOUNDARY_SHA256"
