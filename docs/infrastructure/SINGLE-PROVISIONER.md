@@ -1,5 +1,12 @@
 # Banking single provisioning identity — review and authorization checkpoint
 
+The owner's subsequent instruction authorizes an independent VPC/OIDC test.
+[VPC-OIDC-TEST.md](VPC-OIDC-TEST.md) supersedes the earlier requirement to finish
+IAM/KMS before the VPC seed: the seed now uses a minimal root and inline STS cap
+with the existing EC2 grant. The full EKS platform retains its IAM/key guards.
+Historical approval/state statements below describe the earlier checkpoint;
+the protected live test and its outcome must be recorded separately.
+
 Status: code and offline proposals; no IAM change, live Terraform plan or apply has been authorized or performed in this workstream. Overall project acceptance remains **40% (8/20 verified milestones)**. Code preparation is not live acceptance.
 
 ## A. Can the bootstrap role create the three Banking roles?

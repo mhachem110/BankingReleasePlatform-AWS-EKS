@@ -14,7 +14,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: banking-dev-vpc-seed
+  group: banking-dev-platform
   cancel-in-progress: false
 env:
   AWS_EC2_METADATA_DISABLED: 'true'
@@ -49,10 +49,8 @@ jobs:
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
-      IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
       NETWORK_SEED_ENABLED: ${{ vars.NETWORK_SEED_ENABLED }}
-      PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+      VPC_SEED_INPUTS_JSON: ${{ vars.VPC_SEED_INPUTS_JSON }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
     outputs:
@@ -72,7 +70,7 @@ jobs:
           allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
           audience: sts.amazonaws.com
           role-session-name: banking-vpc-seed-plan
-          managed-session-policies: ${{ steps.config.outputs.session_policy_arn }}
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
       - run: python scripts/infra/network_seed.py preflight
@@ -87,11 +85,11 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/infra/write-backend.py
-          root=infra/environments/dev/platform
+          root=infra/network-seed
           terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/platform.tfbackend.json"
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]
           terraform -chdir="$root" validate
-          terraform -chdir="$root" plan -target=module.network.aws_vpc.this -input=false -lock-timeout=5m -var-file="$GITHUB_WORKSPACE/platform.tfvars.json" -out="$GITHUB_WORKSPACE/platform.tfplan"
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -var-file="$GITHUB_WORKSPACE/platform.tfvars.json" -out="$GITHUB_WORKSPACE/platform.tfplan"
           terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/platform.tfplan" > platform-plan.json
           python scripts/infra/network_seed.py plan > plan-review.json
           terraform -chdir="$root" show -no-color "$GITHUB_WORKSPACE/platform.tfplan" > plan.txt
@@ -108,11 +106,13 @@ jobs:
             plan-review.json
             plan.txt
             seed-policy-review.json
+            seed-oidc-identity.json
+            seed-preflight.json
           retention-days: 1
           if-no-files-found: error
       - name: Publish review instructions
         run: |
-          echo 'Review plan.txt, plan-review.json, the exact saved-plan SHA256, the exact VPC-only target and its scoped session cap before approving the apply deployment.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review plan.txt, plan-review.json, the exact saved-plan SHA256, OIDC identity and inline VPC-only session cap before approving the apply deployment. No IAM/KMS prerequisite or permission grant is used.' >> "$GITHUB_STEP_SUMMARY"
   apply:
     if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-VPC-SEED'
     needs: [prerequisites, plan]
@@ -129,10 +129,8 @@ jobs:
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
-      IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
       NETWORK_SEED_ENABLED: ${{ vars.NETWORK_SEED_ENABLED }}
-      PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+      VPC_SEED_INPUTS_JSON: ${{ vars.VPC_SEED_INPUTS_JSON }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
       REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
@@ -166,7 +164,7 @@ jobs:
           allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
           audience: sts.amazonaws.com
           role-session-name: banking-vpc-seed-apply
-          managed-session-policies: ${{ steps.config.outputs.session_policy_arn }}
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
       - name: Apply only the reviewed saved plan, then verify
@@ -175,7 +173,7 @@ jobs:
           python scripts/infra/network_seed.py preflight
           cmp seed-policy-review.json reviewed/seed-policy-review.json
           python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
-          root=infra/environments/dev/platform
+          root=infra/network-seed
           terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/reviewed/platform.tfbackend.json"
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]
           terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/reviewed/platform.tfplan" > platform-plan.json
@@ -183,7 +181,7 @@ jobs:
           python scripts/infra/network_seed.py plan
           terraform -chdir="$root" apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/reviewed/platform.tfplan"
           python scripts/infra/network_seed.py verify
-          terraform -chdir="$root" plan -target=module.network.aws_vpc.this -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/reviewed/platform.tfvars.json"
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/reviewed/platform.tfvars.json"
       - name: Publish actual VPC/default group IDs for the separately approved full platform plan
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
