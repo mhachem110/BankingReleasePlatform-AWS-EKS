@@ -18,10 +18,14 @@ AWS_OPERATIONS_ENABLED=false. No self-hosted banking-deployer runner is register
 
 The user added Banking trusts/inline policies to the existing CloudOps dev/prod
 roles. Their ARNs are configured in GitHub; **do not request those additions again**.
-Fresh AWS verification is blocked: local STS returns NoCredentials and there is
-no signed-in browser session. Their full trusts, two Banking inline policies,
-six original managed-policy default versions, boundaries and applicable denies
-remain unverified. New allow policies cannot restrict older allow policies.
+Protected read-only run 38318982706 completed after owner approval. Both Banking
+trusts/inline policies and all six retained managed-policy versions were read.
+Neither deployment role has a boundary; each retains broad CloudOps permissions.
+The three dedicated service roles below are confirmed absent by NoSuchEntity;
+both EKS service-linked roles exist. Quota/Organizations reads are denied, and no
+operator/KMS key was nominated. New allow policies cannot restrict older allows.
+Read [the verified findings and 40% acceptance tracker](READINESS-2026-10-12.md)
+before requesting any action already completed by the user.
 
 Run the prepared **Read-only Banking AWS reconciliation** workflow from merged dev
 with inspection=approved-read-only and approve its existing bootstrap environment,

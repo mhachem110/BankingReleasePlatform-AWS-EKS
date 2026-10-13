@@ -46,6 +46,8 @@ jobs:
         env:
           PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
         run: python scripts/infra/inspect-prerequisites.py
+      - name: Report denied reads and unresolved deployment gates
+        run: python scripts/infra/reconcile-evidence.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

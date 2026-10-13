@@ -3,6 +3,13 @@
 No policy here has been applied. Use the single request in
 `docs/infrastructure/ADMIN-REQUEST.md` after owner authorization.
 
+BankingObservedMetadataReads.json contains only the three denied read actions
+observed in run 38318982706. It is an additive administrator proposal for the
+existing bootstrap role, not authorization to modify it. The quota diagnostic
+identifies a missing identity allow; generic Organizations denials still need
+administrator diagnosis. This allow cannot override explicit denies. Provide
+an authoritative organization review instead where these reads are unavailable.
+
 - Three service trusts: only new dedicated identities with the exact names.
 - BankingFlowLogs: inline permissions only on the dedicated flow role.
 - BankingAppDev-new-role-trust and BankingAppDev-permissions: only a new approved
