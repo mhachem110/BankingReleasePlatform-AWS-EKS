@@ -72,7 +72,7 @@ class ReadinessTests(unittest.TestCase):
     def test_valid_banking_inline_does_not_mask_retained_privileges(self):
         audit, prerequisites = fixture()
         audit["roles"]["dev"] = {"role": {"Arn": "synthetic-role"},
-            "inlinePolicies": {"BankingReleasePlatformDevDeploy": {}},
+            "inlinePolicies": {"BankingReleasePlatformDevDeploy": {"PolicyDocument": {"Statement": []}}},
             "review": {"exactBankingTrustFound": True, "documentsComplete": True,
                        "reviewFindings": [{"actions": ["iam:PutRolePolicy"]}]}}
         result = reconciliation.reconcile(audit, prerequisites)["deploymentRoles"]["dev"]
@@ -81,6 +81,14 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(result["broadPermissionFindings"], 1)
         self.assertTrue(result["administratorScopeReviewRequired"])
         self.assertFalse(result["liveEnvironmentOidcAndRbacVerified"])
+
+    def test_denied_inline_policy_name_is_not_a_verified_document(self):
+        audit, prerequisites = fixture()
+        audit["roles"]["dev"] = {"inlinePolicies": {"BankingReleasePlatformDevDeploy": {
+            "inspectionError": "AccessDenied: iam:GetRolePolicy"}}}
+        report = reconciliation.reconcile(audit, prerequisites)
+        self.assertFalse(report["deploymentRoles"]["dev"]["bankingInlinePolicyObserved"])
+        self.assertNotIn("bootstrapOidcAccountVerified", report)
 
     def test_existing_cluster_requires_state_reconciliation_and_denied_is_not_absent(self):
         for value, expected in (({"clusters": ["banking-dev"]}, "PRESENT_REQUIRES_STATE_RECONCILIATION"),

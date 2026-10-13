@@ -77,10 +77,11 @@ def reconcile(audit, prerequisites):
         result = audit.get("roles", {}).get(environment, {})
         review = result.get("review", {})
         findings = review.get("reviewFindings", [])
+        inline = result.get("inlinePolicies", {}).get("BankingReleasePlatform" + environment.title() + "Deploy", {})
         deployment[environment] = {
             "arn": result.get("role", {}).get("Arn"),
             "bankingTrustObserved": review.get("exactBankingTrustFound") is True,
-            "bankingInlinePolicyObserved": "BankingReleasePlatform" + environment.title() + "Deploy" in result.get("inlinePolicies", {}),
+            "bankingInlinePolicyObserved": bool(inline.get("PolicyDocument")) and not inline.get("inspectionError"),
             "documentsComplete": review.get("documentsComplete") is True,
             "permissionsBoundary": review.get("permissionsBoundary"),
             "broadPermissionFindings": len(findings),
@@ -109,7 +110,8 @@ def reconcile(audit, prerequisites):
         "account": ACCOUNT, "region": "us-east-2", "observedAt": prerequisites.get("observedAt"),
         "inspectionCollection": "COMPLETED_WITH_FINDINGS",
         "livePlanReadiness": "BLOCKED", "authorizesAwsOperations": False,
-        "bootstrapOidcAccountVerified": True,
+        "approvedAccountVerified": True,
+        "authenticationEvidence": "GetCallerIdentity proves the account/session; OIDC proof requires the protected workflow credential-step evidence",
         "bankingCluster": cluster_status, "serviceRoles": roles, "deploymentRoles": deployment,
         "missingReadPermissions": sorted(permissions), "diagnostics": diagnostic,
         "addonCandidates": addon_candidates,
