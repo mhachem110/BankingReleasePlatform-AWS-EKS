@@ -30,6 +30,44 @@ def statements(doc):
     return rows if isinstance(rows, list) else [rows]
 
 
+def service_boundary_inventory(call=read):
+    """Inspect the proposed boundary separately from the bootstrap's boundary.
+
+    Its existence does not establish an AWS/account requirement to use it.
+    Full documents stay in the artifact; summaries expose only status/hash match.
+    """
+    import re
+    metadata = call("iam", "get-policy", "--policy-arn", BOUNDARY)
+    result = {"arn": BOUNDARY, "metadata": metadata,
+              "requirementSource": "Banking project security design",
+              "awsOrAccountRequirementVerified": False}
+    error = metadata.get("inspectionError", "")
+    if error:
+        result["status"] = ("ABSENT" if re.search(r"\bNoSuchEntity\b", error) else
+                            "DENIED" if re.search(r"\b(AccessDenied|AccessDeniedException)\b", error) else "UNVERIFIED")
+        return result
+    policy = metadata.get("Policy", {})
+    version_id = policy.get("DefaultVersionId")
+    if policy.get("Arn") != BOUNDARY or not version_id:
+        result["status"] = "UNVERIFIED"
+        return result
+    version = call("iam", "get-policy-version", "--policy-arn", BOUNDARY, "--version-id", version_id)
+    result["version"] = version
+    error = version.get("inspectionError", "")
+    if error:
+        result["status"] = "DENIED" if re.search(r"\b(AccessDenied|AccessDeniedException)\b", error) else "UNVERIFIED"
+        return result
+    document = version.get("PolicyVersion", {}).get("Document")
+    if not isinstance(document, dict) or not document.get("Statement"):
+        result["status"] = "UNVERIFIED"
+        return result
+    proposal = Path(__file__).resolve().parents[2] / "iam/provisioning/proposed/BankingServicePermissionsBoundary.json"
+    result.update(status="PRESENT", observedSha256=digest(document),
+                  proposalSha256=digest(json.loads(proposal.read_text(encoding="utf-8"))))
+    result["matchesReviewedProposal"] = result["observedSha256"] == result["proposalSha256"]
+    return result
+
+
 def inventory(call=read):
     name = BOOTSTRAP.split("/")[-1]
     identity = call("sts", "get-caller-identity")
@@ -53,6 +91,7 @@ def inventory(call=read):
         "baselineInlineDocumentsUnchanged": {n: digest(inline[n]["PolicyDocument"]) == h if n in inline and "PolicyDocument" in inline[n] else None for n, h in BASELINE_POLICIES.items()},
         "baselineTrustStatementsUnchanged": {sid: any(s.get("Sid") == sid and digest(s) == h for s in trust) if "Role" in role else None for sid, h in BASELINE_TRUST.items()},
         "bootstrapBoundary": boundary,
+        "proposedServiceBoundary": service_boundary_inventory(call),
         "noMutationPerformed": True}
 
 
@@ -97,7 +136,9 @@ def simulations(report, call=read, key=None):
 def summarize(report):
     simulations = [r for p in report["simulations"] for r in p.get("simulation", {}).get("EvaluationResults", [])]
     denied = [r for r in simulations if r.get("EvalDecision") != "allowed"]
+    boundary = report.get("proposedServiceBoundary", {})
     return {"status": "BLOCKED" if denied else "UNVERIFIED", "originalInlinePolicies": report["baselineInlineDocumentsUnchanged"], "retailAndBankingTrusts": report["baselineTrustStatementsUnchanged"], "deniedOrIncompleteSimulations": denied, "simulationReadDenials": [p["simulation"] for p in report["simulations"] if "inspectionError" in p.get("simulation", {})],
+        "serviceRoleBoundary": {k: boundary[k] for k in ("arn", "status", "matchesReviewedProposal", "requirementSource", "awsOrAccountRequirementVerified") if k in boundary},
         "authorization": "Simulation does not include this workflow STS cap and does not prove every SCP/RCP/resource policy context. No API write was attempted. An administrator must authorize the exact bounded proposals; fresh successful reads and the later approved saved-plan apply are required.",
         "firstLivePlan": "Controlled Banking IAM prerequisites / operation=plan / protected bootstrap environment; only after boundary and exact IAM-stage policy are authorized"}
 

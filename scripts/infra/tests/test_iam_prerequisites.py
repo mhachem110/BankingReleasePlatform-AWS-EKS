@@ -207,6 +207,41 @@ class BootstrapAuditTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("bootstrap_audit", ROOT / "scripts/infra/audit-bootstrap-role.py")
         cls.audit = importlib.util.module_from_spec(spec); spec.loader.exec_module(cls.audit)
 
+    def test_service_boundary_absence_and_denied_inspection_are_distinct(self):
+        for message, expected in (("NoSuchEntity: policy does not exist", "ABSENT"),
+                                  ("AccessDenied: iam:GetPolicy", "DENIED"),
+                                  ("network failure", "UNVERIFIED")):
+            calls = []
+            def call(service, operation, *args):
+                calls.append((service, operation, args))
+                return {"inspectionError": message}
+            result = self.audit.service_boundary_inventory(call)
+            self.assertEqual(result["status"], expected)
+            self.assertEqual(calls, [("iam", "get-policy", ("--policy-arn", BOUNDARY))])
+            self.assertFalse(result["awsOrAccountRequirementVerified"])
+
+    def test_service_boundary_version_drift_is_visible_without_granting_rights(self):
+        source = json.loads((ROOT / "iam/provisioning/proposed/BankingServicePermissionsBoundary.json").read_text())
+        for document, matches in ((source, True), ({"Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}, False)):
+            calls = []
+            def call(service, operation, *args):
+                calls.append((service, operation))
+                if operation == "get-policy":
+                    return {"Policy": {"Arn": BOUNDARY, "DefaultVersionId": "v2"}}
+                return {"PolicyVersion": {"Document": document}}
+            result = self.audit.service_boundary_inventory(call)
+            self.assertEqual(result["status"], "PRESENT")
+            self.assertEqual(result["matchesReviewedProposal"], matches)
+            self.assertFalse(result["awsOrAccountRequirementVerified"])
+            self.assertEqual(calls, [("iam", "get-policy"), ("iam", "get-policy-version")])
+
+    def test_service_boundary_unreadable_version_is_not_reported_as_present(self):
+        def call(service, operation, *args):
+            return {"Policy": {"Arn": BOUNDARY, "DefaultVersionId": "v2"}} if operation == "get-policy" else {"inspectionError": "AccessDenied: iam:GetPolicyVersion"}
+        result = self.audit.service_boundary_inventory(call)
+        self.assertEqual(result["status"], "DENIED")
+        self.assertNotIn("matchesReviewedProposal", result)
+
     def test_retail_allow_cannot_authorize_banking_role_creation(self):
         report = {"inlinePolicies": {"original": {"PolicyDocument": {"Statement": [{"Effect": "Allow", "Action": ["iam:CreateRole"], "Resource": f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-retail-*"}]}}}, "managedPoliciesIncludingBoundary": {}}
         result = self.audit.candidate_grants(report, "iam:CreateRole", ROLE_ARNS["cluster"])

@@ -72,9 +72,12 @@ regression evidence. The blocked rows require actual AWS results.
 
 Use [the consolidated request](ADMIN-REQUEST.md), prioritizing these blockers:
 
-1. Create the three confirmed missing roles from the complete
-   [service trusts and Flow Logs policy](../../iam/phase3/proposed/README.md).
-   Return actual ARNs. Existing service-linked roles need no recreation.
+1. Follow the [single-provisioner checkpoint](SINGLE-PROVISIONER.md): re-audit the
+   existing bootstrap identity, review demonstrated missing scoped grants and
+   the service-boundary tradeoff, then use the protected separate IAM Terraform
+   stage to create the three roles only after saved-plan apply approval.
+   Terraform returns their actual ARNs. Existing service-linked roles need no
+   recreation; do not ask the user to create the service roles manually.
 2. Nominate an actual human-assumable operator and approved enabled symmetric
    Ohio KMS key/policy/grants. Render exact-key additive platform permissions
    after receiving real values. New paid key creation requires separate approval.

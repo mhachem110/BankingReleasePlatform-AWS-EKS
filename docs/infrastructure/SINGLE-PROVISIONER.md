@@ -16,6 +16,13 @@ AWS evaluation intersects the role grants, session policy, applicable permission
 
 ## B. Exact bounded permissions proposals
 
+The [coworker IAM comparison](REFERENCE-IAM-REVIEW.md) distinguishes their existing
+identity grants from Banking's Retail-only last verified IAM resource scope.
+The service-role boundary is a project security decision, not a verified
+AWS/account mandate. The extended audit explicitly inspects its existence and
+default version. Its design remains unchanged pending that evidence and review
+of the boundary tradeoff; do not request its creation solely as an AWS requirement.
+
 The current package is [iam/provisioning/proposed](../../iam/provisioning/README.md). It is additive: neither original inline document nor any Retail/CloudOps role or trust is managed by these roots. No bootstrap trust change is proposed. The only GitHub Banking subject remains the existing immutable repository subject with `environment:bootstrap`; dev/prod infrastructure resources do not require dev/prod trust on the provisioning role.
 
 | Proposal | Exact permission scope | Ready for administrator review |
@@ -72,9 +79,15 @@ The offline Terraform and Python tests exercise actual mock-provider plan encodi
 
 Changes are on the existing infra branch and [PR #17](https://github.com/mhachem110/BankingReleasePlatform-AWS-EKS/pull/17). Local validation: 11 Terraform roots, 34 mock-provider Terraform tests, 102 infrastructure tests, 342 action/resource checks across 12 proposal documents, Checkov 111 passed/0 failed/21 documented skips, and actionlint on all changed workflows. Bootstrap/governance tests also pass. Final CI results are recorded in that PR after the current revision runs. The PR is not merged automatically. Historical green checks on an earlier head are not current validation.
 
+The subsequent reference/audit review adds direct proposed-boundary inspection,
+safe public summaries and four regression tests. All 106 infrastructure tests
+and the 342 action/resource validations passed locally; Terraform resource and
+permission proposal documents are unchanged. Fresh CI must pass on that revision
+before its merge checkpoint. No live AWS success is inferred from mock tests.
+
 ## E. Unavoidable authorization restrictions and remaining project work
 
-The human's inability to create roles does not determine the bootstrap role's capabilities. The bootstrap role needs an authorized administrator to grant the bounded IAM-stage policy and publish the fixed service boundary. If a current boundary/SCP/explicit deny blocks those grants or operations, that administrator/course account owner must adjudicate the restriction. Do not attach a broader policy to defeat it. If inspection is denied, retain the exact AWS diagnostic and mark the controlling restriction unknown; do not fabricate permission proof.
+The human's inability to create roles does not determine the bootstrap role's capabilities. Recheck its actual grants first. If Banking creation rights remain absent, an authorized administrator must review the additive scoped IAM grant. The current design also requires the fixed service boundary; inspect its existence and account requirements, then explain its tradeoff before requesting creation or revising that project control. If a current boundary/SCP/explicit deny blocks grants or operations, the administrator/course account owner must adjudicate the restriction. Do not attach a broader policy to defeat it. If inspection is denied, retain the exact AWS diagnostic and mark the controlling restriction unknown; do not fabricate permission proof.
 
 No service roles have been created by this change. No operator/key/runner identity is invented. EKS, RDS, queues, application publication/deployment, monitoring, alert delivery, isolation and rollback acceptance remain pending their authorized prerequisites and separate plans/applies. RDS monitoring, controller/payment IRSA and Fargate application-log permissions require further reviewed Terraform IAM inventory expansions after the real cluster issuer/data scope exists; this first IAM stage deliberately creates only the three requested roles. Existing deployment roles retain their unrelated policies and cannot be called isolated merely because a Banking allow was added.
 
@@ -82,6 +95,6 @@ No service roles have been created by this change. No operator/key/runner identi
 
 First review/merge PR #17 only with explicit user authorization under repository rules. Then dispatch the extended **Read-only Banking AWS reconciliation**, inspection=approved-read-only, on dev and approve bootstrap; this is a read-only review, not a Terraform plan. The user already authorized read-only inspection, but the new code cannot run from the working branch or bypass dev review.
 
-An authorized AWS administrator must review the audit, authorize only the finalized IAM-stage/state additions, and publish the fixed boundary without changing either original inline policy or any existing trust. Once verified, record IAM_BOUNDARY_POLICY_SHA256 and enable the separate IAM stage. These are permission approvals; the user is not asked to manually create service roles.
+Review the audit before asking an authorized AWS administrator for demonstrated missing IAM-stage/state additions. Resolve the service-boundary choice from actual account requirements and the documented tradeoff. If retaining the current boundary design, verify its approved live version, record IAM_BOUNDARY_POLICY_SHA256 and only then enable the separate IAM stage. Preserve both original inline policies and all existing bootstrap trusts. These are permission approvals; Terraform creates the service roles after separate saved-plan apply authorization.
 
 The **first Terraform live-plan approval** is `iam-prerequisites.yml` / dev / operation=plan / protected bootstrap. Its backend locks are the only plan writes. Review the seven-entry live plan, service trusts, boundary and policy versions. A plan-only run does not offer apply; dispatch a separately authorized apply run that creates a fresh reviewed plan and pauses again before applying its saved binary. The IAM apply phrase is **APPLY-REVIEWED-BANKING-IAM-PLAN**. After verified IAM apply, finalize the approved key/operator/platform inputs and authorize the separate VPC seed plan/apply. Review its verified interface, then finalize exact platform caps and record their hashes in PLATFORM_POLICY_REVIEW_JSON. EKS platform planning and paid apply follow separate readiness, saved-plan, cost and approval checkpoints. No paid apply is authorized by this report.
