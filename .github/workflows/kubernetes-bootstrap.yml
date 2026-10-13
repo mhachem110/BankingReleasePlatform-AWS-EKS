@@ -72,7 +72,8 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/infra/kubernetes_bootstrap.py preflight
-          export KUBECONFIG="$(mktemp)"
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
           trap 'rm -f "$KUBECONFIG"' EXIT
           aws eks update-kubeconfig --name banking-dev --region "$AWS_REGION"
           kubectl rollout status deployment/coredns -n kube-system --timeout=10m

@@ -243,7 +243,8 @@ jobs:
             {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:GetCallerIdentity","Resource":"*"},{"Effect":"Allow","Action":"eks:DescribeCluster","Resource":"arn:aws:eks:us-east-2:866934333672:cluster/banking-dev"}]}
           unset-current-credentials: true
       - run: |
-          export KUBECONFIG="$(mktemp)"
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
           trap 'rm -f "$KUBECONFIG"' EXIT
           aws eks update-kubeconfig --name banking-dev --region us-east-2
           python scripts/infra/cleanup_kubernetes.py
@@ -311,7 +312,8 @@ jobs:
             {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:GetCallerIdentity","Resource":"*"},{"Effect":"Allow","Action":"eks:DescribeCluster","Resource":"arn:aws:eks:us-east-2:866934333672:cluster/banking-dev"}]}
           unset-current-credentials: true
       - run: |
-          export KUBECONFIG="$(mktemp)"
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
           trap 'rm -f "$KUBECONFIG"' EXIT
           aws eks update-kubeconfig --name banking-dev --region us-east-2
           python scripts/infra/cleanup_kubernetes.py
