@@ -57,9 +57,13 @@ The protected runner stage fails before planning if that ARN is missing. The
 CodeBuild uses small, non-privileged compute. Standard GitHub-hosted jobs rescan
 the published digests with Docker/Trivy and pass the manifest hash to the private
 deployment job. Each private job consumes build minutes, while the project
-itself has no idle runner.
-Review current Ohio build-minute pricing, NAT traffic, CloudWatch logs and
-the EKS/RDS baseline in the saved plan approval. Do not infer a live cost from
+itself has no idle runner. AWS's published on-demand small-compute example is
+**$0.005 per billed minute**, rounded up per build, with **100 shared free
+small-compute minutes per month**; five 10-minute deployment jobs would consume
+50 minutes before other account builds. Check the exact Ohio rate and remaining
+free-tier balance during deployment approval. NAT traffic, CloudWatch logs,
+KMS and the EKS/RDS baseline are separate charges to review in the saved plan.
+Do not infer a live cost from
 the configuration alone.
 
 Kubernetes bootstrap installs the pinned ALB controller with dedicated IRSA,
