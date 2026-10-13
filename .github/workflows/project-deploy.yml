@@ -1,0 +1,124 @@
+# One entry point. Child workflows use this exact commit and keep saved-plan gates.
+# CI has no OIDC permission. Protected deployment jobs alone request AWS access.
+name: Infra CI/CD
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        options: [project, foundation, network, platform, data]
+        default: project
+        description: 'Project runs dependency stages in order; individual targets support recovery'
+      operation:
+        type: choice
+        options: [plan, apply]
+        default: plan
+        description: 'Apply retains verified resources and pauses for saved-plan reviews'
+      approval:
+        type: string
+        default: ''
+        description: 'Apply only: APPLY-REVIEWED-BANKING-PROJECT'
+permissions:
+  contents: read
+concurrency:
+  group: banking-project-lifecycle
+  cancel-in-progress: false # Never interrupt an apply to begin another deployment.
+jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - env:
+          TARGET: ${{ inputs.target }}
+          OPERATION: ${{ inputs.operation }}
+          APPROVAL: ${{ inputs.approval }}
+          AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+          CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
+        run: python scripts/infra/pipeline_entry.py entry
+  ci:
+    needs: authorize
+    uses: ./.github/workflows/terraform-validation.yml
+  foundation:
+    if: inputs.target == 'project' || inputs.target == 'foundation'
+    needs: ci
+    uses: ./.github/workflows/runtime-foundation.yml
+    permissions: &deployment-permissions
+      contents: read
+      actions: read
+      deployments: read
+      id-token: write
+    with:
+      enabled: true
+      operation: ${{ inputs.operation }}
+      approval: APPLY-REVIEWED-BANKING-FOUNDATION
+  network:
+    # Direct recovery can skip earlier stages; a failed dependency stops Project.
+    if: >-
+      !cancelled() && needs.ci.result == 'success' &&
+      (inputs.target == 'network' || (inputs.target == 'project' && needs.foundation.result == 'success'))
+    needs: [ci, foundation]
+    uses: ./.github/workflows/network-prerequisites.yml
+    permissions: *deployment-permissions
+    with:
+      enabled: true
+      operation: ${{ inputs.operation }}
+      approval: APPLY-REVIEWED-BANKING-VPC-SEED
+  platform:
+    if: >-
+      !cancelled() && needs.ci.result == 'success' &&
+      (inputs.target == 'platform' || (inputs.target == 'project' && needs.foundation.result == 'success' && needs.network.result == 'success'))
+    needs: [ci, foundation, network]
+    uses: ./.github/workflows/infra-operations.yml
+    permissions: *deployment-permissions
+    with:
+      operation: ${{ inputs.operation }}
+      approval: APPLY-REVIEWED-PHASE3-PLAN
+      foundation_interface_json: ${{ needs.foundation.outputs.interface_json }}
+      network_interface_json: ${{ needs.network.outputs.interface_json }}
+  data:
+    if: >-
+      !cancelled() && needs.ci.result == 'success' &&
+      (inputs.target == 'data' || (inputs.target == 'project' && needs.platform.result == 'success' && inputs.operation == 'apply'))
+    needs: [ci, foundation, platform]
+    uses: ./.github/workflows/data-operations.yml
+    permissions: *deployment-permissions
+    with:
+      operation: ${{ inputs.operation }}
+      approval: APPLY-REVIEWED-PHASE6-PLAN
+      enabled: true
+      foundation_interface_json: ${{ needs.foundation.outputs.interface_json }}
+      platform_interface_json: ${{ needs.platform.outputs.interface_json }}
+  evidence:
+    if: always()
+    needs: [authorize, ci, foundation, network, platform, data]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report actual results; skipped stages do not prove deployment
+        env:
+          TARGET: ${{ inputs.target }}
+          OPERATION: ${{ inputs.operation }}
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PY'
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('## Infrastructure stages\n\nOperation: ' + os.environ['OPERATION'] + '\n\n')
+              for name, result in results.items():
+                  out.write('- ' + name + ': ' + result['result'] + '\n')
+              out.write('\nVerified resources are retained. Kubernetes rollout, smoke tests, isolation and rollback require separate acceptance evidence.\n')
+          assert all(v['result'] not in ['failure', 'cancelled'] for v in results.values()), 'Deployment is incomplete'
+          if os.environ['TARGET'] == 'project' and os.environ['OPERATION'] == 'apply':
+              assert all(v['result'] == 'success' for v in results.values()), 'Every project stage must succeed'
+          if os.environ['OPERATION'] == 'apply':
+              names = ['foundation', 'network', 'platform', 'data'] if os.environ['TARGET'] == 'project' else [os.environ['TARGET']]
+              for name in names:
+                  outputs = results[name].get('outputs', {})
+                  proof = outputs.get('verified') == 'true' if name == 'data' else json.loads(outputs.get('interface_json') or '{}').get('verified') is True
+                  assert proof, 'Missing actual verification evidence for ' + name
+          PY

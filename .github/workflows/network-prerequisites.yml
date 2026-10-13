@@ -1,5 +1,20 @@
 name: Controlled Banking VPC seed
 on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: true
+      approval:
+        type: string
+        required: true
+      enabled:
+        type: boolean
+        default: false
+    outputs:
+      interface_json:
+        description: Actual verified VPC and default security group from this run
+        value: ${{ jobs.apply.outputs.interface_json || jobs.plan.outputs.interface_json }}
   workflow_dispatch:
     inputs:
       operation:
@@ -22,7 +37,7 @@ env:
   TF_IN_AUTOMATION: 'true'
 jobs:
   prerequisites:
-    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && vars.NETWORK_SEED_ENABLED == 'true'
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && (inputs.enabled || vars.NETWORK_SEED_ENABLED == 'true') && vars.CLEANUP_ENABLED != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,12 +64,14 @@ jobs:
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      NETWORK_SEED_ENABLED: ${{ vars.NETWORK_SEED_ENABLED }}
+      NETWORK_SEED_ENABLED: ${{ inputs.enabled && 'true' || vars.NETWORK_SEED_ENABLED }}
       VPC_SEED_INPUTS_JSON: ${{ vars.VPC_SEED_INPUTS_JSON }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
     outputs:
       digest: ${{ steps.hash.outputs.digest }}
+      existing: ${{ steps.status.outputs.existing }}
+      interface_json: ${{ steps.status.outputs.interface_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -73,7 +90,10 @@ jobs:
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
-      - run: python scripts/infra/network_seed.py preflight
+      - id: status
+        run: python scripts/infra/network_seed.py status
+      - if: steps.status.outputs.existing != 'true'
+        run: python scripts/infra/network_seed.py preflight
       - name: Verify existing backend protections without repairs
         run: python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -81,6 +101,7 @@ jobs:
           terraform_version: '1.15.8'
           terraform_wrapper: false
       - name: Save the exact creation-only plan
+        if: steps.status.outputs.existing != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -94,9 +115,11 @@ jobs:
           python scripts/infra/network_seed.py plan > plan-review.json
           terraform -chdir="$root" show -no-color "$GITHUB_WORKSPACE/platform.tfplan" > plan.txt
       - id: hash
+        if: steps.status.outputs.existing != 'true'
         shell: bash
         run: echo "digest=$(sha256sum platform.tfplan | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.status.outputs.existing != 'true'
         with:
           name: banking-vpc-seed-reviewed-plan
           path: |
@@ -111,10 +134,19 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Publish review instructions
+        if: steps.status.outputs.existing != 'true'
         run: |
           echo 'Review plan.txt, plan-review.json, the exact saved-plan SHA256, OIDC identity and inline VPC-only session cap before approving the apply deployment. No IAM/KMS prerequisite or permission grant is used.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Record a reused VPC without requesting a write session
+        if: steps.status.outputs.existing == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-vpc-seed-verified-interface
+          path: seed-verification.json
+          retention-days: 7
+          if-no-files-found: error
   apply:
-    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-VPC-SEED'
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-VPC-SEED' && needs.plan.outputs.existing != 'true'
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     environment: bootstrap
@@ -129,11 +161,13 @@ jobs:
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      NETWORK_SEED_ENABLED: ${{ vars.NETWORK_SEED_ENABLED }}
+      NETWORK_SEED_ENABLED: ${{ inputs.enabled && 'true' || vars.NETWORK_SEED_ENABLED }}
       VPC_SEED_INPUTS_JSON: ${{ vars.VPC_SEED_INPUTS_JSON }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
       REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
+    outputs:
+      interface_json: ${{ steps.verify.outputs.interface_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -167,7 +201,7 @@ jobs:
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
-      - name: Apply only the reviewed saved plan, then verify
+      - name: Reinspect under read-only credentials before requesting write access
         run: |
           set -euo pipefail
           python scripts/infra/network_seed.py preflight
@@ -179,6 +213,27 @@ jobs:
           terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/reviewed/platform.tfplan" > platform-plan.json
           cp reviewed/platform.tfplan platform.tfplan
           python scripts/infra/network_seed.py plan
+      # The write cap permits only tagged VPC creation after the saved-plan gate.
+      - id: write-cap
+        run: python scripts/infra/network_seed.py write-cap
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-vpc-seed-apply
+          inline-session-policy: ${{ steps.write-cap.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - name: Apply only the reviewed saved plan, then verify
+        id: verify
+        env:
+          WRITE_PROBE: 'true'
+        run: |
+          set -euo pipefail
+          python scripts/infra/network_seed.py preflight
+          root=infra/network-seed
           terraform -chdir="$root" apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/reviewed/platform.tfplan"
           python scripts/infra/network_seed.py verify
           terraform -chdir="$root" plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/reviewed/platform.tfvars.json"

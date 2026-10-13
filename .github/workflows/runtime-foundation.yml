@@ -1,6 +1,21 @@
 # Same reviewed-dev OIDC model; plan is read-only, apply pauses for a second review.
 name: Reviewed Banking runtime foundation
 on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: true
+      approval:
+        type: string
+        required: true
+      enabled:
+        type: boolean
+        default: false
+    outputs:
+      interface_json:
+        description: Verified actual key and operator; empty until a creation plan is applied
+        value: ${{ jobs.apply.outputs.interface_json || jobs.plan.outputs.interface_json }}
   workflow_dispatch:
     inputs:
       operation:
@@ -23,7 +38,7 @@ env:
   TF_IN_AUTOMATION: 'true'
 jobs:
   prerequisites:
-    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && vars.RUNTIME_FOUNDATION_ENABLED == 'true' && vars.CLEANUP_ENABLED != 'true'
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && (inputs.enabled || vars.RUNTIME_FOUNDATION_ENABLED == 'true') && vars.CLEANUP_ENABLED != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -50,7 +65,7 @@ jobs:
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
-      RUNTIME_FOUNDATION_ENABLED: ${{ vars.RUNTIME_FOUNDATION_ENABLED }}
+      RUNTIME_FOUNDATION_ENABLED: ${{ inputs.enabled && 'true' || vars.RUNTIME_FOUNDATION_ENABLED }}
       CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       OPERATION: ${{ inputs.operation }}
@@ -58,6 +73,7 @@ jobs:
     outputs:
       digest: ${{ steps.hash.outputs.digest }}
       apply_required: ${{ steps.plan-review.outputs.apply_required }}
+      interface_json: ${{ steps.status.outputs.interface_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,7 +91,8 @@ jobs:
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
-      - run: python scripts/infra/runtime_foundation.py preflight
+      - id: status
+        run: python scripts/infra/runtime_foundation.py preflight
       - name: Verify protected existing state bucket
         run: python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -112,7 +129,7 @@ jobs:
         run: |
           echo 'Review the new symmetric rotated KMS key, its policy and alias, the restricted operator role/trust, exact ownership and saved-plan SHA256. One key costs USD 1/month, hourly prorated, plus requests and future rotations. No existing keys or bootstrap IAM are changed; this plan creates no EKS, NAT, runner or databases.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-FOUNDATION'
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-FOUNDATION' && needs.plan.outputs.apply_required == 'true'
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -122,6 +139,8 @@ jobs:
       id-token: write
       actions: read
     env: *foundation-env
+    outputs:
+      interface_json: ${{ steps.verify.outputs.interface_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -173,6 +192,7 @@ jobs:
           unset-current-credentials: true
           translate-env-variables: false
       - name: Apply the saved plan, verify live key and operator and require zero drift
+        id: verify
         env:
           APPLY_REQUIRED: ${{ needs.plan.outputs.apply_required }}
         run: |

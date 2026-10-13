@@ -8,7 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'scripts/infra'))
 from iam_contract import ACCOUNT
-from network_seed import ADDRESSES, inputs, plan_review, state_vpc, verify_seed, session_policy, creation_probe
+from network_seed import ADDRESSES, inputs, plan_review, state_vpc, verify_seed, session_policy, creation_probe, existing_seed
 from test_safety import fixture
 
 
@@ -77,6 +77,29 @@ class SeedTests(unittest.TestCase):
         self.assertIn('ec2:CreateVpc', actions)
         self.assertFalse(actions & {'ec2:CreateSecurityGroup', 'ec2:CreateNatGateway', 'eks:CreateCluster', 'iam:CreateRole', 'rds:CreateDBInstance', 'ec2:DeleteVpc'})
         self.assertFalse(any(a.startswith(('iam:', 'kms:')) for a in actions))
+
+    def test_read_session_cannot_create_modify_or_write_native_state(self):
+        cap=json.loads(session_policy(False))
+        actions={a for r in cap['Statement'] for a in (r['Action'] if isinstance(r['Action'],list) else [r['Action']])}
+        self.assertFalse(actions & {'ec2:CreateVpc','ec2:CreateTags','ec2:ModifyVpcAttribute'})
+        state=next(r for r in cap['Statement'] if r['Resource'].endswith('/terraform.tfstate'))
+        self.assertEqual(state['Action'],['s3:GetObject'])
+
+    def test_existing_seed_reuses_native_ids_and_never_plans_seed_root_over_full_platform(self):
+        def call(service,operation,*args):
+            if operation=='describe-vpc-attribute':
+                key='EnableDnsSupport' if args[-1]=='enableDnsSupport' else 'EnableDnsHostnames'
+                return {key:{'Value':True}}
+            return self.call(service,operation,*args)
+        self.assertIsNone(existing_seed({},self.values,call))
+        state=self.state()
+        # Additional known platform state is retained; only the VPC is read here.
+        state['resources'].append(dict(mode='managed',module='module.eks',type='aws_eks_cluster',name='this',instances=[dict(attributes={'id':'banking-dev'})]))
+        result=existing_seed(state,self.values,call)
+        self.assertTrue(result['verified']);self.assertEqual(result['vpc_id'],self.info['vpc_id'])
+        state['resources'][-1]['name']='retail'
+        with self.assertRaises(ValueError):existing_seed(state,self.values,call)
+        with self.assertRaises(ValueError):existing_seed(dict(resources=[self.state()['resources'][0]]),self.values,call)
 
     def test_workflow_preserves_two_reviews_and_exact_binary(self):
         source = (ROOT / '.github/workflows/network-prerequisites.yml').read_text()

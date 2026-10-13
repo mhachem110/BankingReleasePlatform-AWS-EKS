@@ -155,7 +155,9 @@ if __name__=='__main__':
         with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('session_policy='+session_policy()+'\n')
     elif args.command=='write-cap':
         with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('session_policy='+session_policy(True)+'\n')
-    elif args.command=='preflight':Path('foundation-preflight.json').write_text(json.dumps(preflight(),indent=2))
+    elif args.command=='preflight':
+        report=preflight();Path('foundation-preflight.json').write_text(json.dumps(report,indent=2))
+        with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('interface_json='+json.dumps({k:report[k] for k in ['verified','kms_key_arn','operator_role_arn'] if k in report},separators=(',',':'))+'\n')
     elif args.command=='plan':
         report=plan_review(json.loads(Path('foundation-plan.json').read_text()));report['saved_plan_sha256']=hashlib.sha256(Path('foundation.tfplan').read_bytes()).hexdigest();Path('foundation-plan-review.json').write_text(json.dumps(report,indent=2));print(json.dumps(report,indent=2))
         with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('apply_required='+str(report['managed_creates'] > 0).lower()+'\n')
@@ -163,4 +165,6 @@ if __name__=='__main__':
         require(config==json.loads(Path('reviewed/foundation-config.json').read_text()) and backend()==json.loads(Path('reviewed/foundation.tfbackend.json').read_text()),'Reviewed foundation inputs/backend changed')
         report=json.loads(Path('reviewed/foundation-plan-review.json').read_text());require(hashlib.sha256(Path('reviewed/foundation.tfplan').read_bytes()).hexdigest()==report['saved_plan_sha256']==os.environ.get('REVIEWED_DIGEST'),'Saved binary digest differs')
         require(plan_review(json.loads(Path('foundation-plan.json').read_text()))=={k:v for k,v in report.items() if k!='saved_plan_sha256'},'Saved plan differs from reviewed source')
-    else:Path('foundation-verification.json').write_text(json.dumps(verify(json.loads(Path('foundation-outputs.json').read_text())),indent=2))
+    else:
+        report=verify(json.loads(Path('foundation-outputs.json').read_text()));Path('foundation-verification.json').write_text(json.dumps(report,indent=2))
+        with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('interface_json='+json.dumps(report,separators=(',',':'))+'\n')

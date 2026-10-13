@@ -32,7 +32,7 @@ def inputs(env):
     return dict(values, aws_region=REGION, expected_account_id=ACCOUNT, state_bucket_name=BUCKET)
 
 
-def session_policy():
+def session_policy(write=True):
     """A restrictive inline cap, not an underlying role permission addition."""
     bucket = "arn:aws:s3:::" + BUCKET
     vpc = f"arn:aws:ec2:{REGION}:{ACCOUNT}:vpc/*"
@@ -50,6 +50,11 @@ def session_policy():
         {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": bucket + "/" + STATE_KEY},
         {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": bucket + "/" + STATE_KEY + ".tflock"},
     ]
+    if not write:
+        rows = [r for r in rows if not str(r['Action']).startswith('ec2:Create') and r['Action'] != 'ec2:ModifyVpcAttribute']
+        for row in rows:
+            if row['Resource'] == bucket + '/' + STATE_KEY:
+                row['Action'] = ['s3:GetObject']
     value = json.dumps({"Version": "2012-10-17", "Statement": rows}, separators=(",", ":"))
     require(len(value) <= 2048, "VPC-only inline STS cap exceeds AWS limit")
     return value
@@ -92,7 +97,7 @@ def aws(service, operation, *args):
 def policy_check(values, call=aws):
     identity = call("sts", "get-caller-identity")
     require(identity.get("Account") == ACCOUNT and identity.get("Arn", "").startswith(f"arn:aws:sts::{ACCOUNT}:assumed-role/cloudbatch818-mahmoud-cloudops-bootstrap/"), "Wrong OIDC seed identity")
-    doc = json.loads(session_policy())
+    doc = json.loads(session_policy(os.environ.get('WRITE_PROBE') == 'true'))
     Path("seed-policy-review.json").write_text(json.dumps({"roleArn": BOOTSTRAP, "sha256": digest(doc), "document": doc, "capOnly": True}, indent=2))
     Path("seed-oidc-identity.json").write_text(json.dumps(identity, indent=2))
 
@@ -124,11 +129,34 @@ def load_state():
     folder = Path("artifacts/seed-state-read").resolve(); folder.mkdir(parents=True, exist_ok=True)
     target = folder / "state.json"
     try:
-        subprocess.run(["aws", "s3api", "get-object", "--bucket", BUCKET, "--key", STATE_KEY,
-                        "--expected-bucket-owner", ACCOUNT, "--region", REGION, str(target)], capture_output=True, text=True, check=True)
+        result = subprocess.run(["aws", "s3api", "get-object", "--bucket", BUCKET, "--key", STATE_KEY,
+                        "--expected-bucket-owner", ACCOUNT, "--region", REGION, str(target)], capture_output=True, text=True, timeout=60)
+        if result.returncode:
+            require('(NoSuchKey)' in result.stderr, 'Cannot read platform state: ' + result.stderr.strip())
+            return {}
         return json.loads(target.read_text())
     finally:
         if target.exists(): target.unlink()
+
+
+def existing_seed(state, values, call=aws):
+    """Reuse the owned VPC without ever planning the smaller seed root over EKS."""
+    from cleanup_guard import rows, inventory
+    managed = rows(state)
+    if not managed:
+        return None
+    addresses = {r['address'] for r in managed}
+    require(ADDRESSES <= addresses <= inventory('platform'), 'Unknown or incomplete VPC state; no automatic adoption or recreation')
+    vpc = next(r['values'] for r in managed if r['address'] == 'module.network.aws_vpc.this')
+    info = dict(account=ACCOUNT, region=REGION, state_key=STATE_KEY, vpc_id=vpc['id'],
+                default_security_group_id=vpc['default_security_group_id'])
+    # Inspect only the seed resources; the full platform stage checks the rest.
+    seed_state = dict(state, resources=[r for r in state['resources'] if r.get('mode')=='managed' and
+        ((r.get('module','')+'.' if r.get('module') else '')+r['type']+'.'+r['name']) in ADDRESSES])
+    verify_seed({'NETWORK_SEED_REVIEW_JSON':json.dumps(info)}, values, seed_state, call)
+    for attribute, key in [('enableDnsSupport','EnableDnsSupport'),('enableDnsHostnames','EnableDnsHostnames')]:
+        require(call('ec2','describe-vpc-attribute','--vpc-id',vpc['id'],'--attribute',attribute).get(key,{}).get('Value') is True, 'Live VPC DNS drift')
+    return dict(info, verified=True, dns_support=True, dns_hostnames=True, tags=vpc['tags'])
 
 
 def verify_seed(env, values, state=None, call=aws):
@@ -150,20 +178,28 @@ def verify_seed(env, values, state=None, call=aws):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(); parser.add_argument("command", choices=["inputs", "preflight", "plan", "verify"])
+    parser = argparse.ArgumentParser(); parser.add_argument("command", choices=["inputs", "preflight", "plan", "verify", "status", "write-cap"])
     args = parser.parse_args()
     values = inputs(os.environ)
     if args.command == "inputs":
         Path("platform.tfvars.json").write_text(json.dumps(values, indent=2))
         with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-            out.write("session_policy=" + session_policy() + "\n")
+            out.write("session_policy=" + session_policy(False) + "\n")
+    elif args.command == 'write-cap':
+        with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('session_policy='+session_policy(True)+'\n')
+    elif args.command == 'status':
+        report = existing_seed(load_state(), values)
+        if report:Path('seed-verification.json').write_text(json.dumps(report,indent=2))
+        with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+            out.write('existing='+str(report is not None).lower()+'\n')
+            out.write('interface_json='+json.dumps(report or {},separators=(',',':'))+'\n')
     elif args.command == "preflight":
         policy_check(values)
         from preflight import overlaps
         vpcs = aws("ec2", "describe-vpcs")["Vpcs"]
         overlaps(values["vpc_cidr"], vpcs)
         require(not any(any(t.get("Key") == "Name" and t.get("Value") == "banking-dev-vpc" for t in v.get("Tags", [])) for v in vpcs), "Banking VPC name already exists; stop without adoption or repair")
-        probe = creation_probe(values)
+        probe = creation_probe(values) if os.environ.get('WRITE_PROBE') == 'true' else {'api':'ec2:CreateVpc','dryRun':False,'resourcesCreated':0,'status':'Not called from read-only planning session'}
         Path("seed-preflight.json").write_text(json.dumps({"vpcCountBefore": len(vpcs), "cidr": values["vpc_cidr"], "creationAuthorization": probe}, indent=2))
         print(json.dumps(probe))
     elif args.command == "plan":
@@ -179,3 +215,4 @@ if __name__ == "__main__":
         for attribute, key in (("enableDnsSupport", "EnableDnsSupport"), ("enableDnsHostnames", "EnableDnsHostnames")):
             require(aws("ec2", "describe-vpc-attribute", "--vpc-id", vpc["id"], "--attribute", attribute).get(key, {}).get("Value") is True, "Live VPC DNS attribute differs from plan")
         Path("seed-verification.json").write_text(json.dumps(dict(report, dns_support=True, dns_hostnames=True, tags=vpc["tags"], verified=True), indent=2))
+        with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('interface_json='+json.dumps(dict(report,verified=True),separators=(',',':'))+'\n')
