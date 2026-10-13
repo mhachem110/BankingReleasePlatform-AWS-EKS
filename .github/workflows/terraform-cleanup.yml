@@ -1,7 +1,12 @@
-name: Reviewed Banking test VPC destroy
+name: Reviewed Banking project cleanup
 on:
   workflow_dispatch:
     inputs:
+      target:
+        type: choice
+        options: [vpc-seed, policy-prerequisites]
+        default: vpc-seed
+        description: 'Only the verified test VPC or unused project policies'
       operation:
         type: choice
         options: [plan, apply]
@@ -10,11 +15,11 @@ on:
       approval:
         type: string
         default: ''
-        description: 'Apply only: DESTROY-REVIEWED-BANKING-VPC-SEED'
+        description: 'Apply only: DESTROY-REVIEWED-BANKING-VPC-SEED or DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES'
 permissions:
   contents: read
 concurrency:
-  group: banking-dev-platform
+  group: ${{ inputs.target == 'policy-prerequisites' && 'banking-shared-iam-prerequisites' || 'banking-dev-platform' }}
   cancel-in-progress: false
 env:
   AWS_EC2_METADATA_DISABLED: 'true'
@@ -51,7 +56,7 @@ jobs:
       CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       NETWORK_SEED_REVIEW_JSON: ${{ vars.NETWORK_SEED_REVIEW_JSON }}
-      TARGET: vpc-seed
+      TARGET: ${{ inputs.target }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
     outputs:
@@ -70,7 +75,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
           audience: sts.amazonaws.com
-          role-session-name: banking-vpc-cleanup-plan
+          role-session-name: banking-cleanup-plan
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
@@ -97,7 +102,7 @@ jobs:
         run: echo "digest=$(sha256sum cleanup.tfplan | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: banking-vpc-cleanup-reviewed-plan
+          name: banking-cleanup-reviewed-plan
           path: |
             cleanup.tfplan
             cleanup.tfbackend.json
@@ -110,9 +115,9 @@ jobs:
           if-no-files-found: error
       - name: Publish destroy review instructions
         run: |
-          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256 and actual VPC ownership before approving apply. Only the verified test VPC and its local Terraform guard may be deleted. Backend, shared IAM and unrelated resources are retained.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership and dependent states before approving apply. Only the verified VPC seed or unused project policies may be deleted. Backend and unrelated/shared IAM remain intact.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED'
+    if: inputs.operation == 'apply' && ((inputs.target == 'vpc-seed' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED') || (inputs.target == 'policy-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES'))
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -132,7 +137,7 @@ jobs:
         run: python scripts/infra/cleanup_guard.py inputs
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: banking-vpc-cleanup-reviewed-plan
+          name: banking-cleanup-reviewed-plan
           path: reviewed
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -140,7 +145,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
           audience: sts.amazonaws.com
-          role-session-name: banking-vpc-cleanup-inspect
+          role-session-name: banking-cleanup-inspect
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
@@ -161,14 +166,14 @@ jobs:
           terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/reviewed/cleanup.tfplan" > cleanup-plan.json
           python scripts/infra/cleanup_guard.py saved
       - id: delete-cap
-        run: python scripts/infra/cleanup_guard.py vpc-cap
+        run: python scripts/infra/cleanup_guard.py delete-cap
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
           audience: sts.amazonaws.com
-          role-session-name: banking-vpc-cleanup-apply
+          role-session-name: banking-cleanup-apply
           inline-session-policy: ${{ steps.delete-cap.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
@@ -181,7 +186,7 @@ jobs:
           python scripts/infra/cleanup_guard.py verify
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: banking-vpc-cleanup-verification
+          name: banking-cleanup-verification
           path: cleanup-verification.json
           retention-days: 7
           if-no-files-found: error

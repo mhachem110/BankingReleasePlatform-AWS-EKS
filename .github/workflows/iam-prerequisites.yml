@@ -22,7 +22,7 @@ env:
   TF_IN_AUTOMATION: 'true'
 jobs:
   prerequisites:
-    if: github.ref == 'refs/heads/dev' && vars.IAM_PREREQUISITES_ENABLED == 'true'
+    if: github.ref == 'refs/heads/dev' && vars.IAM_PREREQUISITES_ENABLED == 'true' && vars.AWS_OPERATIONS_ENABLED == 'true' && vars.CLEANUP_ENABLED != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

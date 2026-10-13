@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'scripts/infra'))
-from cleanup_guard import inputs, state_review, plan_review, preflight, read_policy, vpc_delete_cap, aws
+from cleanup_guard import inputs, state_review, plan_review, preflight, read_policy, vpc_delete_cap, policy_delete_cap, aws
 from iam_contract import ACCOUNT, REGION, BOOTSTRAP, BUCKET
 
 
@@ -77,6 +77,24 @@ class CleanupTests(unittest.TestCase):
         result = subprocess.CompletedProcess([], 255, '', 'An error occurred (AccessDenied): denied')
         with patch('cleanup_guard.subprocess.run', return_value=result), self.assertRaises(RuntimeError):
             aws('ec2', 'describe-vpcs', absent_codes=('InvalidVpcID.NotFound',))
+
+    def test_unused_policy_cleanup_has_exact_arns_and_no_role_deletion(self):
+        from policy_prerequisites import POLICIES, document
+        env = dict(self.env, TARGET='policy-prerequisites', NETWORK_SEED_REVIEW_JSON='')
+        config = inputs(env)
+        state = dict(lineage='policy-lineage', serial=1, resources=[dict(mode='managed', type='terraform_data', name='authorization', instances=[dict(attributes=dict(id='local'))])])
+        state['resources'].append(dict(mode='managed', type='aws_iam_policy', name='project', instances=[dict(index_key=k, attributes=dict(id=arn, arn=arn, policy=json.dumps(document(k)), tags=dict(Project='BankingReleasePlatform', Environment='shared', ManagedBy='Terraform'))) for k, (arn, _) in POLICIES.items()]))
+        report = state_review(state, config, env)
+        self.assertEqual(len(report['inventory']), 3)
+        cap = policy_delete_cap(config); self.assertLessEqual(len(cap), 2048)
+        delete = next(r for r in json.loads(cap)['Statement'] if r['Action'] == 'iam:DeletePolicy')
+        self.assertEqual(set(delete['Resource']), {v[0] for v in POLICIES.values()})
+        self.assertEqual(delete['Condition']['StringEquals']['aws:ResourceTag/Project'], 'BankingReleasePlatform')
+        def call(service, operation, *args, **kwargs):
+            self.assertEqual(operation, 'get-policy')
+            return dict(Policy=dict(Arn=args[1], AttachmentCount=0, PermissionsBoundaryUsageCount=3))
+        with patch('cleanup_guard.check_identity', return_value={}), patch('cleanup_guard.other_state_empty'), patch('cleanup_guard.aws', side_effect=call), self.assertRaisesRegex(ValueError, 'in use'):
+            preflight(config, report, env)
 
 
 if __name__ == '__main__':
