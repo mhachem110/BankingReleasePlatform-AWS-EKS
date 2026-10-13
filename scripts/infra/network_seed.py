@@ -7,20 +7,52 @@ import os
 from pathlib import Path
 import subprocess
 from iam_contract import ACCOUNT, REGION, BOOTSTRAP, BUCKET, digest, require
-from guard import configuration, STATE_KEY
-from provisioner_policies import vpc_seed
+from guard import STATE_KEY
 
-POLICY = f"arn:aws:iam::{ACCOUNT}:policy/BankingTerraformProvisioner-VpcSeed"
 ADDRESSES = {"terraform_data.prerequisites", "module.network.aws_vpc.this"}
 
 
 def inputs(env):
+    require(env.get("GITHUB_REF") == "refs/heads/dev" and env.get("AWS_OPERATIONS_ENABLED") == "true", "Run only authorized reviewed dev")
     require(env.get("NETWORK_SEED_ENABLED") == "true", "VPC seed needs separate authorization")
-    changed = dict(env)
-    if changed.get("OPERATION") == "apply":
+    require(env.get("BOOTSTRAP_STATE_READY") == "true", "Verified backend required")
+    require(env.get("ROLE_ARN") == BOOTSTRAP, "Use the single exact bootstrap identity")
+    require(env.get("AWS_REGION") == REGION and env.get("AWS_EXPECTED_ACCOUNT_ID") == ACCOUNT and env.get("TF_STATE_BUCKET") == BUCKET, "Wrong account/Region/backend")
+    require(env.get("OPERATION") in {"plan", "apply"}, "No destroy, import or state repair")
+    if env["OPERATION"] == "apply":
         require(env.get("APPROVAL") == "APPLY-REVIEWED-BANKING-VPC-SEED", "Separate VPC apply approval required")
-        changed["APPROVAL"] = "APPLY-REVIEWED-PHASE3-PLAN"
-    return configuration(changed)
+    values = json.loads(env.get("VPC_SEED_INPUTS_JSON") or "{}")
+    require(isinstance(values, dict) and not set(values) - {"vpc_cidr", "owner", "cost_center"}, "Only VPC CIDR and ownership tags belong in this stage")
+    values.setdefault("vpc_cidr", "10.70.0.0/16")
+    values.setdefault("owner", "MahmoudHachem")
+    require(values["vpc_cidr"] == "10.70.0.0/16", "Use the reviewed Banking CIDR")
+    for field in ("owner", "cost_center"):
+        value = values.get(field)
+        require(value is None and field == "cost_center" or isinstance(value, str) and 0 < len(value.strip()) <= 128 and value == value.strip() and "REPLACE" not in value.upper(), "Use actual ownership tags")
+    return dict(values, aws_region=REGION, expected_account_id=ACCOUNT, state_bucket_name=BUCKET)
+
+
+def session_policy():
+    """A restrictive inline cap, not an underlying role permission addition."""
+    bucket = "arn:aws:s3:::" + BUCKET
+    vpc = f"arn:aws:ec2:{REGION}:{ACCOUNT}:vpc/*"
+    rows = [
+        {"Effect": "Allow", "Action": ["sts:GetCallerIdentity", "ec2:DescribeVpcs", "ec2:DescribeVpcAttribute", "ec2:DescribeSecurityGroups", "ec2:DescribeNetworkAcls", "ec2:DescribeRouteTables", "ec2:DescribeTags"], "Resource": "*"},
+        {"Effect": "Allow", "Action": "ec2:CreateVpc", "Resource": vpc,
+         "Condition": {"StringEquals": {"aws:RequestedRegion": REGION, "aws:RequestTag/Project": "BankingReleasePlatform", "aws:RequestTag/Environment": "dev", "aws:RequestTag/ManagedBy": "Terraform", "aws:RequestTag/Name": "banking-dev-vpc"}}},
+        {"Effect": "Allow", "Action": "ec2:CreateTags", "Resource": vpc,
+         "Condition": {"StringEquals": {"ec2:CreateAction": "CreateVpc", "aws:RequestedRegion": REGION}}},
+        {"Effect": "Allow", "Action": "ec2:ModifyVpcAttribute", "Resource": vpc,
+         "Condition": {"StringEquals": {"aws:RequestedRegion": REGION, "aws:ResourceTag/Project": "BankingReleasePlatform", "aws:ResourceTag/Name": "banking-dev-vpc"}}},
+        {"Effect": "Allow", "Action": ["s3:GetBucketLocation", "s3:GetBucketVersioning", "s3:GetEncryptionConfiguration", "s3:GetBucketPublicAccessBlock", "s3:GetBucketPolicy", "s3:GetBucketOwnershipControls", "s3:GetLifecycleConfiguration"], "Resource": bucket},
+        {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": bucket,
+         "Condition": {"StringLike": {"s3:prefix": ["banking-release-platform/dev/platform/*", "banking-release-platform/_workspaces/*"]}}},
+        {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": bucket + "/" + STATE_KEY},
+        {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": bucket + "/" + STATE_KEY + ".tflock"},
+    ]
+    value = json.dumps({"Version": "2012-10-17", "Statement": rows}, separators=(",", ":"))
+    require(len(value) <= 2048, "VPC-only inline STS cap exceeds AWS limit")
+    return value
 
 
 def interface(env):
@@ -34,7 +66,7 @@ def interface(env):
 
 
 def plan_review(plan, values, effective_tags=True):
-    require(plan.get("applyable") and isinstance(plan.get("complete"), bool) and not plan.get("errored") and not plan.get("deferred_changes"), "Applicable targeted seed plan without deferred changes required")
+    require(plan.get("applyable") and plan.get("complete") is True and not plan.get("errored") and not plan.get("deferred_changes"), "Complete VPC-only seed plan required")
     rows = [r for r in plan.get("resource_changes", []) if r.get("mode") == "managed"]
     require(len(rows) == 2 and {r["address"] for r in rows} == ADDRESSES, "Seed may create only the VPC and local prerequisite guard")
     require(all(r["change"]["actions"] == ["create"] and not r["change"].get("importing") and not r.get("previous_address") for r in rows), "No seed adoption, update or replacement")
@@ -52,16 +84,30 @@ def plan_review(plan, values, effective_tags=True):
 
 
 def aws(service, operation, *args):
-    require(operation in {"get-caller-identity", "describe-vpcs", "describe-security-groups", "get-policy", "get-policy-version"}, "Outside read-only seed inspection")
+    require(operation in {"get-caller-identity", "describe-vpcs", "describe-vpc-attribute", "describe-security-groups"}, "Outside read-only seed inspection")
     run = subprocess.run(["aws", service, operation, *args, "--region", REGION, "--output", "json"], capture_output=True, text=True, encoding="utf-8", check=True)
     return json.loads(run.stdout)
 
 
 def policy_check(values, call=aws):
-    meta = call("iam", "get-policy", "--policy-arn", POLICY)["Policy"]
-    doc = call("iam", "get-policy-version", "--policy-arn", POLICY, "--version-id", meta["DefaultVersionId"])["PolicyVersion"]["Document"]
-    require(digest(doc) == digest(vpc_seed(values["kms_key_arn"])), "Seed session cap differs from the exact scoped source proposal")
-    Path("seed-policy-review.json").write_text(json.dumps({"arn": POLICY, "sha256": digest(doc), "version": meta["DefaultVersionId"], "document": doc}, indent=2))
+    identity = call("sts", "get-caller-identity")
+    require(identity.get("Account") == ACCOUNT and identity.get("Arn", "").startswith(f"arn:aws:sts::{ACCOUNT}:assumed-role/cloudbatch818-mahmoud-cloudops-bootstrap/"), "Wrong OIDC seed identity")
+    doc = json.loads(session_policy())
+    Path("seed-policy-review.json").write_text(json.dumps({"roleArn": BOOTSTRAP, "sha256": digest(doc), "document": doc, "capOnly": True}, indent=2))
+    Path("seed-oidc-identity.json").write_text(json.dumps(identity, indent=2))
+
+
+def creation_probe(values, run=subprocess.run):
+    tags = {"Project": "BankingReleasePlatform", "Environment": "dev", "ManagedBy": "Terraform", "Owner": values["owner"], "Purpose": "CloudEngineerTraining", "Component": "network", "Name": "banking-dev-vpc"}
+    if values.get("cost_center") is not None:
+        tags["CostCenter"] = values["cost_center"]
+    specification = [{"ResourceType": "vpc", "Tags": [{"Key": k, "Value": v} for k, v in tags.items()]}]
+    command = ["aws", "ec2", "create-vpc", "--dry-run", "--cidr-block", values["vpc_cidr"], "--instance-tenancy", "default",
+               "--tag-specifications", json.dumps(specification), "--region", REGION, "--output", "json", "--no-cli-pager"]
+    result = run(command, capture_output=True, text=True, encoding="utf-8", timeout=60)
+    require(result.returncode != 0 and "(DryRunOperation)" in result.stderr,
+            "VPC creation authorization dry-run failed; nothing was provisioned by this probe: " + result.stderr.strip())
+    return {"api": "ec2:CreateVpc", "dryRun": True, "authorized": True, "resourcesCreated": 0}
 
 
 def state_vpc(state):
@@ -110,12 +156,16 @@ if __name__ == "__main__":
     if args.command == "inputs":
         Path("platform.tfvars.json").write_text(json.dumps(values, indent=2))
         with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-            out.write("session_policy_arn=" + POLICY + "\n")
+            out.write("session_policy=" + session_policy() + "\n")
     elif args.command == "preflight":
         policy_check(values)
-        require(aws("sts", "get-caller-identity").get("Arn", "").startswith(f"arn:aws:sts::{ACCOUNT}:assumed-role/cloudbatch818-mahmoud-cloudops-bootstrap/"), "Wrong seed identity")
         from preflight import overlaps
-        overlaps(values.get("vpc_cidr", "10.70.0.0/16"), aws("ec2", "describe-vpcs")["Vpcs"])
+        vpcs = aws("ec2", "describe-vpcs")["Vpcs"]
+        overlaps(values["vpc_cidr"], vpcs)
+        require(not any(any(t.get("Key") == "Name" and t.get("Value") == "banking-dev-vpc" for t in v.get("Tags", [])) for v in vpcs), "Banking VPC name already exists; stop without adoption or repair")
+        probe = creation_probe(values)
+        Path("seed-preflight.json").write_text(json.dumps({"vpcCountBefore": len(vpcs), "cidr": values["vpc_cidr"], "creationAuthorization": probe}, indent=2))
+        print(json.dumps(probe))
     elif args.command == "plan":
         report = plan_review(json.loads(Path("platform-plan.json").read_text()), values)
         report["savedPlanSha256"] = hashlib.sha256(Path("platform.tfplan").read_bytes()).hexdigest()
@@ -125,4 +175,7 @@ if __name__ == "__main__":
         vpc = state_vpc(state)
         info = {"account": ACCOUNT, "region": REGION, "state_key": STATE_KEY, "vpc_id": vpc["id"], "default_security_group_id": vpc["default_security_group_id"]}
         env = dict(os.environ, NETWORK_SEED_REVIEW_JSON=json.dumps(info))
-        Path("seed-verification.json").write_text(json.dumps(verify_seed(env, values, state), indent=2))
+        report = verify_seed(env, values, state)
+        for attribute, key in (("enableDnsSupport", "EnableDnsSupport"), ("enableDnsHostnames", "EnableDnsHostnames")):
+            require(aws("ec2", "describe-vpc-attribute", "--vpc-id", vpc["id"], "--attribute", attribute).get(key, {}).get("Value") is True, "Live VPC DNS attribute differs from plan")
+        Path("seed-verification.json").write_text(json.dumps(dict(report, dns_support=True, dns_hostnames=True, tags=vpc["tags"], verified=True), indent=2))

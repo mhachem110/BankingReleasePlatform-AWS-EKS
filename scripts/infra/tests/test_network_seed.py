@@ -8,17 +8,16 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'scripts/infra'))
 from iam_contract import ACCOUNT
-from network_seed import ADDRESSES, inputs, plan_review, state_vpc, verify_seed
-from provisioner_policies import vpc_seed
+from network_seed import ADDRESSES, inputs, plan_review, state_vpc, verify_seed, session_policy, creation_probe
 from test_safety import fixture
 
 
 class SeedTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        run = subprocess.run(['terraform', '-chdir=infra/environments/dev/platform', 'test', '-json', '-verbose'], cwd=ROOT, capture_output=True, text=True, check=True, timeout=90)
-        plan = next(json.loads(line)['test_plan'] for line in run.stdout.splitlines() if json.loads(line).get('type') == 'test_plan' and json.loads(line).get('@testrun') == 'vpc_seed_only')
-        cls.plan = dict(resource_changes=plan['resource_changes'], applyable=True, complete=False)
+        run = subprocess.run(['terraform', '-chdir=infra/network-seed', 'test', '-json', '-verbose'], cwd=ROOT, capture_output=True, text=True, check=True, timeout=90)
+        plan = next(json.loads(line)['test_plan'] for line in run.stdout.splitlines() if json.loads(line).get('type') == 'test_plan' and json.loads(line).get('@testrun') == 'vpc_without_iam_or_kms')
+        cls.plan = dict(resource_changes=plan['resource_changes'], applyable=True, complete=True)
         cls.values = inputs(dict(fixture(), NETWORK_SEED_ENABLED='true'))
         cls.info = dict(account=ACCOUNT, region='us-east-2', state_key='banking-release-platform/dev/platform/terraform.tfstate', vpc_id='vpc-0123456789abcdef0', default_security_group_id='sg-0123456789abcdef0')
         cls.env = dict(NETWORK_SEED_REVIEW_JSON=json.dumps(cls.info))
@@ -34,7 +33,7 @@ class SeedTests(unittest.TestCase):
         self.assertEqual(operation, 'describe-security-groups')
         return dict(SecurityGroups=[dict(GroupId=self.info['default_security_group_id'], VpcId=self.info['vpc_id'], GroupName='default', OwnerId=ACCOUNT)])
 
-    def test_actual_targeted_mock_plan_has_only_one_aws_vpc(self):
+    def test_independent_mock_plan_has_only_one_aws_vpc(self):
         result = plan_review(self.plan, self.values, effective_tags=False)
         self.assertEqual(result['inventory'], sorted(ADDRESSES))
         self.assertEqual(result['aws_vpcs'], 1)
@@ -72,15 +71,58 @@ class SeedTests(unittest.TestCase):
         inputs(dict(fixture(), NETWORK_SEED_ENABLED='true', OPERATION='apply', APPROVAL='APPLY-REVIEWED-BANKING-VPC-SEED'))
 
     def test_seed_session_cannot_create_security_groups_or_paid_resources(self):
-        actions = {a for row in vpc_seed(self.values['kms_key_arn'])['Statement'] for a in (row['Action'] if isinstance(row['Action'], list) else [row['Action']])}
+        cap = session_policy()
+        self.assertLessEqual(len(cap), 2048)
+        actions = {a for row in json.loads(cap)['Statement'] for a in (row['Action'] if isinstance(row['Action'], list) else [row['Action']])}
         self.assertIn('ec2:CreateVpc', actions)
-        self.assertFalse(actions & {'ec2:CreateSecurityGroup', 'ec2:CreateNatGateway', 'eks:CreateCluster', 'iam:CreateRole', 'rds:CreateDBInstance'})
+        self.assertFalse(actions & {'ec2:CreateSecurityGroup', 'ec2:CreateNatGateway', 'eks:CreateCluster', 'iam:CreateRole', 'rds:CreateDBInstance', 'ec2:DeleteVpc'})
+        self.assertFalse(any(a.startswith(('iam:', 'kms:')) for a in actions))
 
     def test_workflow_preserves_two_reviews_and_exact_binary(self):
         source = (ROOT / '.github/workflows/network-prerequisites.yml').read_text()
         self.assertEqual(source.count('environment: bootstrap'), 2)
-        for text in ('APPLY-REVIEWED-BANKING-VPC-SEED', 'sha256sum --check --strict', 'cmp seed-policy-review.json reviewed/seed-policy-review.json', '-target=module.network.aws_vpc.this', 'network_seed.py verify'):
+        for text in ('APPLY-REVIEWED-BANKING-VPC-SEED', 'sha256sum --check --strict', 'cmp seed-policy-review.json reviewed/seed-policy-review.json', 'root=infra/network-seed', 'inline-session-policy:', 'network_seed.py verify'):
             self.assertIn(text, source)
+        self.assertNotIn('-target=', source)
+        self.assertNotIn('managed-session-policies:', source)
+
+    def test_vpc_inputs_do_not_require_iam_key_or_access_roles(self):
+        minimal = {k: v for k, v in fixture().items() if k in {'GITHUB_REF', 'AWS_OPERATIONS_ENABLED', 'BOOTSTRAP_STATE_READY', 'ROLE_ARN', 'AWS_REGION', 'AWS_EXPECTED_ACCOUNT_ID', 'TF_STATE_BUCKET', 'OPERATION'}}
+        actual = inputs(dict(minimal, NETWORK_SEED_ENABLED='true'))
+        self.assertEqual(actual['vpc_cidr'], '10.70.0.0/16')
+        for field in ('kms_key_arn', 'operator_role_arn', 'iam_boundary_policy_sha256'):
+            self.assertNotIn(field, actual)
+        with self.assertRaises(ValueError):
+            inputs(dict(minimal, NETWORK_SEED_ENABLED='true', VPC_SEED_INPUTS_JSON=json.dumps({'kms_key_arn': 'anything'})))
+
+    def test_cap_cannot_delete_state_or_modify_an_untagged_vpc(self):
+        cap = json.loads(session_policy())
+        delete = next(row for row in cap['Statement'] if 's3:DeleteObject' in row.get('Action', []))
+        self.assertTrue(delete['Resource'].endswith('.tflock'))
+        modify = next(row for row in cap['Statement'] if row['Action'] == 'ec2:ModifyVpcAttribute')
+        self.assertEqual(modify['Condition']['StringEquals']['aws:ResourceTag/Name'], 'banking-dev-vpc')
+
+    def test_seed_vpc_address_and_configuration_match_full_platform(self):
+        # Compare actual HCL VPC attributes, not an invented state migration.
+        from pathlib import Path
+        import re
+        sources = [(ROOT / path).read_text() for path in ['infra/modules/network/main.tf', 'infra/modules/vpc-seed/main.tf']]
+        bodies = [re.search(r'resource "aws_vpc" "this" \{(.*?)\n\}', source, re.S).group(1) for source in sources]
+        for attribute in ('cidr_block', 'enable_dns_support', 'enable_dns_hostnames', 'tags'):
+            rows = [next(line.strip() for line in body.splitlines() if line.strip().startswith(attribute + ' ')) for body in bodies]
+            self.assertEqual(rows[0], rows[1])
+
+    def test_authorization_probe_always_dry_runs_and_retains_aws_denials(self):
+        def allowed(command, **options):
+            self.assertIn('--dry-run', command)
+            self.assertEqual(command[0:3], ['aws', 'ec2', 'create-vpc'])
+            return subprocess.CompletedProcess(command, 255, '', 'An error occurred (DryRunOperation): Request would have succeeded')
+        self.assertTrue(creation_probe(self.values, allowed)['authorized'])
+        for error in ('UnauthorizedOperation', 'AccessDenied', 'VpcLimitExceeded'):
+            def denied(command, **options):
+                return subprocess.CompletedProcess(command, 255, '', 'An error occurred (' + error + ')')
+            with self.subTest(error=error), self.assertRaisesRegex(ValueError, error):
+                creation_probe(self.values, denied)
 
 
 if __name__ == '__main__':

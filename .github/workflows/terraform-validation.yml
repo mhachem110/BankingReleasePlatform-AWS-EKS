@@ -54,12 +54,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for root in infra/modules/state-bucket infra/bootstrap infra/environments/dev infra/modules/network infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
+          for root in infra/modules/state-bucket infra/bootstrap infra/environments/dev infra/modules/network infra/modules/vpc-seed infra/network-seed infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
             terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
             terraform -chdir="$root" validate
           done
           terraform -chdir=infra/modules/state-bucket test
-          for root in infra/modules/network infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
+          for root in infra/modules/network infra/network-seed infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
             terraform -chdir="$root" test
           done
           python -m unittest discover -s scripts/bootstrap/tests -v
