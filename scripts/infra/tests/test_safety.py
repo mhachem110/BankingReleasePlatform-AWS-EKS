@@ -32,7 +32,7 @@ class SafetyTests(unittest.TestCase):
         args = (values["expected_account_id"], "us-east-2", values["state_bucket_name"], values["kms_key_arn"])
         tags = admin.policies(*args)["BankingAdministratorTags.json"]
         self.assertTrue(all(t["ManagedBy"] == "Administrator" and "CostCenter" not in t for t in tags.values()))
-        self.assertEqual(tags, json.loads((ROOT / "iam/phase3/proposed/BankingAdministratorTags.json").read_text()))
+        self.assertEqual(tags, json.loads((ROOT / "infra/iam/phase3/proposed/BankingAdministratorTags.json").read_text()))
         alternate = admin.policies(*args, administrator_managed_by="ApprovedManual", cost_center="approved-test")["BankingAdministratorTags.json"]
         self.assertTrue(all(t["ManagedBy"] == "ApprovedManual" and t["CostCenter"] == "approved-test" for t in alternate.values()))
         with self.assertRaises(ValueError):
@@ -230,7 +230,7 @@ class SafetyTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("cost", ROOT / "scripts/infra/cost-estimate.py")
         cost = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cost)
-        result = cost.estimate(json.loads((ROOT / "docs/infrastructure/cost-model.json").read_text()))
+        result = cost.estimate(json.loads((ROOT / "infra/cost/cost-model.json").read_text()))
         self.assertEqual(result["subtotal_monthly_usd"], "240.61")
         self.assertIn("ALB/LCU/public IPv4 charges", result["excluded"])
 

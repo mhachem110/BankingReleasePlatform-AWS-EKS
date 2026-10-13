@@ -32,7 +32,7 @@ class CapacityCostTests(unittest.TestCase):
                 capacity.verify(dict(data, **{field:value}), data['account'], now)
 
     def test_duration_and_scaling_model(self):
-        model = json.loads((ROOT / 'docs/infrastructure/cost-model.json').read_text())
+        model = json.loads((ROOT / 'infra/cost/cost-model.json').read_text())
         result = cost.scenarios(model)
         self.assertEqual(result['initial_system']['duration_usd']['730'], '137.53')
         self.assertEqual(result['dev_only']['duration_usd']['730'], '180.06')

@@ -61,7 +61,7 @@ def service_boundary_inventory(call=read):
     if not isinstance(document, dict) or not document.get("Statement"):
         result["status"] = "UNVERIFIED"
         return result
-    proposal = Path(__file__).resolve().parents[2] / "iam/provisioning/proposed/BankingServicePermissionsBoundary.json"
+    proposal = Path(__file__).resolve().parents[2] / "infra/iam/provisioning/proposed/BankingServicePermissionsBoundary.json"
     result.update(status="PRESENT", observedSha256=digest(document),
                   proposalSha256=digest(json.loads(proposal.read_text(encoding="utf-8"))))
     result["matchesReviewedProposal"] = result["observedSha256"] == result["proposalSha256"]

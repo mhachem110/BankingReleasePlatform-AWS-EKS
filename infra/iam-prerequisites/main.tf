@@ -27,7 +27,7 @@ variable "boundary_policy_sha256" {
   }
 }
 locals {
-  proposal = "${path.module}/../../iam/phase3/proposed"
+  proposal = "${path.module}/../iam/phase3/proposed"
   tags     = { Project = "BankingReleasePlatform", Environment = "shared", ManagedBy = "Terraform", Owner = "MahmoudHachem", Purpose = "CloudEngineerTraining", Component = "service-iam" }
   roles = {
     cluster = "cloudbatch818-mahmoud-banking-eks-cluster"

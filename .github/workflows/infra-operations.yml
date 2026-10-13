@@ -131,7 +131,7 @@ jobs:
           if-no-files-found: error
       - name: Publish review instructions
         run: |
-          echo 'Review plan.txt, plan-review.json, the exact saved-plan SHA256, IAM approvals and docs/infrastructure/COSTS.md before approving the apply deployment.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review plan.txt, plan-review.json, the exact saved-plan SHA256, IAM approvals and infra/OPERATIONS.md cost guidance before approving the apply deployment.' >> "$GITHUB_STEP_SUMMARY"
   apply:
     if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-PHASE3-PLAN'
     needs: [prerequisites, plan]

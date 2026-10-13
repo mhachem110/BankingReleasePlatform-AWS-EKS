@@ -13,22 +13,21 @@ ROUTES = {
     "uat": frozenset({"stage"}),
     "main": frozenset({"uat"}),
 }
-APP_PREFIXES = ("apps/", "tests/", "docs/application/")
+APP_PREFIXES = ("apps/",)
 APP_FILES = frozenset({
     "README.md", ".dockerignore", "compose.yaml", "compose.yml",
     "BankingReleasePlatform.sln", "Directory.Build.props", "global.json",
     "scripts/smoke-test.ps1", "scripts/test-local.ps1",
 })
 # Owner-authored application release changes only; shared cloud ownership remains.
-APP_RELEASE_PREFIXES = ("helm/banking/", "scripts/deploy/", "docs/deployment/")
+APP_RELEASE_PREFIXES = ("helm/banking/", "scripts/deploy/")
 APP_RELEASE_FILES = frozenset({
     ".github/workflows/app-ci.yml", ".github/workflows/app-validation.yml",
     ".github/workflows/app-publish.yml", ".github/workflows/app-deploy.yml",
 })
 BOOTSTRAP_PREFIXES = (
     "infra/bootstrap/", "infra/backend/", "infra/modules/state-bucket/",
-    "scripts/bootstrap/", "docs/phase2/",
-    "iam/bootstrap/", "policies/bootstrap/",
+    "scripts/bootstrap/", "infra/iam/bootstrap/", "policies/bootstrap/",
 )
 BOOTSTRAP_FILES = frozenset({
     "README.md", ".gitignore", ".github/workflows/terraform-operations.yml",
@@ -37,11 +36,38 @@ BOOTSTRAP_FILES = frozenset({
 })
 CLOUD_PREFIXES = (
     "infra/", "helm/", ".github/", "scripts/bootstrap/", "scripts/infra/",
-    "scripts/deploy/", "scripts/governance/", "docs/governance/", "docs/phase2/",
-    "docs/security/", "docs/infrastructure/", "iam/", "policies/",
+    "scripts/deploy/", "scripts/governance/", "policies/",
     "config/aws/", "config/iam/",
 )
-CLOUD_FILES = frozenset({"AGENTS.md", ".gitignore"})
+CLOUD_FILES = frozenset({"AGENTS.md", ".gitignore", "scripts/README.md"})
+# Exact legacy documentation paths retained here only so infra PRs can move or
+# retire these historical files. A wildcard docs/ exception would weaken the
+# fail-closed path policy for future application and infrastructure changes.
+LEGACY_DOC_PATHS = frozenset({
+    "docs/architecture.md", "docs/assignment-requirements.md",
+    "docs/deployment/ARCHITECTURE.md", "docs/deployment/CHAT1-REQUIREMENTS.md",
+    "docs/deployment/DATA-AND-EVENTS.md", "docs/deployment/DEMO-PRESENTATION.md",
+    "docs/deployment/ENVIRONMENT.md", "docs/deployment/INCIDENTS.md",
+    "docs/deployment/offline-evidence.json", "docs/deployment/PHASE6-OFFLINE-REPORT.md",
+    "docs/deployment/README.md", "docs/deployment/REPORT.md", "docs/deployment/RUNBOOK.md",
+    "docs/governance/security-verification.md", "docs/governance/security.md",
+    "docs/infrastructure/ACCEPTANCE.md", "docs/infrastructure/ADMIN-REQUEST.md",
+    "docs/infrastructure/ARCHITECTURE.md", "docs/infrastructure/ASSIGNMENT-MAPPING.md",
+    "docs/infrastructure/CLEANUP.md", "docs/infrastructure/COSTS.md",
+    "docs/infrastructure/DATA-DEPLOYMENT.md", "docs/infrastructure/DEPLOYMENT.md",
+    "docs/infrastructure/FINAL-INTEGRATION.md", "docs/infrastructure/INDEX.md",
+    "docs/infrastructure/INTERFACE.md", "docs/infrastructure/PHASE6-OFFLINE.md",
+    "docs/infrastructure/PIPELINE-PRESENTATION.md", "docs/infrastructure/POLICY-PREREQUISITES.md",
+    "docs/infrastructure/PREPARATION-REPORT.md", "docs/infrastructure/PROJECT-PIPELINE.md",
+    "docs/infrastructure/READINESS-2026-10-12.md", "docs/infrastructure/RECONCILIATION.md",
+    "docs/infrastructure/REFERENCE-IAM-REVIEW.md", "docs/infrastructure/REPORT.md",
+    "docs/infrastructure/REQUIREMENTS.md", "docs/infrastructure/RESOURCE-INVENTORY.md",
+    "docs/infrastructure/RUNTIME-FOUNDATION.md", "docs/infrastructure/SHARED-CLUSTER.md",
+    "docs/infrastructure/SINGLE-PROVISIONER.md", "docs/infrastructure/TAGGING.md",
+    "docs/infrastructure/VPC-OIDC-TEST.md", "docs/phase-1-pr.md", "docs/phase-1-report.md",
+    "docs/phase2/BOOTSTRAP.md", "docs/phase2/COMPLETION.md", "docs/phase2/IAM.md",
+    "docs/phase2/REPORT.md", "docs/reference-project-review.md",
+})
 MAX_FILES = 3000  # GitHub's list-files endpoint limit; reject larger PRs.
 
 
@@ -75,7 +101,7 @@ def forbidden_artifact(path):
 def cloud_owned(path):
     name = PurePosixPath(path).name
     return (
-        path.startswith(CLOUD_PREFIXES) or path in CLOUD_FILES
+        path.startswith(CLOUD_PREFIXES) or path in CLOUD_FILES or path in LEGACY_DOC_PATHS
         or name == "CODEOWNERS" or name.endswith((".tf", ".tf.json", ".hcl"))
         or ".tfvars" in name or ".tfbackend" in name
     )

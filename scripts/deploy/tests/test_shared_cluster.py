@@ -82,7 +82,7 @@ class SharedClusterTests(unittest.TestCase):
                 isolation.verify_access(namespace, lambda *args, **kwargs: "error")
 
     def test_operator_rbac_has_no_cross_namespace_bindings_or_mutating_cluster_grants(self):
-        resources = list(yaml.safe_load_all((common.ROOT/"iam/phase3/deployer-verification-rbac.yaml").read_text()))
+        resources = list(yaml.safe_load_all((common.ROOT/"helm/banking/rbac/deployer-verification-rbac.yaml").read_text()))
         for item in resources:
             if item["kind"] == "Role":
                 self.assertIn(item["metadata"]["namespace"], ["banking-dev", "banking-prod"])
@@ -119,7 +119,7 @@ class SharedClusterTests(unittest.TestCase):
                 snapshot.compare(before, after | changes)
 
     def test_monitoring_discovery_and_rbac_are_separate_per_namespace(self):
-        folder = common.ROOT/"docs/deployment/monitoring"
+        folder = common.ROOT/"infra/monitoring"
         for namespace, prefix in [("banking-dev", ""), ("banking-prod", "prod-")]:
             config = yaml.safe_load((folder/(prefix+"prometheus.yml")).read_text(encoding="utf-8"))
             for job in config["scrape_configs"]:

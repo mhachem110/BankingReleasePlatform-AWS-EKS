@@ -79,7 +79,7 @@ if __name__ == '__main__':
         environment['BANKING_TEST_SQS'] = f'http://127.0.0.1:{port(sqs,4566)}/'
         await_ready(lambda: request(environment['BANKING_TEST_SQS'].rstrip('/'),'/_localstack/health')[0] == 200)
         # The console suite cannot skip absent fixtures and rejects non-loopback destinations.
-        suite = run(['dotnet','run','--project','tests/Banking.Integration','-c','Release','--no-restore'], env=environment)
+        suite = run(['dotnet','run','--project','apps/tests/Banking.Integration','-c','Release','--no-restore'], env=environment)
         (output/'database-messaging.log').write_text(suite, encoding='utf-8')
         print(suite, flush=True)
         suite_summary = json.loads(suite.splitlines()[-1])

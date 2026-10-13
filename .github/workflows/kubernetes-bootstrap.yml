@@ -80,7 +80,7 @@ jobs:
           kubectl apply --server-side -f helm/banking/namespaces/banking-dev.yaml
           kubectl apply --server-side -f helm/banking/namespaces/banking-prod.yaml
           kubectl apply --server-side -f helm/banking/namespaces/aws-observability.yaml
-          kubectl apply --server-side -f iam/phase3/deployer-verification-rbac.yaml
+          kubectl apply --server-side -f helm/banking/rbac/deployer-verification-rbac.yaml
           python scripts/infra/install_controller.py
           python scripts/infra/prepare_database.py
           python scripts/infra/kubernetes_bootstrap.py verify

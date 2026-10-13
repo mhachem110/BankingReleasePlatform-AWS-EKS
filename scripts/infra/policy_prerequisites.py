@@ -12,7 +12,7 @@ KEY = 'banking-release-platform/shared/policy-prerequisites/terraform.tfstate'
 CAP = f'arn:aws:iam::{ACCOUNT}:policy/BankingTerraformProvisioner-IamPrerequisites'
 POLICIES = {'boundary': (BOUNDARY, 'BankingServicePermissionsBoundary.json'),
             'iam_cap': (CAP, 'BankingTerraformProvisioner-IamPrerequisites.json')}
-FOLDER = Path(__file__).resolve().parents[2] / 'iam/provisioning/proposed'
+FOLDER = Path(__file__).resolve().parents[2] / 'infra/iam/provisioning/proposed'
 TAGS = dict(Project='BankingReleasePlatform', Environment='shared', ManagedBy='Terraform', Owner='MahmoudHachem', Purpose='CloudEngineerTraining', Component='policy-iam')
 
 

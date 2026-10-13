@@ -20,7 +20,7 @@ ROOT = "infra/runtime-prerequisites"
 NAMES = {"dev": "BankingReleasePlatformPhase6Session", "prod": "BankingReleasePlatformPhase6ProdSession"}
 TAGS = {"Project": "BankingReleasePlatform", "ManagedBy": "Terraform", "Owner": "MahmoudHachem"}
 CONTROLLER = f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-alb-controller"
-CONTROLLER_POLICY = json.loads((Path(__file__).resolve().parents[2] / "iam/phase3/aws-load-balancer-controller-v2.14.1.json").read_text())
+CONTROLLER_POLICY = json.loads((Path(__file__).resolve().parents[2] / "infra/iam/phase3/aws-load-balancer-controller-v2.14.1.json").read_text())
 FARGATE = f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-fargate-execution"
 
 

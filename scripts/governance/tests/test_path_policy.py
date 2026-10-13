@@ -24,9 +24,9 @@ def file(path, status="modified", previous=None):
 
 class ScopeTests(unittest.TestCase):
     def test_application_paths(self):
-        for path in ["apps/Account.Api/Program.cs", "tests/Payment.Api.Tests/Test.cs",
+        for path in ["apps/Account.Api/Program.cs", "apps/tests/Payment.Api.Tests/Test.cs",
                      "apps/Payment.Api/Dockerfile", "compose.yaml", "README.md",
-                     "scripts/test-local.ps1", "docs/application/run.md"]:
+                     "scripts/test-local.ps1", "apps/README.md"]:
             with self.subTest(path=path):
                 policy.validate(pull_request(), [file(path)], REPO)
 
@@ -34,11 +34,22 @@ class ScopeTests(unittest.TestCase):
         paths = ["infra/bootstrap/main.tf", "helm/payment/values.yaml",
                  ".github/workflows/terraform-operations.yml", ".github/CODEOWNERS",
                  "scripts/bootstrap/write-backend-config.py", "scripts/governance/validate_pr_paths.py",
-                 "docs/governance/README.md", "iam/bootstrap/trust.json", ".gitignore",
+                 ".github/governance/README.md", "infra/iam/bootstrap/trust.json", ".gitignore",
                  "AGENTS.md", "unknown/new-script.ps1", "apps/Account.Api/main.tf",
-                 "tests/CODEOWNERS", "apps/Account.Api/config.tf.json"]
+                 "apps/tests/CODEOWNERS", "apps/Account.Api/config.tf.json"]
         for path in paths:
             with self.subTest(path=path), self.assertRaises(policy.PolicyError):
+                policy.validate(pull_request(cloud=True), [file(path)], REPO)
+
+    def test_infra_can_relocate_only_known_legacy_docs_and_script_guide(self):
+        paths = sorted(policy.LEGACY_DOC_PATHS)
+        files = [file(path, "removed") for path in paths]
+        files.append(file("scripts/README.md", "added"))
+        policy.validate(pull_request("infra", cloud=True, count=len(files)), files, REPO)
+        for path in ["docs/new.md", "docs/deployment/new-policy.json", "scripts/new-guide.md"]:
+            with self.subTest(path=path), self.assertRaises(policy.PolicyError):
+                policy.validate(pull_request("infra", cloud=True), [file(path)], REPO)
+            with self.subTest(app_path=path), self.assertRaises(policy.PolicyError):
                 policy.validate(pull_request(cloud=True), [file(path)], REPO)
 
     def test_rename_out_of_workflow_directory_is_rejected(self):
@@ -54,7 +65,7 @@ class ScopeTests(unittest.TestCase):
             policy.validate(pull_request(), [file(".github/CODEOWNERS", "removed")], REPO)
 
     def test_exact_owner_authored_release_paths(self):
-        for path in ["helm/banking/values.yaml", "scripts/deploy/deploy.py", "docs/deployment/RUNBOOK.md",
+        for path in ["helm/banking/values.yaml", "scripts/deploy/deploy.py",
                      *sorted(policy.APP_RELEASE_FILES)]:
             with self.subTest(path=path):
                 policy.validate(pull_request(cloud=True), [file(path)], REPO)
@@ -63,9 +74,9 @@ class ScopeTests(unittest.TestCase):
 
     def test_release_exceptions_cannot_smuggle_infrastructure_or_governance(self):
         for path in ["helm/other/values.yaml", "scripts/deploy/main.tf", "helm/banking/backend.tf.json",
-                     "docs/deployment/CODEOWNERS", "scripts/deploy/policy.hcl", "helm/banking/x.tfvars.example",
+                     "helm/banking/CODEOWNERS", "scripts/deploy/policy.hcl", "helm/banking/x.tfvars.example",
                      ".github/workflows/app-anything.yml", ".github/workflows/branch-governance.yml",
-                     "scripts/infra/guard.py", "docs/infrastructure/ADMIN-REQUEST.md", "iam/phase3/trust.json"]:
+                     "scripts/infra/guard.py", "infra/OPERATIONS.md", "infra/iam/phase3/trust.json"]:
             with self.subTest(path=path), self.assertRaises(policy.PolicyError):
                 policy.validate(pull_request(cloud=True), [file(path)], REPO)
 
@@ -76,7 +87,7 @@ class ScopeTests(unittest.TestCase):
     def test_bootstrap_scope(self):
         for path in ["infra/bootstrap/main.tf", "infra/modules/state-bucket/main.tf",
                      "infra/backend/dev.s3.tfbackend.example", "scripts/bootstrap/helper.py",
-                     "docs/phase2/IAM.md", ".github/workflows/terraform-validation.yml",
+                     "infra/iam/bootstrap/IAM.md", ".github/workflows/terraform-validation.yml",
                      "infra/environments/dev/main.tf"]:
             with self.subTest(path=path):
                 policy.validate(pull_request("bootstrap", cloud=True), [file(path)], REPO)

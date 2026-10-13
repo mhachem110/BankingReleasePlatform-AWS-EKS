@@ -1,0 +1,27 @@
+rule_files: [alerts.yml]
+evaluation_interval: 15s
+tests:
+  - interval: 15s
+    input_series:
+      - series: 'up{job="banking-account",instance="account:8080"}'
+        values: '1+0x20'
+      - series: 'up{job="banking-payment",instance="payment:8080"}'
+        values: '1+0x20'
+      - series: 'banking_storage_ready{job="banking-payment",instance="payment:8080"}'
+        values: '0+0x20'
+      - series: 'banking_outbox_dead{job="banking-payment",instance="payment:8080"}'
+        values: '1+0x20'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: BankingStorageUnavailable
+        exp_alerts:
+          - exp_labels: {job: banking-payment, severity: critical, owner: MahmoudHachem}
+            exp_annotations: {summary: "A Banking API reports unavailable storage", runbook: "infra/OPERATIONS.md"}
+      - eval_time: 1m
+        alertname: BankingOutboxDead
+        exp_alerts:
+          - exp_labels: {severity: critical, owner: MahmoudHachem}
+            exp_annotations: {summary: "Retained outbox events require operator recovery", runbook: "infra/OPERATIONS.md"}
+      - eval_time: 1m
+        alertname: BankingMetricsMissing
+        exp_alerts: []

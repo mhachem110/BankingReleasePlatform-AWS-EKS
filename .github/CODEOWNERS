@@ -3,7 +3,7 @@
 
 # Application ownership; replace these owners only after real teams are verified.
 /apps/ @mhachem110
-/tests/ @mhachem110
+/apps/tests/ @mhachem110
 /Dockerfile* @mhachem110
 /.dockerignore @mhachem110
 /compose.yaml @mhachem110
@@ -16,7 +16,6 @@
 /README.md @mhachem110
 /scripts/smoke-test.ps1 @mhachem110
 /scripts/test-local.ps1 @mhachem110
-/docs/application/ @mhachem110
 
 # Sensitive ownership LAST: never overridden by later application patterns.
 /infra/ @mhachem110
@@ -26,9 +25,9 @@
 /scripts/infra/ @mhachem110
 /scripts/deploy/ @mhachem110
 /scripts/governance/ @mhachem110
-/docs/governance/ @mhachem110
-/docs/phase2/ @mhachem110
-/iam/ @mhachem110
+/infra/iam/ @mhachem110
+/.github/governance/ @mhachem110
+/.github/rulesets/ @mhachem110
 /policies/ @mhachem110
 /config/aws/ @mhachem110
 /config/iam/ @mhachem110
