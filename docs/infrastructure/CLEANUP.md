@@ -1,11 +1,11 @@
 # Reviewed test cleanup
 
-The `Reviewed Banking test VPC destroy` workflow removes the verified VPC seed
+The `Reviewed Banking project cleanup` workflow removes the verified VPC seed
 from its native `dev/platform` state. It is enabled only on reviewed `dev`, with
 `CLEANUP_ENABLED=true` and `AWS_OPERATIONS_ENABLED=false`. Creation is disabled
 during cleanup. Both the plan and apply jobs retain the bootstrap reviewer gate.
 
-Dispatch `operation=apply` with `DESTROY-REVIEWED-BANKING-VPC-SEED`. Review the
+Dispatch `target=vpc-seed`, `operation=apply` with `DESTROY-REVIEWED-BANKING-VPC-SEED`. Review the
 first deployment to permit read-only inspection and saved destroy-plan creation.
 Before the second review, inspect the saved plan, SHA256, actual VPC ID, tags and
 dependency checks. The apply job rechecks the state lineage, serial, inventory,
@@ -19,8 +19,11 @@ VPC with Banking/dev ownership tags, writes only its state, and deletes only its
 state lock. It retains the backend, state history and all shared IAM resources.
 No imports, state removal, force unlocks, targeted plans or forced deletes occur.
 
-The current workflow refuses full platform states, populated VPCs and dependent
-data states. Full platform/data teardown must be implemented and reviewed before
+The workflow also removes unused policy prerequisites as described in
+[POLICY-PREREQUISITES.md](POLICY-PREREQUISITES.md), with its own target/phrase and
+checks that policy users and dependent project states are absent. It refuses full
+platform states, populated VPCs and dependent data states. Full platform/data
+teardown must be implemented and reviewed before
 those deployments; Kubernetes ingress/controller cleanup, ECR image inventory,
 EKS/RDS deletion protection and final snapshots require their own concrete
 handling. This workflow alone does not establish full-project teardown readiness.

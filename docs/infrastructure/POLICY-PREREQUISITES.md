@@ -24,6 +24,13 @@ attach policies or create/update/delete roles. Apply checks the same-run binary
 hash, account, backend, documents and fresh owner authorization before execution.
 Verification reads actual policy versions/tags and requires a zero-drift plan.
 
+The protected project cleanup workflow also supports `target=policy-prerequisites`
+with `DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES`. It refuses deletion while the
+project platform, data or service-role states are populated, or either policy has
+attachments/boundary users. It reviews the exact two documents, tags and versions,
+deletes only those policies and verifies AWS absence. Additional policy versions
+require a new inventory review; bootstrap and unrelated policies are retained.
+
 Managed STS session policies restrict the existing identity grant. They do not
 need to be attached to the bootstrap role. The later three-role workflow checks
 the verified owner grant and exact live session-cap document rather than requiring

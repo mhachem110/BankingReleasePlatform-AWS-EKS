@@ -14,7 +14,7 @@ POLICY_FOLDER = PROPOSALS.parents[1] / "provisioning/proposed"
 
 def configuration(env):
     require(env.get("GITHUB_REF") == "refs/heads/dev", "Run only reviewed dev")
-    require(env.get("IAM_PREREQUISITES_ENABLED") == "true", "IAM stage is disabled until administrator authorization")
+    require(env.get("IAM_PREREQUISITES_ENABLED") == "true", "IAM stage needs the explicit owner-authorized deployment window")
     require(env.get("BOOTSTRAP_STATE_READY") == "true", "Verified backend required")
     require(env.get("ROLE_ARN") == BOOTSTRAP, "Use the single exact bootstrap identity")
     require(env.get("AWS_REGION") == REGION and env.get("AWS_EXPECTED_ACCOUNT_ID") == ACCOUNT and env.get("TF_STATE_BUCKET") == BUCKET, "Wrong account/Region/backend")
@@ -22,7 +22,7 @@ def configuration(env):
     if env["OPERATION"] == "apply":
         require(env.get("APPROVAL") == "APPLY-REVIEWED-BANKING-IAM-PLAN", "Separate exact IAM apply approval required")
     boundary = json.loads((POLICY_FOLDER / "BankingServicePermissionsBoundary.json").read_text())
-    require(env.get("IAM_BOUNDARY_POLICY_SHA256") == digest(boundary), "Review and pin the administrator-published boundary")
+    require(env.get("IAM_BOUNDARY_POLICY_SHA256") == digest(boundary), "Pin the verified Terraform-published project boundary")
     return {"permissions_boundary_arn": BOUNDARY, "boundary_policy_sha256": digest(boundary)}
 
 
