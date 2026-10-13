@@ -7,6 +7,23 @@
       "Resource": "arn:aws:eks:us-east-2:866934333672:cluster/banking-dev"
     },
     {
+      "Sid": "ReadOnlyRDSManagedBankingCredentials",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:us-east-2:866934333672:secret:rds!db-*"
+    },
+    {
+      "Sid": "DecryptOnlyBankingRuntimeKey",
+      "Effect": "Allow",
+      "Action": "kms:Decrypt",
+      "Resource": "arn:aws:kms:us-east-2:866934333672:key/*",
+      "Condition": {
+        "ForAnyValue:StringEquals": {
+          "kms:ResourceAliases": "alias/banking-release-platform-runtime"
+        }
+      }
+    },
+    {
       "Effect": "Deny",
       "Action": [
         "iam:*",

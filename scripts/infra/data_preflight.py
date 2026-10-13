@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from data_guard import ACCOUNT, REGION, configuration, cost_review, digest, require
+from data_guard import ACCOUNT, REGION, ENVIRONMENT, NAME, configuration, cost_review, digest, require
 from data_iam import monitoring_trust, session_cap
 
 
@@ -15,14 +15,14 @@ def aws(service, operation, *args):
 
 def verify(role, attached, key, topic, policy, values, env):
     require(role["Arn"] == values["monitoring_role_arn"] and not role.get("PermissionsBoundary"), "Monitoring role identity/boundary requires review")
-    require(role["AssumeRolePolicyDocument"] == monitoring_trust(), "Dedicated monitoring trust must restrict exact database/account")
+    require(role["AssumeRolePolicyDocument"] == monitoring_trust(ENVIRONMENT), "Dedicated monitoring trust must restrict exact database/account")
     require("arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole" in
             {p["PolicyArn"] for p in attached}, "Actual AWS-managed Enhanced Monitoring permissions required")
     require(key.get("Arn") == values["kms_key_arn"] and key.get("KeyState") == "Enabled" and
             key.get("KeySpec") == "SYMMETRIC_DEFAULT" and key.get("KeyUsage") == "ENCRYPT_DECRYPT", "Approved enabled encryption key required")
     require(topic.get("TopicArn") == values["alert_topic_arn"] and int(topic.get("SubscriptionsConfirmed", "0")) > 0,
             "Approved alert topic must have a confirmed destination; delivery still requires live acceptance")
-    expected = session_cap(values, env["DATA_SESSION_POLICY_ARN"])
+    expected = session_cap(values, env["DATA_SESSION_POLICY_ARN"], ENVIRONMENT)
     require(digest(policy) == env["DATA_SESSION_POLICY_SHA256"] == digest(expected), "Actual managed session cap changed or exceeds approved scope")
 
 
@@ -48,17 +48,17 @@ def main():
                   "--db-instance-class", values["instance_class"])["OrderableDBInstanceOptions"]
     require(any(o.get("StorageType") == "gp3" and o.get("SupportsStorageEncryption") and o.get("SupportsEnhancedMonitoring") for o in options),
             "Exact approved engine/class must support reviewed storage/encryption/monitoring")
-    require(not any(d["DBInstanceIdentifier"] == "banking-dev-postgres" for d in aws("rds", "describe-db-instances")["DBInstances"]), "Database name exists; recovery requires separate reviewed scope")
-    require(not any(s["DBSnapshotIdentifier"] == "banking-dev-postgres-final-reviewed" for s in aws("rds", "describe-db-snapshots")["DBSnapshots"]), "Retained final-snapshot name exists; preserve it and review recovery separately")
-    require(not any(d["DBSubnetGroupName"] == "banking-dev-database" for d in aws("rds", "describe-db-subnet-groups")["DBSubnetGroups"]), "Database subnet group already exists")
-    require(not any(d["DBParameterGroupName"] == "banking-dev-postgres17" for d in aws("rds", "describe-db-parameter-groups")["DBParameterGroups"]), "Database parameter group already exists")
-    require(not aws("ec2", "describe-security-groups", "--filters", "Name=vpc-id,Values="+values["vpc_id"], "Name=group-name,Values=banking-dev-database")["SecurityGroups"], "Database security group already exists")
-    queues = aws("sqs", "list-queues", "--queue-name-prefix", "banking-dev-payments").get("QueueUrls", [])
-    require(not any(q.rsplit("/", 1)[-1] in {"banking-dev-payments", "banking-dev-payments-dlq"} for q in queues), "Data queue name exists; never adopt automatically")
-    for name in ("/banking/banking-dev/application", "/aws/rds/instance/banking-dev-postgres/postgresql", "/aws/rds/instance/banking-dev-postgres/upgrade"):
+    require(not any(d["DBInstanceIdentifier"] == NAME + "-postgres" for d in aws("rds", "describe-db-instances")["DBInstances"]), "Database name exists; recovery requires separate reviewed scope")
+    require(not any(s["DBSnapshotIdentifier"] == NAME + "-postgres-final-reviewed" for s in aws("rds", "describe-db-snapshots")["DBSnapshots"]), "Retained final-snapshot name exists; preserve it and review recovery separately")
+    require(not any(d["DBSubnetGroupName"] == NAME + "-database" for d in aws("rds", "describe-db-subnet-groups")["DBSubnetGroups"]), "Database subnet group already exists")
+    require(not any(d["DBParameterGroupName"] == NAME + "-postgres17" for d in aws("rds", "describe-db-parameter-groups")["DBParameterGroups"]), "Database parameter group already exists")
+    require(not aws("ec2", "describe-security-groups", "--filters", "Name=vpc-id,Values="+values["vpc_id"], "Name=group-name,Values="+NAME+"-database")["SecurityGroups"], "Database security group already exists")
+    queues = aws("sqs", "list-queues", "--queue-name-prefix", NAME + "-payments").get("QueueUrls", [])
+    require(not any(q.rsplit("/", 1)[-1] in {NAME + "-payments", NAME + "-payments-dlq"} for q in queues), "Data queue name exists; never adopt automatically")
+    for name in (f"/banking/{NAME}/application", f"/aws/rds/instance/{NAME}-postgres/postgresql", f"/aws/rds/instance/{NAME}-postgres/upgrade"):
         require(not any(g["logGroupName"] == name for g in aws("logs", "describe-log-groups", "--log-group-name-prefix", name)["logGroups"]), "Data log group already exists")
-    require(not aws("cloudwatch", "describe-alarms", "--alarm-name-prefix", "banking-dev-")["MetricAlarms"], "Banking alarms already exist; review bounded recovery separately")
-    Path("data-prerequisites.json").write_text(json.dumps({"account":ACCOUNT, "region":REGION, "cluster":"banking-dev",
+    require(not aws("cloudwatch", "describe-alarms", "--alarm-name-prefix", NAME + "-")["MetricAlarms"], "Banking alarms already exist; review bounded recovery separately")
+    Path("data-prerequisites.json").write_text(json.dumps({"account":ACCOUNT, "region":REGION, "cluster":"banking-dev", "environment": ENVIRONMENT,
         "policy_sha256":digest(document), "key_arn":key["Arn"], "monitoring_role_arn":role["Arn"],
         "alert_topic_arn":topic["TopicArn"], "scope":"read-only metadata; not live application acceptance"}, indent=2), encoding="utf-8")
     print("Verified data prerequisite metadata. No AWS writes or credential-value reads.")

@@ -1,0 +1,153 @@
+# Internal Infra CI/CD stage. CodeBuild starts one temporary VPC runner per job.
+# This creation uses two separate protected bootstrap reviews and one saved plan.
+name: Banking ephemeral runner
+on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: true
+      platform_interface_json:
+        type: string
+        required: true
+    outputs:
+      verified:
+        value: ${{ jobs.apply.outputs.verified }}
+permissions:
+  contents: read
+concurrency:
+  group: banking-runner-prerequisite
+  cancel-in-progress: false
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    env: &runner-env
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
+      PLATFORM_INTERFACE_JSON: ${{ inputs.platform_interface_json }}
+      CODEBUILD_GITHUB_CONNECTION_ARN: ${{ vars.CODEBUILD_GITHUB_CONNECTION_ARN }}
+      TF_IN_AUTOMATION: 'true'
+    outputs:
+      digest: ${{ steps.hash.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: python scripts/infra/runner_guard.py
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runner-plan
+          unset-current-credentials: true
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Save exact project-owned runner plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=infra/runner
+          terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/runner.tfbackend.json"
+          [[ "$(terraform -chdir="$root" workspace show)" == default ]]
+          terraform -chdir="$root" validate
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -var="state_bucket_name=$TF_STATE_BUCKET" -var="github_connection_arn=$CODEBUILD_GITHUB_CONNECTION_ARN" -out="$GITHUB_WORKSPACE/runner.tfplan"
+          terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/runner.tfplan" > runner-plan.json
+          python scripts/infra/runner_plan_guard.py runner-plan.json
+          terraform -chdir="$root" show -no-color "$GITHUB_WORKSPACE/runner.tfplan" > runner-plan.txt
+      - id: hash
+        run: echo "digest=$(sha256sum runner.tfplan | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-runner-reviewed-plan
+          path: |
+            runner.tfplan
+            runner.tfbackend.json
+            runner-config.json
+            runner-plan-review.json
+            runner-plan.txt
+          retention-days: 1
+          if-no-files-found: error
+      - run: echo 'Review the exact CodeBuild project, service role/boundary, private network rules, GitHub webhook, saved plan hash and CodeBuild minutes before approving the second bootstrap deployment.' >> "$GITHUB_STEP_SUMMARY"
+  apply:
+    if: inputs.operation == 'apply'
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env: *runner-env
+    outputs:
+      verified: ${{ steps.verify.outputs.verified }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: python scripts/infra/runner_guard.py
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: banking-runner-reviewed-plan
+          path: reviewed
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runner-apply
+          unset-current-credentials: true
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Apply only the same-run saved runner plan
+        env:
+          REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$REVIEWED_DIGEST  reviewed/runner.tfplan" | sha256sum --check --strict
+          cmp runner.tfbackend.json reviewed/runner.tfbackend.json
+          cmp runner-config.json reviewed/runner-config.json
+          root=infra/runner
+          terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/reviewed/runner.tfbackend.json"
+          [[ "$(terraform -chdir="$root" workspace show)" == default ]]
+          terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/reviewed/runner.tfplan" > runner-plan.json
+          python scripts/infra/runner_plan_guard.py runner-plan.json
+          cmp runner-plan-review.json reviewed/runner-plan-review.json
+          terraform -chdir="$root" apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/reviewed/runner.tfplan"
+          terraform -chdir="$root" output -json > runner-outputs.json
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -detailed-exitcode -var="state_bucket_name=$TF_STATE_BUCKET" -var="github_connection_arn=$CODEBUILD_GITHUB_CONNECTION_ARN"
+      - id: verify
+        run: |
+          python - <<'PY'
+          import json, os
+          o = json.load(open('runner-outputs.json'))
+          assert o['project_name']['value'] == 'banking-release-deployer'
+          assert o['webhook_url']['value'].startswith('https://')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f: f.write('verified=true\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-runner-verified-interface
+          path: runner-outputs.json
+          retention-days: 7
+          if-no-files-found: error

@@ -1,7 +1,15 @@
-name: Deploy approved application digest
+# Publish once on dev, then promote the same scanned digest pair to each namespace.
+# Publication and deployment have separate protected jobs and bounded OIDC caps.
+name: App CD
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Publish immutable images or deploy an existing approved release
+        type: choice
+        options: [deploy, publish]
+        default: deploy
+        required: true
       environment:
         description: Protected deployment environment
         type: choice
@@ -9,9 +17,9 @@ on:
         default: dev
         required: true
       publish_run_id:
-        description: Successful reviewed-dev app-publish workflow run ID (same for every promotion)
+        description: Successful App CD publication run ID; required only for deploy
         type: string
-        required: true
+        required: false
       authorization:
         description: Explicit approval for application deployment on existing infrastructure
         type: choice
@@ -21,17 +29,91 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: banking-deployment-${{ inputs.environment }}
+  group: banking-deployment-${{ inputs.operation == 'publish' && 'publication' || inputs.environment }}
   cancel-in-progress: false
 jobs:
-  deploy:
+  publish:
+    if: inputs.operation == 'publish' && inputs.environment == 'dev' && github.ref == 'refs/heads/dev' && inputs.authorization == 'approved'
+    uses: ./.github/workflows/app-publish.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      authorization: approved
+  rescan:
+    # Hosted Docker rescans the exact published bytes before the private job.
     if: >-
-      inputs.authorization == 'approved' &&
+      inputs.operation == 'deploy' && inputs.authorization == 'approved' &&
       ((inputs.environment == 'dev' && github.ref == 'refs/heads/dev') ||
        (inputs.environment == 'stage' && github.ref == 'refs/heads/stage') ||
        (inputs.environment == 'uat' && github.ref == 'refs/heads/uat') ||
        (inputs.environment == 'prod' && github.ref == 'refs/heads/main'))
-    runs-on: [self-hosted, linux, x64, banking-deployer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      DEPLOY_ENV: ${{ inputs.environment }}
+      PUBLISH_RUN_ID: ${{ inputs.publish_run_id }}
+      APP_DEPLOYMENTS_ENABLED: ${{ vars.APP_DEPLOYMENTS_ENABLED }}
+      APP_RELEASE_MODE: ${{ vars.APP_RELEASE_MODE }}
+      APP_DEPLOY_ROLE_ARN: ${{ vars.APP_DEPLOY_ROLE_ARN }}
+      INFRA_ROLE_ARN: ${{ vars.INFRA_ROLE_ARN }}
+      BOOTSTRAP_ROLE_ARN: ${{ vars.BOOTSTRAP_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_ACCOUNT_REPOSITORY: ${{ vars.ECR_ACCOUNT_REPOSITORY }}
+      ECR_PAYMENT_REPOSITORY: ${{ vars.ECR_PAYMENT_REPOSITORY }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      manifest_sha256: ${{ steps.digest.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - id: config
+        run: python scripts/deploy/preflight.py --environment "$DEPLOY_ENV"
+      - run: python scripts/deploy/provenance.py --environment "$DEPLOY_ENV" --run-id "$PUBLISH_RUN_ID"
+      - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
+        with:
+          role-to-assume: ${{ vars.APP_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+          role-session-name: banking-app-rescan-${{ github.run_id }}
+      - name: Authenticate to exact ECR registry
+        run: aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+      - run: python scripts/deploy/scan.py --manifest release/release.json
+      - id: digest
+        run: echo "sha256=$(sha256sum release/release.json | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: deployment-trivy-reports
+          path: artifacts/application/scanned/reports
+          retention-days: 90
+      - if: always()
+        run: docker logout "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+  deploy:
+    needs: rescan
+    if: >-
+      inputs.operation == 'deploy' && inputs.authorization == 'approved' &&
+      ((inputs.environment == 'dev' && github.ref == 'refs/heads/dev') ||
+       (inputs.environment == 'stage' && github.ref == 'refs/heads/stage') ||
+       (inputs.environment == 'uat' && github.ref == 'refs/heads/uat') ||
+       (inputs.environment == 'prod' && github.ref == 'refs/heads/main'))
+    # CodeBuild starts a temporary private-subnet runner after this environment approval.
+    runs-on: codebuild-banking-release-deployer-${{ github.run_id }}-${{ github.run_attempt }}
     timeout-minutes: 90
     environment: ${{ inputs.environment }}
     permissions:
@@ -43,8 +125,6 @@ jobs:
       PUBLISH_RUN_ID: ${{ inputs.publish_run_id }}
       APP_DEPLOYMENTS_ENABLED: ${{ vars.APP_DEPLOYMENTS_ENABLED }}
       APP_RELEASE_MODE: ${{ vars.APP_RELEASE_MODE }}
-      APP_DATA_OPERATIONS_ENABLED: ${{ vars.APP_DATA_OPERATIONS_ENABLED }}
-      APP_RUNTIME_VALUES_JSON: ${{ vars.APP_RUNTIME_VALUES_JSON }}
       APP_DEPLOY_ROLE_ARN: ${{ vars.APP_DEPLOY_ROLE_ARN }}
       INFRA_ROLE_ARN: ${{ vars.INFRA_ROLE_ARN }}
       BOOTSTRAP_ROLE_ARN: ${{ vars.BOOTSTRAP_ROLE_ARN }}
@@ -68,6 +148,10 @@ jobs:
       - run: python scripts/deploy/install-tools.py
       - name: Verify publication and promotion evidence
         run: python scripts/deploy/provenance.py --environment "$DEPLOY_ENV" --run-id "$PUBLISH_RUN_ID"
+      - name: Bind deployment to the rescan's exact release manifest
+        env:
+          REVIEWED_SHA256: ${{ needs.rescan.outputs.manifest_sha256 }}
+        run: echo "$REVIEWED_SHA256  release/release.json" | sha256sum --check --strict
       - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
         with:
           role-to-assume: ${{ vars.APP_DEPLOY_ROLE_ARN }}
@@ -76,13 +160,6 @@ jobs:
           unset-current-credentials: true
           allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
           role-session-name: banking-app-deploy-${{ github.run_id }}
-      - name: Authenticate to existing ECR
-        shell: bash
-        run: |
-          REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
-      - name: Rescan exact published digests before deployment
-        run: python scripts/deploy/scan.py --manifest release/release.json
       - name: Deploy verify and roll back on failure
         run: python scripts/deploy/deploy.py --environment "$DEPLOY_ENV"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -91,13 +168,3 @@ jobs:
           path: release/deployment.json
           if-no-files-found: error
           retention-days: 90
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: deployment-trivy-reports
-          path: artifacts/application/scanned/reports
-          retention-days: 90
-      - name: Clear Docker registry credentials
-        if: always()
-        shell: bash
-        run: docker logout "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"

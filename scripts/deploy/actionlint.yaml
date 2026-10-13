@@ -1,2 +1,2 @@
-self-hosted-runner:
-  labels: [banking-deployer]
+# The private CodeBuild runner uses a scalar runs-on label generated from the
+# exact project name and GitHub run identifiers; no permanent runner is used.

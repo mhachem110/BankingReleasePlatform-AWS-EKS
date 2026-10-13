@@ -1,12 +1,12 @@
-name: Reviewed Banking project cleanup
+name: Terraform Destroy
 on:
   workflow_dispatch:
     inputs:
       target:
         type: choice
-        options: [vpc-seed, policy-prerequisites, iam-prerequisites, runtime-foundation]
+        options: [applications, dev-data, prod-data, runtime-prerequisites, runner, platform, vpc-seed, policy-prerequisites, iam-prerequisites, runtime-foundation, platform-caps]
         default: vpc-seed
-        description: 'Only unused project prerequisites: VPC seed, policies, service roles, runtime key/operator'
+        description: 'Select one dependency stage: applications, data, runtime, runner, platform or unused prerequisites'
       operation:
         type: choice
         options: [plan, apply]
@@ -16,10 +16,19 @@ on:
         type: string
         default: ''
         description: 'Apply only: DESTROY-REVIEWED-BANKING- followed by the uppercase target'
+      data_disposition:
+        type: choice
+        options: [none, FINAL-SNAPSHOT-RETAIN]
+        default: none
+        description: 'For dev/prod data deletion, retain the final encrypted RDS snapshot'
+      kubernetes_cleanup_review_json:
+        type: string
+        default: ''
+        description: 'Successful protected applications cleanup receipt for full-stack targets'
 permissions:
   contents: read
 concurrency:
-  group: ${{ inputs.target == 'vpc-seed' && 'banking-dev-platform' || 'banking-shared-iam-prerequisites' }}
+  group: banking-project-lifecycle
   cancel-in-progress: false
 env:
   AWS_EC2_METADATA_DISABLED: 'true'
@@ -41,9 +50,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/bootstrap/check-github-environment.py
   plan:
+    if: inputs.target != 'applications'
     needs: prerequisites
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: bootstrap
     permissions:
       contents: read
@@ -59,6 +69,8 @@ jobs:
       TARGET: ${{ inputs.target }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
+      DATA_DISPOSITION: ${{ inputs.data_disposition }}
+      KUBERNETES_CLEANUP_REVIEW_JSON: ${{ inputs.kubernetes_cleanup_review_json }}
     outputs:
       digest: ${{ steps.hash.outputs.digest }}
     steps:
@@ -68,7 +80,7 @@ jobs:
           persist-credentials: false
       - run: python -m pip install -r scripts/infra/requirements.txt
       - id: config
-        run: python scripts/infra/cleanup_guard.py inputs
+        run: python scripts/infra/cleanup_dispatch.py inputs
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -92,10 +104,10 @@ jobs:
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]
           terraform -chdir="$root" validate
           terraform -chdir="$root" state pull > cleanup-state.json
-          python scripts/infra/cleanup_guard.py preflight
+          python scripts/infra/cleanup_dispatch.py preflight
           terraform -chdir="$root" plan -destroy -input=false -lock-timeout=5m -out="$GITHUB_WORKSPACE/cleanup.tfplan"
           terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/cleanup.tfplan" > cleanup-plan.json
-          python scripts/infra/cleanup_guard.py plan
+          python scripts/infra/cleanup_dispatch.py plan
           terraform -chdir="$root" show -no-color "$GITHUB_WORKSPACE/cleanup.tfplan" > cleanup-plan.txt
       - id: hash
         shell: bash
@@ -115,12 +127,14 @@ jobs:
           if-no-files-found: error
       - name: Publish destroy review instructions
         run: |
-          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership and live dependencies before approving apply. Only unused project prerequisites may be removed. Runtime key cleanup schedules deletion after seven days; retained encrypted logs/snapshots, grants and live users block it. Backend and unrelated/shared resources remain intact.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership, data/snapshot decision and live dependencies before approving apply. Use applications → dev/prod data → runtime prerequisites → runner → platform → project IAM/key/policies. Runtime keys remain while final snapshots use them. The S3 backend and unrelated resources remain intact.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && ((inputs.target == 'vpc-seed' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED') || (inputs.target == 'policy-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES') || (inputs.target == 'iam-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-IAM-PREREQUISITES') || (inputs.target == 'runtime-foundation' && inputs.approval == 'DESTROY-REVIEWED-BANKING-RUNTIME-FOUNDATION'))
+    # Both jobs run the guard: it rejects an unknown target or wrong destroy
+    # phrase before requesting AWS credentials. Apply also has its own review.
+    if: inputs.operation == 'apply' && inputs.target != 'applications'
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 120
     environment: bootstrap
     permissions:
       contents: read
@@ -134,7 +148,7 @@ jobs:
           persist-credentials: false
       - run: python -m pip install -r scripts/infra/requirements.txt
       - id: config
-        run: python scripts/infra/cleanup_guard.py inputs
+        run: python scripts/infra/cleanup_dispatch.py inputs
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: banking-cleanup-reviewed-plan
@@ -162,11 +176,11 @@ jobs:
           terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/cleanup.tfbackend.json"
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]
           terraform -chdir="$root" state pull > cleanup-state.json
-          python scripts/infra/cleanup_guard.py preflight
+          python scripts/infra/cleanup_dispatch.py preflight
           terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/reviewed/cleanup.tfplan" > cleanup-plan.json
-          python scripts/infra/cleanup_guard.py saved
+          python scripts/infra/cleanup_dispatch.py saved
       - id: delete-cap
-        run: python scripts/infra/cleanup_guard.py delete-cap
+        run: python scripts/infra/cleanup_dispatch.py delete-cap
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -180,13 +194,144 @@ jobs:
       - name: Apply only the reviewed saved destroy plan and verify AWS absence
         run: |
           set -euo pipefail
-          python scripts/infra/cleanup_guard.py preflight
+          python scripts/infra/cleanup_dispatch.py preflight
+          python scripts/infra/cleanup_dispatch.py unlock
           terraform -chdir=infra/cleanup apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/reviewed/cleanup.tfplan"
           terraform -chdir=infra/cleanup state pull > cleanup-state.json
-          python scripts/infra/cleanup_guard.py verify
+          python scripts/infra/cleanup_dispatch.py verify
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: banking-cleanup-verification
           path: cleanup-verification.json
           retention-days: 7
+          if-no-files-found: error
+  application-plan:
+    # A disposable private runner can reach the API; the plan only inventories.
+    if: inputs.target == 'applications'
+    needs: prerequisites
+    runs-on: codebuild-banking-release-deployer-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 25
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TARGET: ${{ inputs.target }}
+      OPERATION: plan
+      APPROVAL: ${{ inputs.approval }}
+      CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
+      AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      image_digest: ${{ steps.image-digest.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: python scripts/deploy/install-tools.py
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-operator
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-app-cleanup-plan
+          inline-session-policy: >-
+            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:GetCallerIdentity","Resource":"*"},{"Effect":"Allow","Action":"eks:DescribeCluster","Resource":"arn:aws:eks:us-east-2:866934333672:cluster/banking-dev"}]}
+          unset-current-credentials: true
+      - run: |
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
+          trap 'rm -f "$KUBECONFIG"' EXIT
+          aws eks update-kubeconfig --name banking-dev --region us-east-2
+          python scripts/infra/cleanup_kubernetes.py
+      - id: digest
+        run: python -c "import json,os; from scripts.infra.cleanup_kubernetes import digest; open(os.environ['GITHUB_OUTPUT'],'a').write('digest='+digest(json.load(open('kubernetes-cleanup-plan.json')))+'\n')"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-images-cleanup-plan
+          inline-session-policy: >-
+            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:GetCallerIdentity","Resource":"*"},{"Effect":"Allow","Action":["ecr:DescribeRepositories","ecr:ListTagsForResource","ecr:ListImages"],"Resource":["arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-account","arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-payment"]}]}
+          unset-current-credentials: true
+      - run: python scripts/infra/cleanup_images.py
+      - id: image-digest
+        run: python -c "import json,os; from scripts.infra.cleanup_images import digest; open(os.environ['GITHUB_OUTPUT'],'a').write('digest='+digest(json.load(open('images-cleanup-plan.json')))+'\n')"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-kubernetes-cleanup-plan
+          path: |
+            kubernetes-cleanup-plan.json
+            images-cleanup-plan.json
+          retention-days: 1
+          if-no-files-found: error
+  application-apply:
+    if: inputs.target == 'applications' && inputs.operation == 'apply'
+    needs: [prerequisites, application-plan]
+    runs-on: codebuild-banking-release-deployer-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 45
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env:
+      TARGET: ${{ inputs.target }}
+      OPERATION: apply
+      APPROVAL: ${{ inputs.approval }}
+      CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
+      AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      REVIEWED_DIGEST: ${{ needs.application-plan.outputs.digest }}
+      REVIEWED_IMAGE_DIGEST: ${{ needs.application-plan.outputs.image_digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: python scripts/deploy/install-tools.py
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: banking-kubernetes-cleanup-plan
+          path: reviewed
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-operator
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-app-cleanup-apply
+          inline-session-policy: >-
+            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:GetCallerIdentity","Resource":"*"},{"Effect":"Allow","Action":"eks:DescribeCluster","Resource":"arn:aws:eks:us-east-2:866934333672:cluster/banking-dev"}]}
+          unset-current-credentials: true
+      - run: |
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
+          trap 'rm -f "$KUBECONFIG"' EXIT
+          aws eks update-kubeconfig --name banking-dev --region us-east-2
+          python scripts/infra/cleanup_kubernetes.py
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-images-cleanup-apply
+          inline-session-policy: >-
+            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:GetCallerIdentity","Resource":"*"},{"Effect":"Allow","Action":["elasticloadbalancing:DescribeLoadBalancers","elasticloadbalancing:DescribeTags"],"Resource":"*"},{"Effect":"Allow","Action":["ecr:DescribeRepositories","ecr:ListTagsForResource","ecr:ListImages","ecr:BatchDeleteImage"],"Resource":["arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-account","arn:aws:ecr:us-east-2:866934333672:repository/banking-dev-payment"]}]}
+          unset-current-credentials: true
+      - run: python scripts/infra/cleanup_load_balancers.py
+      - run: python scripts/infra/cleanup_images.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-kubernetes-cleanup-verification
+          path: kubernetes-cleanup-verification.json
+          retention-days: 30
           if-no-files-found: error

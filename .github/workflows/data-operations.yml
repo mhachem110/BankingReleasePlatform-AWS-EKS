@@ -1,20 +1,40 @@
+# Reusable stage: launch through Infra CI/CD on reviewed dev.
 name: Protected Banking data services
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       operation:
-        type: choice
-        options: [plan, apply]
-        default: plan
-        description: 'Separate Phase 6 plan; apply requires same-run saved-plan/cost review'
+        type: string
+        required: true
       approval:
         type: string
+        required: true
+      enabled:
+        type: boolean
+        default: false
+      data_environment:
+        type: string
+        default: dev
+      foundation_interface_json:
+        type: string
         default: ''
-        description: 'Apply only: APPLY-REVIEWED-PHASE6-PLAN'
+      platform_interface_json:
+        type: string
+        default: ''
+      runtime_interface_json:
+        type: string
+        default: ''
+    outputs:
+      verified:
+        description: True only after data verification and zero drift
+        value: ${{ jobs.apply.outputs.verified }}
+      interface_json:
+        description: Verified non-secret database, RDS secret and queue identifiers
+        value: ${{ jobs.apply.outputs.interface_json }}
 permissions:
   contents: read
 concurrency:
-  group: banking-dev-data
+  group: banking-${{ inputs.data_environment }}-data
   cancel-in-progress: false
 env:
   AWS_EC2_METADATA_DISABLED: 'true'
@@ -22,7 +42,7 @@ env:
   TF_IN_AUTOMATION: 'true'
 jobs:
   prerequisites:
-    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && vars.DATA_OPERATIONS_ENABLED == 'true'
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && (inputs.enabled || vars.DATA_OPERATIONS_ENABLED == 'true') && vars.CLEANUP_ENABLED != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,11 +66,15 @@ jobs:
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      DATA_OPERATIONS_ENABLED: ${{ vars.DATA_OPERATIONS_ENABLED }}
-      DATA_INPUTS_JSON: ${{ vars.DATA_INPUTS_JSON }}
-      DATA_COST_REVIEW_JSON: ${{ vars.DATA_COST_REVIEW_JSON }}
-      DATA_SESSION_POLICY_ARN: ${{ vars.DATA_SESSION_POLICY_ARN }}
-      DATA_SESSION_POLICY_SHA256: ${{ vars.DATA_SESSION_POLICY_SHA256 }}
+      DATA_OPERATIONS_ENABLED: ${{ inputs.enabled && 'true' || vars.DATA_OPERATIONS_ENABLED }}
+      DATA_ENVIRONMENT: ${{ inputs.data_environment }}
+      DATA_INPUTS_JSON: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_INPUTS_JSON || vars.DATA_INPUTS_JSON }}
+      FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
+      PLATFORM_INTERFACE_JSON: ${{ inputs.platform_interface_json }}
+      RUNTIME_INTERFACE_JSON: ${{ inputs.runtime_interface_json }}
+      DATA_COST_REVIEW_JSON: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_COST_REVIEW_JSON || vars.DATA_COST_REVIEW_JSON }}
+      DATA_SESSION_POLICY_ARN: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_SESSION_POLICY_ARN || vars.DATA_SESSION_POLICY_ARN }}
+      DATA_SESSION_POLICY_SHA256: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_SESSION_POLICY_SHA256 || vars.DATA_SESSION_POLICY_SHA256 }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
     permissions:
@@ -63,6 +87,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - run: python scripts/infra/pipeline_entry.py data-bindings
       - run: python scripts/infra/data_guard.py inputs
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -71,7 +96,7 @@ jobs:
           allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
           audience: sts.amazonaws.com
           role-session-name: banking-phase6-plan
-          managed-session-policies: ${{ vars.DATA_SESSION_POLICY_ARN }}
+          managed-session-policies: ${{ inputs.runtime_interface_json != '' && fromJSON(inputs.runtime_interface_json).outputs[inputs.data_environment].data_policy_arn || (inputs.data_environment == 'prod' && vars.PROD_DATA_SESSION_POLICY_ARN || vars.DATA_SESSION_POLICY_ARN) }}
           unset-current-credentials: true
           translate-env-variables: false
       - run: python scripts/infra/data_preflight.py
@@ -83,7 +108,7 @@ jobs:
       - name: Save full creation-only data plan
         run: |
           set -euo pipefail
-          root=infra/environments/dev/data
+          root="infra/environments/$DATA_ENVIRONMENT/data"
           terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/data.tfbackend.json"
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]
           terraform -chdir="$root" validate
@@ -95,7 +120,7 @@ jobs:
         run: echo "digest=$(sha256sum data.tfplan | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: banking-phase6-reviewed-plan
+          name: banking-${{ inputs.data_environment }}-reviewed-plan
           path: |
             data.tfplan
             data.tfbackend.json
@@ -119,14 +144,21 @@ jobs:
       BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
       AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
       ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      DATA_OPERATIONS_ENABLED: ${{ vars.DATA_OPERATIONS_ENABLED }}
-      DATA_INPUTS_JSON: ${{ vars.DATA_INPUTS_JSON }}
-      DATA_COST_REVIEW_JSON: ${{ vars.DATA_COST_REVIEW_JSON }}
-      DATA_SESSION_POLICY_ARN: ${{ vars.DATA_SESSION_POLICY_ARN }}
-      DATA_SESSION_POLICY_SHA256: ${{ vars.DATA_SESSION_POLICY_SHA256 }}
+      DATA_OPERATIONS_ENABLED: ${{ inputs.enabled && 'true' || vars.DATA_OPERATIONS_ENABLED }}
+      DATA_ENVIRONMENT: ${{ inputs.data_environment }}
+      DATA_INPUTS_JSON: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_INPUTS_JSON || vars.DATA_INPUTS_JSON }}
+      DATA_COST_REVIEW_JSON: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_COST_REVIEW_JSON || vars.DATA_COST_REVIEW_JSON }}
+      FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
+      PLATFORM_INTERFACE_JSON: ${{ inputs.platform_interface_json }}
+      RUNTIME_INTERFACE_JSON: ${{ inputs.runtime_interface_json }}
+      DATA_SESSION_POLICY_ARN: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_SESSION_POLICY_ARN || vars.DATA_SESSION_POLICY_ARN }}
+      DATA_SESSION_POLICY_SHA256: ${{ inputs.data_environment == 'prod' && vars.PROD_DATA_SESSION_POLICY_SHA256 || vars.DATA_SESSION_POLICY_SHA256 }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
       REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
+    outputs:
+      verified: ${{ steps.verify.outputs.verified }}
+      interface_json: ${{ steps.verify.outputs.interface_json }}
     permissions:
       contents: read
       id-token: write
@@ -135,10 +167,11 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - run: python scripts/infra/pipeline_entry.py data-bindings
       - run: python scripts/infra/data_guard.py inputs
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: banking-phase6-reviewed-plan
+          name: banking-${{ inputs.data_environment }}-reviewed-plan
           path: reviewed
       - name: Verify same-run plan, inputs, backend and cost review
         run: |
@@ -154,7 +187,7 @@ jobs:
           allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
           audience: sts.amazonaws.com
           role-session-name: banking-phase6-apply
-          managed-session-policies: ${{ vars.DATA_SESSION_POLICY_ARN }}
+          managed-session-policies: ${{ inputs.runtime_interface_json != '' && fromJSON(inputs.runtime_interface_json).outputs[inputs.data_environment].data_policy_arn || (inputs.data_environment == 'prod' && vars.PROD_DATA_SESSION_POLICY_ARN || vars.DATA_SESSION_POLICY_ARN) }}
           unset-current-credentials: true
           translate-env-variables: false
       - run: python scripts/infra/data_preflight.py
@@ -163,9 +196,10 @@ jobs:
           terraform_version: '1.15.8'
           terraform_wrapper: false
       - name: Reaudit and apply only the reviewed binary
+        id: verify
         run: |
           set -euo pipefail
-          root=infra/environments/dev/data
+          root="infra/environments/$DATA_ENVIRONMENT/data"
           terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/reviewed/data.tfbackend.json"
           [[ "$(terraform -chdir="$root" workspace show)" == default ]]
           terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/reviewed/data.tfplan" > data-plan.json
@@ -176,9 +210,16 @@ jobs:
           terraform -chdir="$root" output -json > data-outputs.json
           python scripts/infra/data_verify.py
           terraform -chdir="$root" plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/reviewed/data.tfvars.json"
+          python - <<'PY'
+          import json, os
+          values = json.load(open('data-outputs.json'))['interface']['value']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('interface_json=' + json.dumps({'verified': True, 'environment': os.environ['DATA_ENVIRONMENT'], 'outputs': values}, separators=(',', ':')) + '\n')
+          PY
+          echo 'verified=true' >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: banking-data-verified-interface
+          name: banking-${{ inputs.data_environment }}-verified-interface
           path: |
             data-outputs.json
             data-verification.json

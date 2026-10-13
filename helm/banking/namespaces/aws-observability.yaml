@@ -1,0 +1,36 @@
+# EKS Fargate's built-in Fluent Bit router reads this ConfigMap when new Pods
+# start. Only Banking namespaces reach their pre-created encrypted log groups.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aws-observability
+  labels:
+    aws-observability: enabled
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-logging
+  namespace: aws-observability
+data:
+  flb_log_cw: "false"
+  filters.conf: |
+    [FILTER]
+        Name kubernetes
+        Match kube.*
+        Merge_Log On
+        Keep_Log Off
+        Buffer_Size 0
+    [FILTER]
+        Name grep
+        Match kube.*
+        Regex $kubernetes['namespace_name'] ^banking-(dev|prod)$
+  output.conf: |
+    [OUTPUT]
+        Name cloudwatch_logs
+        Match kube.*
+        region us-east-2
+        log_group_name /banking/fargate/unrouted
+        log_group_template /banking/$kubernetes['namespace_name']/application
+        log_stream_prefix fargate-
+        auto_create_group false

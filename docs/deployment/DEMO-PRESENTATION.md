@@ -6,9 +6,9 @@ never narrate a local emulator or Terraform mock as an AWS deployment.
 | Timing | Segment | Demonstration / required evidence |
 | --- | --- | --- |
 | 0:00–2:00 | Business and architecture | Safe release objective, synthetic API/data boundary, Fargate/DNS/outbox diagram and actual approval controls |
-| 2:00–6:00 | Application, containers and EKS | Local persistence/message evidence now; later actual Ready Pods, Fargate nodes, private DNS, durable payment after Pod replacement and real SQS receipt |
+| 2:00–6:00 | Application, containers and EKS | Two private namespaces, temporary CodeBuild deployment runner, actual Ready Pods/Fargate nodes, durable payment after Pod replacement and real SQS receipt |
 | 6:00–9:00 | CI/CD specialty | Exact-commit CI, immutable scanned pair, protected publication/deploy, verified same-digest dev-to-prod demonstration and failed job with verified rollback |
-| 9:00–12:00 | Security, telemetry and incident | Separate identities, verified database TLS/DDL denial, fresh per-Pod graphs/logs, real alert delivery, detection/investigation/recovery timeline |
+| 9:00–12:00 | Security, telemetry and incident | OIDC and saved-plan approvals, separate dev/prod identities, database TLS/DDL denial, CloudWatch pod logs and encrypted alerts, recovery timeline |
 | 12:00–14:00 | Migration and cost | Wave evidence, measured baseline/before-after outcomes, three supported optimization comparisons and residual charges |
 | 14:00–15:00 | Risks and next steps | One-AZ database/one-NAT tradeoffs, unverified HA/backup restore, remaining live gates and authorized cleanup |
 

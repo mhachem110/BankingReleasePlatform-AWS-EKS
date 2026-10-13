@@ -1,16 +1,27 @@
+# Reusable stage: launch through Infra CI/CD on reviewed dev.
 name: Controlled Banking infrastructure
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       operation:
-        type: choice
-        options: [plan, apply]
-        default: plan
-        description: 'Plan only by default; apply pauses again for saved-plan and cost review'
+        type: string
+        required: true
       approval:
         type: string
+        required: true
+      foundation_interface_json:
+        type: string
         default: ''
-        description: 'Apply only: APPLY-REVIEWED-PHASE3-PLAN'
+      network_interface_json:
+        type: string
+        default: ''
+      policy_review_json:
+        type: string
+        default: ''
+    outputs:
+      interface_json:
+        description: Platform outputs only after live verification and zero drift
+        value: ${{ jobs.apply.outputs.interface_json }}
 permissions:
   contents: read
 concurrency:
@@ -52,8 +63,10 @@ jobs:
       IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
       IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
       NETWORK_SEED_REVIEW_JSON: ${{ vars.NETWORK_SEED_REVIEW_JSON }}
-      PLATFORM_POLICY_REVIEW_JSON: ${{ vars.PLATFORM_POLICY_REVIEW_JSON }}
+      PLATFORM_POLICY_REVIEW_JSON: ${{ inputs.policy_review_json || vars.PLATFORM_POLICY_REVIEW_JSON }}
       PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+      FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
+      NETWORK_INTERFACE_JSON: ${{ inputs.network_interface_json }}
       CAPACITY_REVIEW_JSON: ${{ vars.CAPACITY_REVIEW_JSON }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
@@ -65,6 +78,7 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
       - run: python -m pip install -r scripts/infra/requirements.txt
+      - run: python scripts/infra/pipeline_entry.py platform-bindings
       - id: config
         run: python scripts/infra/guard.py inputs
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -137,18 +151,23 @@ jobs:
       IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
       IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
       NETWORK_SEED_REVIEW_JSON: ${{ vars.NETWORK_SEED_REVIEW_JSON }}
-      PLATFORM_POLICY_REVIEW_JSON: ${{ vars.PLATFORM_POLICY_REVIEW_JSON }}
+      PLATFORM_POLICY_REVIEW_JSON: ${{ inputs.policy_review_json || vars.PLATFORM_POLICY_REVIEW_JSON }}
       PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
+      FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
+      NETWORK_INTERFACE_JSON: ${{ inputs.network_interface_json }}
       OPERATION: ${{ inputs.operation }}
       APPROVAL: ${{ inputs.approval }}
       REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
       CAPACITY_REVIEW_JSON: ${{ vars.CAPACITY_REVIEW_JSON }}
+    outputs:
+      interface_json: ${{ steps.interface.outputs.interface_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
       - run: python -m pip install -r scripts/infra/requirements.txt
+      - run: python scripts/infra/pipeline_entry.py platform-bindings
       - id: config
         run: python scripts/infra/guard.py inputs
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -195,6 +214,15 @@ jobs:
           python scripts/infra/verify-platform.py
           python scripts/infra/export-irsa-request.py
           terraform -chdir="$root" plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/reviewed/platform.tfvars.json"
+      - id: interface
+        name: Publish verified non-secret platform outputs to the next stage
+        run: |
+          python - <<'PY'
+          import json, os
+          outputs = json.load(open('platform-outputs.json'))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('interface_json=' + json.dumps({'verified': True, 'outputs': outputs}, separators=(',', ':')) + '\n')
+          PY
       - name: Publish verified interface and exact administrator IRSA request
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

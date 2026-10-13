@@ -45,7 +45,7 @@ class HelmTests(unittest.TestCase):
             "--set", "messaging.enabled=true", "--set", "messaging.approved=true",
             "--set", "messaging.roleArn=arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-payment-runtime-dev",
             "--set", "messaging.queueUrl=https://sqs.us-east-2.amazonaws.com/866934333672/banking-dev-payments",
-            "--set", "messaging.deadLetterQueueUrl=https://sqs.us-east-2.amazonaws.com/866934333672/banking-dev-dead"]
+            "--set", "messaging.deadLetterQueueUrl=https://sqs.us-east-2.amazonaws.com/866934333672/banking-dev-payments-dlq"]
         items = render(*args)
         for item in (i for i in items if i["kind"] == "ServiceAccount"):
             payment = item["metadata"]["name"].endswith("payment")

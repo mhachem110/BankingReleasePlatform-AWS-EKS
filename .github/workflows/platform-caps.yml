@@ -1,0 +1,211 @@
+# Same reviewed-dev OIDC model; plan is read-only, apply pauses for a second review.
+name: Publish Banking platform session caps
+on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: true
+      approval:
+        type: string
+        required: true
+      enabled:
+        type: boolean
+        default: false
+      foundation_interface_json:
+        type: string
+        required: true
+      network_interface_json:
+        type: string
+        required: true
+    outputs:
+      policy_review_json:
+        description: Live verified policy ARNs and canonical hashes; never an IAM grant
+        value: ${{ jobs.apply.outputs.policy_review_json || jobs.plan.outputs.policy_review_json }}
+permissions:
+  contents: read
+concurrency:
+  group: banking-shared-iam-prerequisites
+  cancel-in-progress: false
+env:
+  AWS_EC2_METADATA_DISABLED: 'true'
+  AWS_PAGER: ''
+  TF_IN_AUTOMATION: 'true'
+jobs:
+  prerequisites:
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && inputs.enabled && vars.CLEANUP_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/bootstrap/check-github-environment.py
+  plan:
+    needs: prerequisites
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    env: &caps-env
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
+      AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
+      FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
+      NETWORK_INTERFACE_JSON: ${{ inputs.network_interface_json }}
+      ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      OPERATION: ${{ inputs.operation }}
+      APPROVAL: ${{ inputs.approval }}
+    outputs:
+      digest: ${{ steps.hash.outputs.digest }}
+      apply_required: ${{ steps.plan-review.outputs.apply_required }}
+      policy_review_json: ${{ steps.status.outputs.policy_review_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: config
+        run: python scripts/infra/publish_platform_caps.py inputs
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runtime-caps-plan
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - id: status
+        run: python scripts/infra/publish_platform_caps.py preflight
+      - name: Verify protected existing state bucket
+        run: python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Save the exact three-policy and local account-check plan
+        run: |
+          set -euo pipefail
+          root=infra/platform-caps
+          terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/caps.tfbackend.json"
+          [[ "$(terraform -chdir="$root" workspace show)" == default ]]
+          terraform -chdir="$root" validate
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -var-file="$GITHUB_WORKSPACE/caps.tfvars.json" -out="$GITHUB_WORKSPACE/caps.tfplan"
+          terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/caps.tfplan" > caps-plan.json
+          terraform -chdir="$root" show -no-color "$GITHUB_WORKSPACE/caps.tfplan" > caps-plan.txt
+      - id: plan-review
+        run: python scripts/infra/publish_platform_caps.py plan
+      - id: hash
+        run: echo "digest=$(sha256sum caps.tfplan | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-runtime-caps-reviewed-plan
+          path: |
+            caps.tfplan
+            caps.tfbackend.json
+            caps-config.json
+            caps.tfvars.json
+            caps-plan-review.json
+            caps-plan.txt
+            caps-preflight.json
+          retention-days: 1
+          if-no-files-found: error
+      - name: Publish source-generated session policy review instructions
+        run: |
+          echo 'Review the three source-generated session policy documents, actual key/VPC/default-group/operator bindings, ownership and saved-plan SHA256. No policy is attached to bootstrap and no role permissions change.' >> "$GITHUB_STEP_SUMMARY"
+  apply:
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-PLATFORM-CAPS' && needs.plan.outputs.apply_required == 'true'
+    needs: [prerequisites, plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env: *caps-env
+    outputs:
+      policy_review_json: ${{ steps.verify.outputs.policy_review_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: config
+        run: python scripts/infra/publish_platform_caps.py inputs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: banking-runtime-caps-reviewed-plan
+          path: reviewed
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runtime-caps-inspect
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Recheck authorization and the same-run reviewed binary
+        env:
+          REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
+        run: |
+          set -euo pipefail
+          python scripts/infra/publish_platform_caps.py preflight
+          terraform -chdir=infra/platform-caps init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/caps.tfbackend.json"
+          [[ "$(terraform -chdir=infra/platform-caps workspace show)" == default ]]
+          terraform -chdir=infra/platform-caps show -json "$GITHUB_WORKSPACE/reviewed/caps.tfplan" > caps-plan.json
+          python scripts/infra/publish_platform_caps.py saved
+      # Only after the saved plan is reviewed do we request the bounded write session.
+      - id: write-cap
+        if: needs.plan.outputs.apply_required == 'true'
+        run: python scripts/infra/publish_platform_caps.py write-cap
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        if: needs.plan.outputs.apply_required == 'true'
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runtime-caps-apply
+          inline-session-policy: ${{ steps.write-cap.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - name: Apply the saved plan, verify live policies and require zero drift
+        id: verify
+        env:
+          APPLY_REQUIRED: ${{ needs.plan.outputs.apply_required }}
+        run: |
+          set -euo pipefail
+          python scripts/infra/publish_platform_caps.py preflight
+          if [[ "$APPLY_REQUIRED" == true ]]; then
+            terraform -chdir=infra/platform-caps apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/reviewed/caps.tfplan"
+          fi
+          terraform -chdir=infra/platform-caps output -json > caps-outputs.json
+          python scripts/infra/publish_platform_caps.py verify
+          terraform -chdir=infra/platform-caps plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/caps.tfvars.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-runtime-caps-verification
+          path: |
+            caps-verification.json
+            caps-outputs.json
+          retention-days: 7
+          if-no-files-found: error

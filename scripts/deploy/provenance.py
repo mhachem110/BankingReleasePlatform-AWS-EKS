@@ -39,7 +39,12 @@ def deployment_receipt(environment, manifest, commit, run_id):
 
 def verify_publication(manifest):
     info = json_run(["gh", "api", f"repos/{REPOSITORY}/actions/runs/{manifest['publishRunId']}"])
-    validate_run(info, workflow="app-publish.yml", branch="dev", commit=manifest["sourceCommit"])
+    # Keep receipts from the original publisher valid. New publication is an
+    # App CD operation; the reusable child retains the same immutable manifest.
+    workflow = info.get("path", "").removeprefix(".github/workflows/")
+    if workflow not in {"app-publish.yml", "app-deploy.yml"}:
+        raise ValueError("Publication must originate from the reviewed application publisher")
+    validate_run(info, workflow=workflow, branch="dev", commit=manifest["sourceCommit"])
     run(["git", "merge-base", "--is-ancestor", manifest["sourceCommit"], "HEAD"], cwd=ROOT)
 
 def verify_previous(environment, manifest):

@@ -1,5 +1,9 @@
 # Project reconciliation — 12 October 2026
 
+> Historical inventory. See [PROJECT-PIPELINE.md](PROJECT-PIPELINE.md) for the
+> current runner and deployment sequence. Its permanent `banking-deployer`
+> runner prerequisite has been superseded.
+
 This audit continues the existing BankingReleasePlatform project. The approved
 compute remains EKS Fargate in account 866934333672, us-east-2, cluster/namespace
 banking-dev. The current workstream is deployment preparation on `infra`.

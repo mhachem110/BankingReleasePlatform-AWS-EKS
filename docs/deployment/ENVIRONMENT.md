@@ -29,13 +29,14 @@ not an AWS credential. Inputs are passed through quoted environment variables, n
 interpolated into command text.
 
 Publication runs on a GitHub-hosted Linux runner and uses only ECR APIs.
-Deployment runs on an approved dedicated self-hosted Linux x64 runner with label
-banking-deployer, with Docker, Python 3.12, AWS CLI v2, gh CLI, git and approved EKS
-API network access. Do not attach this runner to untrusted PR CI.
-Use an existing approved runner; provisioning one is a separate owner decision.
-The checksum installer supplies Helm/kubectl. No dynamic public-endpoint broadening
-or per-run security-group edits occur. Deployment jobs serialize per environment and
-never cancel a running rollout/rollback.
+Deployment runs on the project CodeBuild GitHub Actions runner in the two private
+application subnets. CodeBuild starts a temporary runner for a queued, named
+release job and stops it when the job finishes. GitHub-hosted jobs perform Docker
+image scans before the private deployment job. The checksum installer supplies
+Helm/kubectl; no public EKS endpoint broadening or per-run security-group edits
+occur. Deployment jobs serialize per environment and never cancel a running
+rollout/rollback. See `docs/infrastructure/PROJECT-PIPELINE.md` for the one-time
+GitHub App connection, Terraform runner stage, network path and cost review.
 
 The administrator must review an OIDC role with audience sts.amazonaws.com and exact
 subjects repo:mhachem110@150286776/BankingReleasePlatform-AWS-EKS@1413860979:environment:dev (and only
@@ -88,9 +89,10 @@ owner review, no administrator bypass, exact dev/main branch restrictions and co
 non-secret variables. APP_RELEASE_MODE=shared-cluster-demo permits dev then prod
 against banking-dev, retaining the source branch promotion routes dev/stage/uat/main.
 Stage/UAT are available for branch governance and remain inactive as paid workloads.
-Deployment/data switches remain false and prod runtime is explicitly memory mode.
-Prod persistence/messaging cannot be enabled through the current dev-only workflow;
-its isolated data design requires a separate actual resource/cost plan approval.
+Deployment/data switches remain false until both environment-specific data plans,
+runtime IRSA roles, secret delivery and final acceptance have been reviewed.
+Prod persistence/messaging may use only its own namespace-bound role and queues;
+the default remains memory mode until those actual resources and secrets exist.
 
 The existing CloudOps deployment role trusts/permissions are user-reported and await
 full AWS audit. Workflow STS caps add no permission and constrain dev publication and

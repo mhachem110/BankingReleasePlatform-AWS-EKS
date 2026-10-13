@@ -1,0 +1,38 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageReviewedBankingAlertSubscriptions",
+      "Effect": "Allow",
+      "Action": [
+        "sns:Subscribe",
+        "sns:Unsubscribe",
+        "sns:ListSubscriptionsByTopic"
+      ],
+      "Resource": [
+        "arn:aws:sns:us-east-2:866934333672:banking-dev-alerts",
+        "arn:aws:sns:us-east-2:866934333672:banking-prod-alerts"
+      ]
+    },
+    {
+      "Sid": "ManageReviewedProdDataPolicy",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreatePolicy",
+        "iam:DeletePolicy",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:TagPolicy",
+        "iam:UntagPolicy"
+      ],
+      "Resource": "arn:aws:iam::866934333672:policy/BankingReleasePlatformPhase6ProdSession"
+    },
+    {
+      "Sid": "ReadRDSServiceLinkedRoleForDataPreflight",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": "arn:aws:iam::866934333672:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS"
+    }
+  ]
+}
