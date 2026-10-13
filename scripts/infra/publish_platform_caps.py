@@ -1,4 +1,5 @@
 """Publish source-generated session caps without changing any role permissions."""
+import subprocess
 import argparse
 import hashlib
 import json
