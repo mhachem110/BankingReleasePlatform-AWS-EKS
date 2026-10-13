@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
-from iam_contract import ACCOUNT, REGION, BOOTSTRAP, BUCKET, ROLE_ARNS, ATTACHMENTS, require, digest
+from iam_contract import ACCOUNT, REGION, BOOTSTRAP, BUCKET, BOUNDARY, ROLE_ARNS, ATTACHMENTS, require, digest, trust, flow_policy
 from network_seed import ADDRESSES as SEED_ADDRESSES, interface
 
 KEYS = {"vpc-seed": "banking-release-platform/dev/platform/terraform.tfstate",
@@ -27,7 +27,7 @@ def inputs(env):
     require(env.get("CLEANUP_ENABLED") == "true" and env.get("AWS_OPERATIONS_ENABLED") == "false", "Explicit cleanup window; creation must be disabled")
     require(env.get("ROLE_ARN") == BOOTSTRAP and env.get("AWS_EXPECTED_ACCOUNT_ID") == ACCOUNT and env.get("AWS_REGION") == REGION and env.get("TF_STATE_BUCKET") == BUCKET, "Wrong cleanup identity/account/Region/backend")
     target = env.get("TARGET")
-    require(target in {"vpc-seed", "policy-prerequisites"} and env.get("OPERATION") in {"plan", "apply"}, "Only the verified test VPC or unused project policies are enabled")
+    require(target in {"vpc-seed", "policy-prerequisites", "iam-prerequisites"} and env.get("OPERATION") in {"plan", "apply"}, "Only the verified VPC, project policies or project service roles are enabled")
     if env["OPERATION"] == "apply":
         require(env.get("APPROVAL") == "DESTROY-REVIEWED-BANKING-" + target.upper(), "Exact destroy phrase and separate environment review required")
     require(re.fullmatch(r"[1-9][0-9]*", env.get("GITHUB_RUN_ID", "")) and re.fullmatch(r"[1-9][0-9]*", env.get("GITHUB_RUN_ATTEMPT", "")), "Use an actual workflow run")
@@ -43,10 +43,16 @@ def backend(config):
 
 def read_policy(config):
     bucket = "arn:aws:s3:::" + BUCKET
-    actions = ["sts:GetCallerIdentity", "ec2:Describe*"] if config["target"] == "vpc-seed" else ["sts:GetCallerIdentity", "iam:GetPolicy", "iam:GetPolicyVersion", "iam:ListPolicyVersions"]
+    # Compact read-only project scope leaves enough room for exact role deletes
+    # in the STS 2,048-character inline cap. Writes still name one selected state.
+    state_reads = (bucket + "/banking-release-platform/*/terraform.tfstate" if config["target"] == "iam-prerequisites" else
+                   [bucket + "/" + key for key in sorted(set(KEYS.values()))])
+    actions = (["sts:GetCallerIdentity", "ec2:Describe*"] if config["target"] == "vpc-seed" else
+               ["sts:GetCallerIdentity", "iam:Get*", "iam:List*", "eks:Describe*", "eks:List*", "ec2:DescribeFlowLogs"] if config["target"] == "iam-prerequisites" else
+               ["sts:GetCallerIdentity", "iam:GetPolicy", "iam:GetPolicyVersion", "iam:ListPolicyVersions"])
     rows = [{"Effect": "Allow", "Action": actions, "Resource": "*"},
             {"Effect": "Allow", "Action": ["s3:Get*", "s3:ListBucket"], "Resource": bucket},
-            {"Effect": "Allow", "Action": "s3:GetObject", "Resource": [bucket + "/" + key for key in sorted(set(KEYS.values()))]},
+            {"Effect": "Allow", "Action": "s3:GetObject", "Resource": state_reads},
             {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": bucket + "/" + config["key"] + ".tflock"}]
     result = json.dumps({"Version": "2012-10-17", "Statement": rows}, separators=(",", ":"))
     require(len(result) <= 2048, "Read-only cleanup STS cap exceeds limit")
@@ -92,6 +98,11 @@ def state_review(state, config, env):
     require(addresses <= inventory(config["target"]), "Unrelated resource address in cleanup state")
     if config["target"] == "vpc-seed":
         require(addresses == SEED_ADDRESSES, "VPC seed cleanup refuses a full/partial platform state")
+    if config["target"] == "iam-prerequisites":
+        for item in managed:
+            if item["type"] in {"aws_iam_role_policy_attachment", "aws_iam_role_policy"}:
+                key = item["address"].rsplit(".", 1)[1]
+                require(f'aws_iam_role.service["{key}"]' in addresses, "Role policy cleanup requires its managed service role in the same state")
     expected_env = "prod" if config["target"] == "prod-data" else "shared" if config["target"] in {"iam-prerequisites", "policy-prerequisites"} else "dev"
     seed = interface(env) if config["target"] in {"vpc-seed", "platform"} else None
     for item in managed:
@@ -110,6 +121,7 @@ def state_review(state, config, env):
         if kind == "aws_iam_role":
             key = item["address"].split('"')[1]
             require(value.get("arn") == ROLE_ARNS[key], "Never delete bootstrap/application/other service roles")
+            require(value.get("permissions_boundary") == BOUNDARY and json.loads(value.get("assume_role_policy") or "{}") == trust(key), "Service role boundary/trust differs from the reviewed source")
         if kind == "aws_iam_policy":
             from policy_prerequisites import POLICIES, document
             key = item["address"].split('"')[1]
@@ -193,6 +205,30 @@ def preflight(config, report, env):
     if config["target"] == "iam-prerequisites":
         other_state_empty(KEYS["platform"])
         require(aws("eks", "describe-cluster", "--name", "banking-dev", absent_codes=("ResourceNotFoundException",)).get("absent"), "Cluster must be absent before service-role teardown")
+        names = aws("eks", "list-clusters")["clusters"]
+        for name in names:
+            cluster = aws("eks", "describe-cluster", "--name", name)["cluster"]
+            require(cluster.get("roleArn") not in ROLE_ARNS.values(), "A live cluster still references a project service role")
+            for profile in aws("eks", "list-fargate-profiles", "--cluster-name", name)["fargateProfileNames"]:
+                value = aws("eks", "describe-fargate-profile", "--cluster-name", name, "--fargate-profile-name", profile)["fargateProfile"]
+                require(value.get("podExecutionRoleArn") not in ROLE_ARNS.values(), "A live Fargate profile still references a project service role")
+        require(not any(r.get("DeliverLogsPermissionArn") in ROLE_ARNS.values() for r in aws("ec2", "describe-flow-logs")["FlowLogs"]), "A live flow log still references a project service role")
+        for item in report["inventory"]:
+            if item["type"] != "aws_iam_role":
+                continue
+            key = item["address"].split('"')[1]; name = ROLE_ARNS[key].split("/")[-1]
+            role = aws("iam", "get-role", "--role-name", name)["Role"]
+            require(role.get("Arn") == ROLE_ARNS[key] and role.get("Path") == "/" and role.get("AssumeRolePolicyDocument") == trust(key) and role.get("PermissionsBoundary", {}).get("PermissionsBoundaryArn") == BOUNDARY, "Live service role identity/trust/boundary changed")
+            tags = {r["Key"]: r["Value"] for r in role.get("Tags", [])}
+            require(all(tags.get(k) == v for k, v in {"Project": "BankingReleasePlatform", "Environment": "shared", "ManagedBy": "Terraform"}.items()), "Live service-role ownership changed")
+            expected_attached = {r["values"]["policy_arn"] for r in report["inventory"] if r["type"] == "aws_iam_role_policy_attachment" and r["values"]["role"] == name}
+            actual = aws("iam", "list-attached-role-policies", "--role-name", name)["AttachedPolicies"]
+            require({r["PolicyArn"] for r in actual} == expected_attached, "Role has policy attachments outside the reviewed state")
+            expected_inline = {r["values"]["name"] for r in report["inventory"] if r["type"] == "aws_iam_role_policy" and r["values"]["role"] == name}
+            require(set(aws("iam", "list-role-policies", "--role-name", name)["PolicyNames"]) == expected_inline, "Role has inline policies outside the reviewed state")
+            if expected_inline:
+                require(aws("iam", "get-role-policy", "--role-name", name, "--policy-name", "BankingFlowLogs")["PolicyDocument"] == flow_policy(), "Live flow policy changed")
+            require(not aws("iam", "list-instance-profiles-for-role", "--role-name", name)["InstanceProfiles"], "A live instance profile still references a service role")
     if config["target"] in {"vpc-seed", "platform"}:
         seed = interface(env)
         live = aws("ec2", "describe-vpcs", "--vpc-ids", seed["vpc_id"])["Vpcs"]
@@ -230,6 +266,18 @@ def policy_delete_cap(config):
     return value
 
 
+def role_delete_cap(config):
+    doc = json.loads(read_policy(config))
+    tagged = {"StringEquals": {"aws:ResourceTag/Project": "BankingReleasePlatform", "aws:ResourceTag/Environment": "shared"}}
+    doc["Statement"] += [{"Effect": "Allow", "Action": "iam:DeleteRole", "Resource": list(ROLE_ARNS.values()), "Condition": tagged},
+                         {"Effect": "Allow", "Action": "iam:DetachRolePolicy", "Resource": [ROLE_ARNS[k] for k in ATTACHMENTS], "Condition": dict(tagged, ArnEquals={"iam:PolicyARN": list(ATTACHMENTS.values())})},
+                         {"Effect": "Allow", "Action": "iam:DeleteRolePolicy", "Resource": ROLE_ARNS["flow"], "Condition": tagged},
+                         {"Effect": "Allow", "Action": "s3:PutObject", "Resource": "arn:aws:s3:::" + BUCKET + "/" + config["key"]}]
+    value = json.dumps(doc, separators=(",", ":"))
+    require(len(value) <= 2048, "Service-role cleanup cap exceeds STS limit")
+    return value
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(); parser.add_argument("command", choices=["inputs", "preflight", "plan", "verify", "delete-cap", "saved"])
     args = parser.parse_args(); config = inputs(os.environ)
@@ -239,7 +287,8 @@ if __name__ == "__main__":
         with open(os.environ["GITHUB_OUTPUT"], "a") as out:
             out.write("session_policy=" + read_policy(config) + "\n")
     elif args.command == "delete-cap":
-        cap = vpc_delete_cap(config, os.environ) if config["target"] == "vpc-seed" else policy_delete_cap(config)
+        cap = (vpc_delete_cap(config, os.environ) if config["target"] == "vpc-seed" else
+               role_delete_cap(config) if config["target"] == "iam-prerequisites" else policy_delete_cap(config))
         with open(os.environ["GITHUB_OUTPUT"], "a") as out:
             out.write("session_policy=" + cap + "\n")
     elif args.command == "preflight":
@@ -268,8 +317,11 @@ if __name__ == "__main__":
         if config["target"] == "vpc-seed":
             seed = interface(os.environ)
             require(aws("ec2", "describe-vpcs", "--vpc-ids", seed["vpc_id"], absent_codes=("InvalidVpcID.NotFound",)).get("absent"), "VPC still exists")
-        else:
+        elif config["target"] == "policy-prerequisites":
             from policy_prerequisites import POLICIES
             for arn, _ in POLICIES.values():
                 require(aws("iam", "get-policy", "--policy-arn", arn, absent_codes=("NoSuchEntity",)).get("absent"), "Project policy still exists")
+        else:
+            for arn in ROLE_ARNS.values():
+                require(aws("iam", "get-role", "--role-name", arn.split("/")[-1], absent_codes=("NoSuchEntity",)).get("absent"), "Project service role still exists")
         Path("cleanup-verification.json").write_text(json.dumps({"target": config["target"], "account": ACCOUNT, "region": REGION, "state_key": config["key"], "managed_resources_remaining": 0, "verified": True}, indent=2))

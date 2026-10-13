@@ -22,7 +22,22 @@ No imports, state removal, force unlocks, targeted plans or forced deletes occur
 The workflow also removes unused policy prerequisites as described in
 [POLICY-PREREQUISITES.md](POLICY-PREREQUISITES.md), with its own target/phrase and
 checks that policy users and dependent project states are absent. It refuses full
-platform states, populated VPCs and dependent data states. Full platform/data
+platform states, populated VPCs and dependent data states.
+
+The `iam-prerequisites` target, with
+`DESTROY-REVIEWED-BANKING-IAM-PREREQUISITES`, removes only the three project service
+roles and their two known managed attachments and one flow-log inline policy.
+It requires empty platform/data states, absence of `banking-dev`, and live scans
+of all Ohio clusters, Fargate profiles and flow logs to reject any role use.
+It also refuses instance-profile use, changed trust/boundary/ownership, unknown
+policy attachments and inline-policy drift. Partial creation can be cleaned up
+only when every policy association has its managed role in the same state.
+The cleanup session permits exact tagged role deletions, exact AWS-managed
+policy detachment and only the selected IAM state write. Its compact read-only
+scope covers project Terraform states; it cannot write those other states.
+Two reviews and the same-run state/binary checks apply before any deletes.
+
+Full platform/data
 teardown must be implemented and reviewed before
 those deployments; Kubernetes ingress/controller cleanup, ECR image inventory,
 EKS/RDS deletion protection and final snapshots require their own concrete
