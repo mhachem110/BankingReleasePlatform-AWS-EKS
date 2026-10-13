@@ -38,9 +38,12 @@ def platform_bindings(env):
     return values, network
 
 
-def data_bindings(env):
+def data_bindings(env, *, include_policy=False):
     foundation = json.loads(env.get('FOUNDATION_INTERFACE_JSON') or '{}')
     platform = json.loads(env.get('PLATFORM_INTERFACE_JSON') or '{}')
+    runtime = json.loads(env.get('RUNTIME_INTERFACE_JSON') or '{}')
+    environment = env.get('DATA_ENVIRONMENT') or 'dev'
+    require(environment in {'dev', 'prod'}, 'Only Banking dev/prod data may be created')
     values = json.loads(env.get('DATA_INPUTS_JSON') or '{}')
     if foundation:
         require(foundation.get('verified') is True and foundation.get('kms_key_arn'), 'Verified foundation key required')
@@ -50,7 +53,17 @@ def data_bindings(env):
         for key in ['vpc_id', 'database_subnet_ids', 'cluster_security_group_id']:
             require(platform.get('outputs', {}).get(key, {}).get('value'), 'Missing actual platform output: ' + key)
             values[key] = platform['outputs'][key]['value']
-    return values
+    policy = {}
+    if runtime:
+        require(runtime.get('verified') is True, 'Runtime IAM/alerts are not verified')
+        actual = runtime.get('outputs', {}).get(environment, {})
+        for key in ['monitoring_role_arn', 'alert_topic_arn', 'data_policy_arn', 'data_policy_sha256', 'subscription_arn']:
+            require(actual.get(key), 'Missing actual runtime output: ' + key)
+        values['monitoring_role_arn'] = actual['monitoring_role_arn']
+        values['alert_topic_arn'] = actual['alert_topic_arn']
+        policy = {'DATA_SESSION_POLICY_ARN': actual['data_policy_arn'],
+                  'DATA_SESSION_POLICY_SHA256': actual['data_policy_sha256']}
+    return (values, policy) if include_policy else values
 
 
 if __name__ == '__main__':
@@ -63,5 +76,8 @@ if __name__ == '__main__':
             out.write('PLATFORM_INPUTS_JSON=' + json.dumps(values, separators=(',', ':')) + '\n')
             if network:out.write('NETWORK_SEED_REVIEW_JSON=' + json.dumps(network, separators=(',', ':')) + '\n')
     else:
+        values, policy = data_bindings(os.environ, include_policy=True)
         with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as out:
-            out.write('DATA_INPUTS_JSON=' + json.dumps(data_bindings(os.environ), separators=(',', ':')) + '\n')
+            out.write('DATA_INPUTS_JSON=' + json.dumps(values, separators=(',', ':')) + '\n')
+            for key, value in policy.items():
+                out.write(key + '=' + value + '\n')

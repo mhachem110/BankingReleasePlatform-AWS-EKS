@@ -2,7 +2,8 @@
 
 `project-deploy.yml` presents **Infra CI/CD**. It validates scope, runs the existing
 credential-free Terraform/Helm/security CI, then calls the foundation, network,
-platform-cap publication, platform and data workflows from the same Git commit. Native bootstrap environment
+platform-cap publication, platform, runtime IAM/alerts, dev/prod data and Kubernetes
+bootstrap workflows from the same Git commit. Native bootstrap environment
 reviews, saved binary hashes, backend locks and live verification remain intact.
 Destroy stays outside this entry. An apply cannot cancel an earlier project run.
 
@@ -16,7 +17,8 @@ The foundation returns its actual key/operator. The network returns its actual
 owned VPC/default group. These outputs replace stale dependency IDs for the next
 stage without modifying GitHub environment variables. The platform returns actual
 subnets and cluster group only after live verification and a zero-drift plan;
-the data stage consumes those outputs. Planned/computed identifiers cannot stand
+the data stages consume those outputs and the runtime stage supplies exact
+monitoring roles, alert destinations and managed data-policy hashes. Planned/computed identifiers cannot stand
 in for an applied dependency. A first-time plan cannot resolve every later plan
 until its dependencies exist; apply progresses through the saved-plan reviews in
 the same run.
@@ -38,9 +40,13 @@ verified key, operator, VPC and default group. Their dedicated native state is
 resumable; policies are session restrictions and are never attached to bootstrap.
 Creation and cleanup retain separate saved-plan approvals and live identity checks.
 
-The remaining work before dispatching the complete project is measured quota and cost evidence, runtime
-IAM/alert prerequisites, production data orchestration, a private deployment
-runner, full platform/data cleanup, Kubernetes bootstrap and end-to-end acceptance.
+The remaining work before dispatching the complete project is measured quota and
+cost evidence, the additive bootstrap IAM permissions in
+`docs/deployment/bootstrap-runtime-policy-additions.json`, a registered trusted
+`banking-deployer` runner with EKS API reachability, full platform/data cleanup,
+and end-to-end application acceptance. The workflow deliberately fails its
+final evidence job if the runner/Kubernetes stage is skipped. Runtime and data
+code is prepared but has not been executed against AWS.
 App CD now combines publication/deployment, and App Rollback is a separate protected
 recovery entry. See [the presentation walkthrough](PIPELINE-PRESENTATION.md) for
 controls and the precise readiness limits. Existing required checks and protections

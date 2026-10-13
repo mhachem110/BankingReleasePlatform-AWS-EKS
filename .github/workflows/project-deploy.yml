@@ -97,22 +97,65 @@ jobs:
       foundation_interface_json: ${{ needs.foundation.outputs.interface_json }}
       network_interface_json: ${{ needs.network.outputs.interface_json }}
       policy_review_json: ${{ needs.platform-caps.outputs.policy_review_json }}
+  runtime:
+    # Publish dev/prod monitoring, encrypted alarm delivery and data caps only
+    # after the EKS issuer, network and runtime key exist and verify live.
+    if: >-
+      !cancelled() && inputs.target == 'project' && needs.platform.result == 'success' &&
+      inputs.operation == 'apply' && fromJSON(needs.platform.outputs.interface_json || '{}').verified == true
+    needs: [foundation, platform]
+    uses: ./.github/workflows/runtime-prerequisites.yml
+    permissions: *deployment-permissions
+    with:
+      enabled: true
+      operation: ${{ inputs.operation }}
+      approval: APPLY-REVIEWED-BANKING-RUNTIME
+      foundation_interface_json: ${{ needs.foundation.outputs.interface_json }}
+      platform_interface_json: ${{ needs.platform.outputs.interface_json }}
   data:
     if: >-
       !cancelled() && needs.ci.result == 'success' &&
-      (inputs.target == 'data' || (inputs.target == 'project' && needs.platform.result == 'success' && inputs.operation == 'apply'))
-    needs: [ci, foundation, platform]
+      (inputs.target == 'data' || (inputs.target == 'project' && needs.runtime.result == 'success' && inputs.operation == 'apply'))
+    needs: [ci, foundation, platform, runtime]
     uses: ./.github/workflows/data-operations.yml
     permissions: *deployment-permissions
     with:
       operation: ${{ inputs.operation }}
       approval: APPLY-REVIEWED-PHASE6-PLAN
       enabled: true
+      data_environment: dev
       foundation_interface_json: ${{ needs.foundation.outputs.interface_json }}
+      platform_interface_json: ${{ needs.platform.outputs.interface_json }}
+      runtime_interface_json: ${{ needs.runtime.outputs.interface_json }}
+  data-prod:
+    if: >-
+      !cancelled() && inputs.target == 'project' && inputs.operation == 'apply' &&
+      needs.data.result == 'success' && needs.runtime.result == 'success'
+    needs: [data, foundation, platform, runtime]
+    uses: ./.github/workflows/data-operations.yml
+    permissions: *deployment-permissions
+    with:
+      operation: ${{ inputs.operation }}
+      approval: APPLY-REVIEWED-PHASE6-PLAN
+      enabled: true
+      data_environment: prod
+      foundation_interface_json: ${{ needs.foundation.outputs.interface_json }}
+      platform_interface_json: ${{ needs.platform.outputs.interface_json }}
+      runtime_interface_json: ${{ needs.runtime.outputs.interface_json }}
+  kubernetes:
+    # Owner-managed namespace/RBAC install requires the registered trusted runner.
+    # A missing runner readiness flag leaves Project incomplete instead of claiming success.
+    if: >-
+      !cancelled() && inputs.target == 'project' && inputs.operation == 'apply' &&
+      needs.data-prod.result == 'success' && needs.platform.result == 'success'
+    needs: [data-prod, platform]
+    uses: ./.github/workflows/kubernetes-bootstrap.yml
+    permissions: *deployment-permissions
+    with:
       platform_interface_json: ${{ needs.platform.outputs.interface_json }}
   evidence:
     if: always()
-    needs: [authorize, ci, foundation, network, platform-caps, platform, data]
+    needs: [authorize, ci, foundation, network, platform-caps, platform, runtime, data, data-prod, kubernetes]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -129,16 +172,16 @@ jobs:
               out.write('## Infrastructure stages\n\nOperation: ' + os.environ['OPERATION'] + '\n\n')
               for name, result in results.items():
                   out.write('- ' + name + ': ' + result['result'] + '\n')
-              out.write('\nVerified resources are retained. Kubernetes rollout, smoke tests, isolation and rollback require separate acceptance evidence.\n')
+              out.write('\nVerified resources are retained. Application publication, rollout, smoke, isolation and rollback require App CD acceptance evidence.\n')
           assert all(v['result'] not in ['failure', 'cancelled'] for v in results.values()), 'Deployment is incomplete'
           if os.environ['TARGET'] == 'project' and os.environ['OPERATION'] == 'apply':
               assert all(v['result'] == 'success' for v in results.values()), 'Every project stage must succeed'
               caps = json.loads(results['platform-caps'].get('outputs', {}).get('policy_review_json') or '[]')
               assert len(caps) == 3, 'Missing verified session caps'
           if os.environ['OPERATION'] == 'apply':
-              names = ['foundation', 'network', 'platform', 'data'] if os.environ['TARGET'] == 'project' else [os.environ['TARGET']]
+              names = ['foundation', 'network', 'platform', 'runtime', 'data', 'data-prod', 'kubernetes'] if os.environ['TARGET'] == 'project' else [os.environ['TARGET']]
               for name in names:
                   outputs = results[name].get('outputs', {})
-                  proof = outputs.get('verified') == 'true' if name == 'data' else json.loads(outputs.get('interface_json') or '{}').get('verified') is True
+                  proof = outputs.get('verified') == 'true' if name in {'data', 'data-prod', 'kubernetes'} else json.loads(outputs.get('interface_json') or '{}').get('verified') is True
                   assert proof, 'Missing actual verification evidence for ' + name
           PY

@@ -4,24 +4,27 @@ import re
 from data_guard import ACCOUNT, REGION, STATE_KEY, digest, require
 
 
-def monitoring_trust():
+def monitoring_trust(environment="dev"):
+    require(environment in {"dev", "prod"}, "Banking environment only")
     return {"Version":"2012-10-17", "Statement":[{"Effect":"Allow",
         "Principal":{"Service":"monitoring.rds.amazonaws.com"}, "Action":"sts:AssumeRole",
         "Condition":{"StringEquals":{"aws:SourceAccount":ACCOUNT},
-                     "ArnEquals":{"aws:SourceArn":f"arn:aws:rds:{REGION}:{ACCOUNT}:db:banking-dev-postgres"}}}]}
+                     "ArnEquals":{"aws:SourceArn":f"arn:aws:rds:{REGION}:{ACCOUNT}:db:banking-{environment}-postgres"}}}]}
 
 
-def payment_trust(issuer):
+def payment_trust(issuer, environment="dev"):
+    require(environment in {"dev", "prod"}, "Banking environment only")
     require(re.fullmatch(r"https://oidc\.eks\.us-east-2\.amazonaws\.com/id/[A-Fa-f0-9]{32}", issuer), "Actual banking-dev issuer required")
     host = issuer.removeprefix("https://")
     return {"Version":"2012-10-17", "Statement":[{"Effect":"Allow",
         "Principal":{"Federated":f"arn:aws:iam::{ACCOUNT}:oidc-provider/{host}"}, "Action":"sts:AssumeRoleWithWebIdentity",
-        "Condition":{"StringEquals":{host+":aud":"sts.amazonaws.com", host+":sub":"system:serviceaccount:banking-dev:banking-payment"}}}]}
+        "Condition":{"StringEquals":{host+":aud":"sts.amazonaws.com", host+":sub":f"system:serviceaccount:banking-{environment}:banking-payment"}}}]}
 
 
-def payment_permissions(key):
+def payment_permissions(key, environment="dev"):
+    require(environment in {"dev", "prod"}, "Banking environment only")
     require(re.fullmatch(f"arn:aws:kms:{REGION}:{ACCOUNT}:key/[a-f0-9-]{{36}}", key), "Approved data key required")
-    source = f"arn:aws:sqs:{REGION}:{ACCOUNT}:banking-dev-payments"
+    source = f"arn:aws:sqs:{REGION}:{ACCOUNT}:banking-{environment}-payments"
     return {"Version":"2012-10-17", "Statement":[
         {"Effect":"Allow", "Action":["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:ChangeMessageVisibility", "sqs:GetQueueAttributes"], "Resource":source},
         {"Effect":"Allow", "Action":"sqs:GetQueueAttributes", "Resource":source+"-dlq"},
@@ -29,7 +32,10 @@ def payment_permissions(key):
          "Condition":{"StringEquals":{"kms:ViaService":f"sqs.{REGION}.amazonaws.com"}}}]}
 
 
-def session_cap(values, policy_arn):
+def session_cap(values, policy_arn, environment="dev"):
+    require(environment in {"dev", "prod"}, "Banking environment only")
+    name = "banking-" + environment
+    state_key = f"banking-release-platform/{environment}/data/terraform.tfstate"
     region = {"StringEquals":{"aws:RequestedRegion":REGION}}
     key = values["kms_key_arn"]
     require(re.fullmatch(f"arn:aws:kms:{REGION}:{ACCOUNT}:key/[a-f0-9-]{{36}}", key), "Actual approved key required")
@@ -42,22 +48,22 @@ def session_cap(values, policy_arn):
     allow(["sts:GetCallerIdentity", "ec2:Describe*", "eks:DescribeCluster", "rds:Describe*", "sqs:ListQueues", "logs:DescribeLogGroups", "cloudwatch:DescribeAlarms"], "*", region)
     allow(["rds:CreateDBInstance", "rds:ModifyDBInstance", "rds:CreateDBSubnetGroup", "rds:CreateDBParameterGroup",
            "rds:ModifyDBParameterGroup", "rds:AddTagsToResource", "rds:ListTagsForResource"],
-          f"arn:aws:rds:{REGION}:{ACCOUNT}:*:banking-dev-*", region)
+          f"arn:aws:rds:{REGION}:{ACCOUNT}:*:{name}-*", region)
     allow(["sqs:CreateQueue", "sqs:GetQueueUrl", "sqs:GetQueueAttributes", "sqs:SetQueueAttributes", "sqs:TagQueue", "sqs:ListQueueTags"],
-          [f"arn:aws:sqs:{REGION}:{ACCOUNT}:banking-dev-payments", f"arn:aws:sqs:{REGION}:{ACCOUNT}:banking-dev-payments-dlq"], region)
+          [f"arn:aws:sqs:{REGION}:{ACCOUNT}:{name}-payments", f"arn:aws:sqs:{REGION}:{ACCOUNT}:{name}-payments-dlq"], region)
     logs = [f"arn:aws:logs:{REGION}:{ACCOUNT}:log-group:{name}:*" for name in
-            ("/banking/banking-dev/application", "/aws/rds/instance/banking-dev-postgres/postgresql", "/aws/rds/instance/banking-dev-postgres/upgrade")]
+            (f"/banking/{name}/application", f"/aws/rds/instance/{name}-postgres/postgresql", f"/aws/rds/instance/{name}-postgres/upgrade")]
     allow(["logs:CreateLogGroup", "logs:AssociateKmsKey", "logs:PutRetentionPolicy", "logs:TagResource", "logs:TagLogGroup",
            "logs:ListTagsForResource", "logs:ListTagsLogGroup", "logs:PutMetricFilter", "logs:DescribeMetricFilters"], logs, region)
     allow(["cloudwatch:PutMetricAlarm", "cloudwatch:TagResource", "cloudwatch:ListTagsForResource"],
-          f"arn:aws:cloudwatch:{REGION}:{ACCOUNT}:alarm:banking-dev-*", region)
+          f"arn:aws:cloudwatch:{REGION}:{ACCOUNT}:alarm:{name}-*", region)
     allow("ec2:CreateSecurityGroup", [f"arn:aws:ec2:{REGION}:{ACCOUNT}:vpc/{values['vpc_id']}",
           f"arn:aws:ec2:{REGION}:{ACCOUNT}:security-group/*"],
-          {"StringEquals":{"aws:RequestedRegion":REGION, "aws:RequestTag/Project":"BankingReleasePlatform", "aws:RequestTag/Environment":"dev"}})
+          {"StringEquals":{"aws:RequestedRegion":REGION, "aws:RequestTag/Project":"BankingReleasePlatform", "aws:RequestTag/Environment":environment}})
     allow("ec2:CreateTags", f"arn:aws:ec2:{REGION}:{ACCOUNT}:security-group/*",
-          {"StringEquals":{"ec2:CreateAction":"CreateSecurityGroup", "aws:RequestTag/Project":"BankingReleasePlatform", "aws:RequestTag/Environment":"dev"}})
+          {"StringEquals":{"ec2:CreateAction":"CreateSecurityGroup", "aws:RequestTag/Project":"BankingReleasePlatform", "aws:RequestTag/Environment":environment}})
     allow(["ec2:AuthorizeSecurityGroupIngress", "ec2:RevokeSecurityGroupEgress"], f"arn:aws:ec2:{REGION}:{ACCOUNT}:security-group/*",
-          {"StringEquals":{"aws:RequestedRegion":REGION, "aws:ResourceTag/Project":"BankingReleasePlatform", "aws:ResourceTag/Environment":"dev"}})
+          {"StringEquals":{"aws:RequestedRegion":REGION, "aws:ResourceTag/Project":"BankingReleasePlatform", "aws:ResourceTag/Environment":environment}})
     allow("iam:PassRole", values["monitoring_role_arn"], {"StringEquals":{"iam:PassedToService":"monitoring.rds.amazonaws.com"}})
     allow(["iam:GetRole", "iam:ListAttachedRolePolicies"], values["monitoring_role_arn"])
     allow("iam:GetRole", f"arn:aws:iam::{ACCOUNT}:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS")
@@ -70,9 +76,9 @@ def session_cap(values, policy_arn):
     allow("sns:GetTopicAttributes", values["alert_topic_arn"], region)
     bucket = f"arn:aws:s3:::mhachem-banking-tfstate-{ACCOUNT}"
     allow(["s3:GetBucket*", "s3:GetEncryptionConfiguration", "s3:GetLifecycleConfiguration"], bucket)
-    allow("s3:ListBucket", bucket, {"StringLike":{"s3:prefix":[STATE_KEY, STATE_KEY+".tflock", "banking-release-platform/_workspaces/*"]}})
-    allow(["s3:GetObject", "s3:PutObject"], bucket+"/"+STATE_KEY)
-    allow(["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], bucket+"/"+STATE_KEY+".tflock")
+    allow("s3:ListBucket", bucket, {"StringLike":{"s3:prefix":[state_key, state_key+".tflock", "banking-release-platform/_workspaces/*"]}})
+    allow(["s3:GetObject", "s3:PutObject"], bucket+"/"+state_key)
+    allow(["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], bucket+"/"+state_key+".tflock")
     policy = {"Version":"2012-10-17", "Statement":statement}
     require(len(json.dumps(policy, separators=(",", ":"))) <= 6144, "Managed policy exceeds AWS quota; separate reviewed policy design required")
     return policy

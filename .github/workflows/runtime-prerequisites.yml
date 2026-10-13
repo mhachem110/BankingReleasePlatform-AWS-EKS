@@ -1,0 +1,218 @@
+# Same reviewed-dev OIDC model; plan is read-only, apply pauses for a second review.
+name: Runtime IAM and alert prerequisites
+on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: true
+      approval:
+        type: string
+        required: true
+      enabled:
+        type: boolean
+        default: false
+      foundation_interface_json:
+        type: string
+        required: true
+      platform_interface_json:
+        type: string
+        required: true
+    outputs:
+      interface_json:
+        description: Live verified policy ARNs and canonical hashes; never an IAM grant
+        value: ${{ jobs.apply.outputs.interface_json || jobs.plan.outputs.interface_json }}
+permissions:
+  contents: read
+concurrency:
+  group: banking-shared-iam-prerequisites
+  cancel-in-progress: false
+env:
+  AWS_EC2_METADATA_DISABLED: 'true'
+  AWS_PAGER: ''
+  TF_IN_AUTOMATION: 'true'
+jobs:
+  prerequisites:
+    if: github.ref == 'refs/heads/dev' && vars.AWS_OPERATIONS_ENABLED == 'true' && inputs.enabled && vars.CLEANUP_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/bootstrap/check-github-environment.py
+  plan:
+    needs: prerequisites
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    env: &runtime-env
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_EXPECTED_ACCOUNT_ID: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      BOOTSTRAP_STATE_READY: ${{ vars.BOOTSTRAP_STATE_READY }}
+      AWS_OPERATIONS_ENABLED: ${{ vars.AWS_OPERATIONS_ENABLED }}
+      CLEANUP_ENABLED: ${{ vars.CLEANUP_ENABLED }}
+      FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
+      PLATFORM_INTERFACE_JSON: ${{ inputs.platform_interface_json }}
+      ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      OPERATION: ${{ inputs.operation }}
+      APPROVAL: ${{ inputs.approval }}
+    outputs:
+      digest: ${{ steps.hash.outputs.digest }}
+      apply_required: ${{ steps.plan-review.outputs.apply_required }}
+      interface_json: ${{ steps.status.outputs.interface_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: config
+        run: python scripts/infra/runtime_prerequisites.py inputs
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runtime-services-plan
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - id: status
+        run: python scripts/infra/runtime_prerequisites.py preflight
+      - name: Verify protected existing state bucket
+        if: steps.status.outputs.interface_json == ''
+        run: python scripts/bootstrap/verify-state-bucket.py --bucket "$TF_STATE_BUCKET" --account "$AWS_EXPECTED_ACCOUNT_ID" --region "$AWS_REGION"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        if: steps.status.outputs.interface_json == ''
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Save the exact runtime service plan
+        if: steps.status.outputs.interface_json == ''
+        run: |
+          set -euo pipefail
+          root=infra/runtime-prerequisites
+          terraform -chdir="$root" init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/runtime.tfbackend.json"
+          [[ "$(terraform -chdir="$root" workspace show)" == default ]]
+          terraform -chdir="$root" validate
+          terraform -chdir="$root" plan -input=false -lock-timeout=5m -var-file="$GITHUB_WORKSPACE/runtime.tfvars.json" -out="$GITHUB_WORKSPACE/runtime.tfplan"
+          terraform -chdir="$root" show -json "$GITHUB_WORKSPACE/runtime.tfplan" > runtime-plan.json
+          terraform -chdir="$root" show -no-color "$GITHUB_WORKSPACE/runtime.tfplan" > runtime-plan.txt
+      - id: plan-review
+        if: steps.status.outputs.interface_json == ''
+        run: python scripts/infra/runtime_prerequisites.py plan
+      - id: hash
+        if: steps.status.outputs.interface_json == ''
+        run: echo "digest=$(sha256sum runtime.tfplan | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.status.outputs.interface_json == ''
+        with:
+          name: banking-runtime-services-reviewed-plan
+          path: |
+            runtime.tfplan
+            runtime.tfbackend.json
+            runtime-config.json
+            runtime.tfvars.json
+            runtime-plan-review.json
+            runtime-plan.txt
+            runtime-preflight.json
+          retention-days: 1
+          if-no-files-found: error
+      - name: Publish source-generated runtime review instructions
+        if: steps.status.outputs.interface_json == ''
+        run: |
+          echo 'Review the owned alert key, dev/prod monitoring roles, encrypted SNS/SQS delivery, two unattached data session caps and saved-plan SHA256. A separate bootstrap environment review gates apply.' >> "$GITHUB_STEP_SUMMARY"
+  apply:
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-RUNTIME' && needs.plan.outputs.apply_required == 'true'
+    needs: [prerequisites, plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: bootstrap
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env: *runtime-env
+    outputs:
+      interface_json: ${{ steps.verify.outputs.interface_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: config
+        run: python scripts/infra/runtime_prerequisites.py inputs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: banking-runtime-services-reviewed-plan
+          path: reviewed
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runtime-services-inspect
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.15.8'
+          terraform_wrapper: false
+      - name: Recheck authorization and the same-run reviewed binary
+        env:
+          REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
+        run: |
+          set -euo pipefail
+          python scripts/infra/runtime_prerequisites.py preflight
+          terraform -chdir=infra/runtime-prerequisites init -input=false -lockfile=readonly -backend-config="$GITHUB_WORKSPACE/runtime.tfbackend.json"
+          [[ "$(terraform -chdir=infra/runtime-prerequisites workspace show)" == default ]]
+          terraform -chdir=infra/runtime-prerequisites show -json "$GITHUB_WORKSPACE/reviewed/runtime.tfplan" > runtime-plan.json
+          python scripts/infra/runtime_prerequisites.py saved
+      # Only after the saved plan is reviewed do we request the bounded write session.
+      - id: write-cap
+        if: needs.plan.outputs.apply_required == 'true'
+        run: python scripts/infra/runtime_prerequisites.py write-cap
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        if: needs.plan.outputs.apply_required == 'true'
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_EXPECTED_ACCOUNT_ID }}
+          audience: sts.amazonaws.com
+          role-session-name: banking-runtime-services-apply
+          inline-session-policy: ${{ steps.write-cap.outputs.session_policy }}
+          unset-current-credentials: true
+          translate-env-variables: false
+      - name: Apply the saved plan, verify live policies and require zero drift
+        id: verify
+        env:
+          APPLY_REQUIRED: ${{ needs.plan.outputs.apply_required }}
+        run: |
+          set -euo pipefail
+          python scripts/infra/runtime_prerequisites.py preflight
+          if [[ "$APPLY_REQUIRED" == true ]]; then
+            terraform -chdir=infra/runtime-prerequisites apply -input=false -lock-timeout=5m "$GITHUB_WORKSPACE/reviewed/runtime.tfplan"
+          fi
+          terraform -chdir=infra/runtime-prerequisites output -json > runtime-outputs.json
+          python scripts/infra/runtime_prerequisites.py verify
+          terraform -chdir=infra/runtime-prerequisites plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/runtime.tfvars.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: banking-runtime-services-verification
+          path: |
+            runtime-verification.json
+            runtime-outputs.json
+          retention-days: 7
+          if-no-files-found: error

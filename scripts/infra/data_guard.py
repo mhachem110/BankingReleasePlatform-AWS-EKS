@@ -9,8 +9,12 @@ from pathlib import Path
 
 ACCOUNT = "866934333672"
 REGION = "us-east-2"
-STATE_KEY = "banking-release-platform/dev/data/terraform.tfstate"
-ROOT = "infra/environments/dev/data"
+ENVIRONMENT = os.environ.get("DATA_ENVIRONMENT") or "dev"
+if ENVIRONMENT not in {"dev", "prod"}:
+    raise ValueError("Only Banking dev/prod data is supported")
+NAME = "banking-" + ENVIRONMENT
+STATE_KEY = f"banking-release-platform/{ENVIRONMENT}/data/terraform.tfstate"
+ROOT = f"infra/environments/{ENVIRONMENT}/data"
 MODULE_SHA256 = "709be704536ebfd2e0a3a065ae3db96c7cae15e47df43ad0b0200dc137de045d"
 MODULE = "module.data_services."
 COMPONENTS = {"rds", "gp3_max_storage", "backups_snapshots", "cpu_credits", "secrets",
@@ -59,15 +63,16 @@ def configuration(env):
     patterns = {
         "kms_key_arn": f"arn:aws:kms:{REGION}:{ACCOUNT}:key/[a-f0-9-]{{36}}",
         "engine_version": r"17\.[0-9]+", "instance_class": r"db\.t4g\.(micro|small|medium)",
-        "monitoring_role_arn": f"arn:aws:iam::{ACCOUNT}:role/(?:[A-Za-z0-9_+=,.@-]+/)*cloudbatch818-mahmoud-banking-rds-monitoring",
-        "alert_topic_arn": f"arn:aws:sns:{REGION}:{ACCOUNT}:banking-dev-[A-Za-z0-9_-]+"}
+        "monitoring_role_arn": f"arn:aws:iam::{ACCOUNT}:role/(?:[A-Za-z0-9_+=,.@-]+/)*cloudbatch818-mahmoud-banking-rds-monitoring" + ("-prod" if ENVIRONMENT == "prod" else ""),
+        "alert_topic_arn": f"arn:aws:sns:{REGION}:{ACCOUNT}:{NAME}-[A-Za-z0-9_-]+"}
     for key, pattern in patterns.items():
         require(isinstance(values[key], str) and re.fullmatch(pattern, values[key]), "Invalid approved " + key)
     if values.get("cost_center") is not None:
         require(isinstance(values["cost_center"], str) and values["cost_center"].strip() == values["cost_center"] and
                 0 < len(values["cost_center"]) <= 128 and "REPLACE" not in values["cost_center"].upper(), "Actual CostCenter only")
     policy = env.get("DATA_SESSION_POLICY_ARN", "")
-    require(re.fullmatch(f"arn:aws:iam::{ACCOUNT}:policy/(?:[A-Za-z0-9_+=,.@-]+/)*BankingReleasePlatformPhase6Session", policy),
+    policy_name = "BankingReleasePlatformPhase6ProdSession" if ENVIRONMENT == "prod" else "BankingReleasePlatformPhase6Session"
+    require(re.fullmatch(f"arn:aws:iam::{ACCOUNT}:policy/(?:[A-Za-z0-9_+=,.@-]+/)*{policy_name}", policy),
             "Require separately administrator-approved managed session cap")
     require(re.fullmatch(r"[a-f0-9]{64}", env.get("DATA_SESSION_POLICY_SHA256", "")), "Require the reviewed session-policy digest")
     return values
@@ -117,7 +122,7 @@ def audit(plan, values, *, effective_tags=True):
     require(len(managed) == len(resources) and set(managed) == inventory(), "Exact 21-entry data inventory mismatch")
     require(all(r["change"]["actions"] == ["create"] for r in resources),
             "Initial data workflow permits only creation: existing/no-op/update/delete/replacement requires separate recovery review")
-    common = {"Project": "BankingReleasePlatform", "Environment": "dev", "ManagedBy": "Terraform",
+    common = {"Project": "BankingReleasePlatform", "Environment": ENVIRONMENT, "ManagedBy": "Terraform",
               "Owner": "MahmoudHachem", "Purpose": "CloudEngineerTraining"}
     if values.get("cost_center") is not None:
         common["CostCenter"] = values["cost_center"]
@@ -132,41 +137,41 @@ def audit(plan, values, *, effective_tags=True):
             for field in (["tags", "tags_all"] if effective_tags else ["tags"]):
                 tags = item["change"]["after"].get(field) or {}
                 require(all(tags.get(k) == v for k, v in dict(common, Component=component).items()) and
-                        tags.get("Name", "").startswith("banking-dev") and
+                        tags.get("Name", "").startswith(NAME) and
                         (values.get("cost_center") is not None or "CostCenter" not in tags), "Resolved approved tags required: " + address)
 
     def after(resource):
         return managed[MODULE + resource]["change"]["after"]
     database = after("aws_db_instance.this")
-    expected = {"identifier": "banking-dev-postgres", "engine": "postgres", "engine_version": values["engine_version"],
+    expected = {"identifier": NAME + "-postgres", "engine": "postgres", "engine_version": values["engine_version"],
         "instance_class": values["instance_class"], "allocated_storage": 20, "max_allocated_storage": 40, "storage_type": "gp3",
         "storage_encrypted": True, "kms_key_id": values["kms_key_arn"], "master_user_secret_kms_key_id": values["kms_key_arn"],
         "manage_master_user_password": True, "username": "banking_migrator", "db_name": "banking", "publicly_accessible": False,
         "multi_az": False, "iam_database_authentication_enabled": True, "deletion_protection": True, "backup_retention_period": 7,
-        "skip_final_snapshot": False, "final_snapshot_identifier": "banking-dev-postgres-final-reviewed", "copy_tags_to_snapshot": True,
+        "skip_final_snapshot": False, "final_snapshot_identifier": NAME + "-postgres-final-reviewed", "copy_tags_to_snapshot": True,
         "monitoring_interval": 60, "monitoring_role_arn": values["monitoring_role_arn"], "auto_minor_version_upgrade": True,
         "apply_immediately": False, "backup_window": "03:00-04:00", "maintenance_window": "sun:04:00-sun:05:00"}
     require(all(database.get(k) == v for k, v in expected.items()) and not database.get("password") and
             set(database.get("enabled_cloudwatch_logs_exports", [])) == {"postgresql", "upgrade"}, "Database privacy/encryption/recovery/cost mismatch")
     group = after("aws_security_group.database")
-    require(group["vpc_id"] == values["vpc_id"] and group["name"] == "banking-dev-database" and
+    require(group["vpc_id"] == values["vpc_id"] and group["name"] == NAME + "-database" and
             group["ingress"] == group["egress"] == [], "Database SG scope mismatch")
     ingress = after("aws_vpc_security_group_ingress_rule.postgres")
     require(ingress["referenced_security_group_id"] == values["cluster_security_group_id"] and
             ingress["ip_protocol"] == "tcp" and ingress["from_port"] == ingress["to_port"] == 5432 and
             not ingress.get("cidr_ipv4") and not ingress.get("cidr_ipv6"), "Only approved cluster SG TCP5432 may reach database")
     subnet = after("aws_db_subnet_group.this")
-    require(subnet["name"] == "banking-dev-database" and set(subnet["subnet_ids"]) == set(values["database_subnet_ids"]), "Database subnets mismatch")
+    require(subnet["name"] == NAME + "-database" and set(subnet["subnet_ids"]) == set(values["database_subnet_ids"]), "Database subnets mismatch")
     parameter = after("aws_db_parameter_group.this")
-    require(parameter["name"] == "banking-dev-postgres17" and parameter["family"] == "postgres17" and
+    require(parameter["name"] == NAME + "-postgres17" and parameter["family"] == "postgres17" and
             {p["name"]: p["value"] for p in parameter["parameter"]} == {"rds.force_ssl":"1", "log_connections":"1", "log_disconnections":"1"}, "PostgreSQL TLS/log parameters mismatch")
-    for kind, name, retention in (("payments", "banking-dev-payments", 86400), ("dead", "banking-dev-payments-dlq", 1209600)):
+    for kind, name, retention in (("payments", NAME + "-payments", 86400), ("dead", NAME + "-payments-dlq", 1209600)):
         queue = after("aws_sqs_queue." + kind)
         require(queue["name"] == name and queue["kms_master_key_id"] == values["kms_key_arn"] and
                 queue["message_retention_seconds"] == retention and not queue.get("fifo_queue"), "SQS identity/encryption/retention mismatch")
     queue = after("aws_sqs_queue.payments")
     require(queue["visibility_timeout_seconds"] == 30 and queue["receive_wait_time_seconds"] == 2 and queue["max_message_size"] == 4096, "Queue retry/size mismatch")
-    source_arn = f"arn:aws:sqs:{REGION}:{ACCOUNT}:banking-dev-payments"
+    source_arn = f"arn:aws:sqs:{REGION}:{ACCOUNT}:{NAME}-payments"
     dead_arn = source_arn + "-dlq"
     def policy_contract(resource, field, expected):
         change = managed[MODULE + resource]["change"]
@@ -185,20 +190,20 @@ def audit(plan, values, *, effective_tags=True):
         policy_contract(f'aws_sqs_queue_policy.tls["{name}"]', "policy", {"Version":"2012-10-17", "Statement":[{
             "Sid":"DenyUnencryptedTransport", "Effect":"Deny", "Principal":"*", "Action":"sqs:*", "Resource":arn,
             "Condition":{"Bool":{"aws:SecureTransport":"false"}}}]})
-    for resource, name in (("application", "/banking/banking-dev/application"),
-                           ('database["postgresql"]', "/aws/rds/instance/banking-dev-postgres/postgresql"),
-                           ('database["upgrade"]', "/aws/rds/instance/banking-dev-postgres/upgrade")):
+    for resource, name in (("application", f"/banking/{NAME}/application"),
+                           ('database["postgresql"]', f"/aws/rds/instance/{NAME}-postgres/postgresql"),
+                           ('database["upgrade"]', f"/aws/rds/instance/{NAME}-postgres/upgrade")):
         log = after("aws_cloudwatch_log_group." + resource)
         require(log["name"] == name and log["retention_in_days"] == 30 and log["kms_key_id"] == values["kms_key_arn"], "Log retention/key mismatch")
     alarms = {"database_cpu": ("AWS/RDS", "CPUUtilization", 80, "GreaterThanThreshold", "Average", 300),
               "database_storage": ("AWS/RDS", "FreeStorageSpace", 5368709120, "LessThanThreshold", "Minimum", 300),
               "queue_age": ("AWS/SQS", "ApproximateAgeOfOldestMessage", 120, "GreaterThanThreshold", "Maximum", 60),
               "dead_letters": ("AWS/SQS", "ApproximateNumberOfMessagesVisible", 0, "GreaterThanThreshold", "Maximum", 60),
-              "http_errors": ("BankingReleasePlatform/dev", "Http5xx", 5, "GreaterThanOrEqualToThreshold", "Sum", 60)}
+              "http_errors": (f"BankingReleasePlatform/{ENVIRONMENT}", "Http5xx", 5, "GreaterThanOrEqualToThreshold", "Sum", 60)}
     for name, configuration in alarms.items():
         alarm = after(f'aws_cloudwatch_metric_alarm.this["{name}"]')
         require(tuple(alarm.get(k) for k in ("namespace", "metric_name", "threshold", "comparison_operator", "statistic", "period")) == configuration and
-                alarm["alarm_name"] == "banking-dev-" + name and alarm["evaluation_periods"] == 2 and
+                alarm["alarm_name"] == NAME + "-" + name and alarm["evaluation_periods"] == 2 and
                 alarm["actions_enabled"] and alarm["alarm_actions"] == alarm["ok_actions"] == [values["alert_topic_arn"]], "Owned alarm configuration mismatch")
     return {"managed_creates": len(managed), "managed_updates": 0, "managed_deletes": 0, "module_sha256":MODULE_SHA256,
             "resources": sorted(managed), "effective_tags_verified": effective_tags}
