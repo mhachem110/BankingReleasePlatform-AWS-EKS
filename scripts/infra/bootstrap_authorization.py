@@ -1,4 +1,4 @@
-"""Pin the owner's live IAM configuration verified by run 38342975527.
+"""Pin the owner's live IAM configuration verified by run 38382778844.
 
 The owner replaced the former inline/trust configuration in the IAM console.
 This contract accepts that verified update without modifying the shared role.
@@ -6,7 +6,7 @@ Project session caps restrict the existing grant; they need no role attachment.
 """
 from iam_contract import BOOTSTRAP, digest, require
 
-POLICY_SHA256 = 'aadf4049b79c2e941ba0b07846420b0b9a1f21450caaa10d411807ac4ecc627b'
+POLICY_SHA256 = 'a303296355d2fa5ac5402f30f7ea902fcd67a57811bf7982688a8309c4e01552'
 TRUST_SHA256 = '208ba6818c59e3763d82d4a5ffa71ec6960ec13e0643c072fa8f6df3dff0b4d2'
 
 
@@ -22,4 +22,4 @@ def verify(call):
     attached = call('iam', 'list-attached-role-policies', '--role-name', name)
     require(attached.get('AttachedPolicies') == [], 'Bootstrap attached-policy inventory changed')
     return dict(roleArn=BOOTSTRAP, policySha256=POLICY_SHA256, trustSha256=TRUST_SHA256,
-                auditRun=38342975527, sessionCapsAreRoleAttachments=False)
+                auditRun=38382778844, sessionCapsAreRoleAttachments=False)
