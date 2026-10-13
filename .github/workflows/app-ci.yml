@@ -1,3 +1,5 @@
+# App CI remains credential-free: restore/audit, build, Helm safety and Trivy.
+# Keep the existing check names so branch protection continues to recognize them.
 name: Application CI
 on:
   pull_request:

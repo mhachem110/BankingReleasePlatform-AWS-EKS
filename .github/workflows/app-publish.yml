@@ -1,13 +1,12 @@
-name: Publish approved application images
+name: Internal application publication
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       authorization:
-        description: Explicit approval to publish images to existing ECR repositories
-        type: choice
-        options: [disabled, approved]
+        description: Explicit approval passed by App CD
+        type: string
         default: disabled
-        required: true
+        required: false
 permissions:
   contents: read
 concurrency:

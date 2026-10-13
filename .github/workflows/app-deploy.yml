@@ -1,7 +1,15 @@
-name: Deploy approved application digest
+# Publish once on dev, then promote the same scanned digest pair to each namespace.
+# Publication and deployment have separate protected jobs and bounded OIDC caps.
+name: App CD
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Publish immutable images or deploy an existing approved release
+        type: choice
+        options: [deploy, publish]
+        default: deploy
+        required: true
       environment:
         description: Protected deployment environment
         type: choice
@@ -9,9 +17,9 @@ on:
         default: dev
         required: true
       publish_run_id:
-        description: Successful reviewed-dev app-publish workflow run ID (same for every promotion)
+        description: Successful App CD publication run ID; required only for deploy
         type: string
-        required: true
+        required: false
       authorization:
         description: Explicit approval for application deployment on existing infrastructure
         type: choice
@@ -21,12 +29,20 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: banking-deployment-${{ inputs.environment }}
+  group: banking-deployment-${{ inputs.operation == 'publish' && 'publication' || inputs.environment }}
   cancel-in-progress: false
 jobs:
+  publish:
+    if: inputs.operation == 'publish' && inputs.environment == 'dev' && github.ref == 'refs/heads/dev' && inputs.authorization == 'approved'
+    uses: ./.github/workflows/app-publish.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      authorization: approved
   deploy:
     if: >-
-      inputs.authorization == 'approved' &&
+      inputs.operation == 'deploy' && inputs.authorization == 'approved' &&
       ((inputs.environment == 'dev' && github.ref == 'refs/heads/dev') ||
        (inputs.environment == 'stage' && github.ref == 'refs/heads/stage') ||
        (inputs.environment == 'uat' && github.ref == 'refs/heads/uat') ||

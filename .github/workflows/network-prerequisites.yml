@@ -1,3 +1,4 @@
+# Reusable stage: launch through Infra CI/CD on reviewed dev.
 name: Controlled Banking VPC seed
 on:
   workflow_call:
@@ -15,17 +16,6 @@ on:
       interface_json:
         description: Actual verified VPC and default security group from this run
         value: ${{ jobs.apply.outputs.interface_json || jobs.plan.outputs.interface_json }}
-  workflow_dispatch:
-    inputs:
-      operation:
-        type: choice
-        options: [plan, apply]
-        default: plan
-        description: 'Plan only by default; apply pauses again for saved-plan and cost review'
-      approval:
-        type: string
-        default: ''
-        description: 'Apply only: APPLY-REVIEWED-BANKING-VPC-SEED'
 permissions:
   contents: read
 concurrency:

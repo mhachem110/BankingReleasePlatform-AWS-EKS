@@ -1,3 +1,4 @@
+# Reusable stage: launch through Infra CI/CD on reviewed dev.
 name: Protected Banking data services
 on:
   workflow_call:
@@ -21,17 +22,6 @@ on:
       verified:
         description: True only after data verification and zero drift
         value: ${{ jobs.apply.outputs.verified }}
-  workflow_dispatch:
-    inputs:
-      operation:
-        type: choice
-        options: [plan, apply]
-        default: plan
-        description: 'Separate Phase 6 plan; apply requires same-run saved-plan/cost review'
-      approval:
-        type: string
-        default: ''
-        description: 'Apply only: APPLY-REVIEWED-PHASE6-PLAN'
 permissions:
   contents: read
 concurrency:

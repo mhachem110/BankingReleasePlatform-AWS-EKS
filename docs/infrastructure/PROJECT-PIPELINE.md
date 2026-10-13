@@ -2,7 +2,7 @@
 
 `project-deploy.yml` presents **Infra CI/CD**. It validates scope, runs the existing
 credential-free Terraform/Helm/security CI, then calls the foundation, network,
-platform and data workflows from the same Git commit. Native bootstrap environment
+platform-cap publication, platform and data workflows from the same Git commit. Native bootstrap environment
 reviews, saved binary hashes, backend locks and live verification remain intact.
 Destroy stays outside this entry. An apply cannot cancel an earlier project run.
 
@@ -33,9 +33,16 @@ outputs before calling an apply successful. A skipped or failed stage is never
 deployment proof. Terraform success also does not prove Kubernetes readiness,
 application behavior, production-data isolation or rollback.
 
-The remaining work before dispatching the complete project is managed platform cap
-publication from the actual new key/VPC, measured quota and cost evidence, runtime
+Platform-cap publication now generates the three policy documents from the actual
+verified key, operator, VPC and default group. Their dedicated native state is
+resumable; policies are session restrictions and are never attached to bootstrap.
+Creation and cleanup retain separate saved-plan approvals and live identity checks.
+
+The remaining work before dispatching the complete project is measured quota and cost evidence, runtime
 IAM/alert prerequisites, production data orchestration, a private deployment
 runner, full platform/data cleanup, Kubernetes bootstrap and end-to-end acceptance.
-The App CI/CD and dedicated Rollback consolidation follows that resource work as
-the owner requested. Existing required checks and protections stay in place.
+App CD now combines publication/deployment, and App Rollback is a separate protected
+recovery entry. See [the presentation walkthrough](PIPELINE-PRESENTATION.md) for
+controls and the precise readiness limits. Existing required checks and protections
+stay in place. No additional tests or AWS apply/destroy runs were launched after
+the owner asked to stop testing.

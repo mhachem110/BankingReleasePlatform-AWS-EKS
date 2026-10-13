@@ -1,3 +1,4 @@
+# Reusable stage: launch through Infra CI/CD on reviewed dev.
 # Same reviewed-dev OIDC model; plan is read-only, apply pauses for a second review.
 name: Reviewed Banking runtime foundation
 on:
@@ -16,17 +17,6 @@ on:
       interface_json:
         description: Verified actual key and operator; empty until a creation plan is applied
         value: ${{ jobs.apply.outputs.interface_json || jobs.plan.outputs.interface_json }}
-  workflow_dispatch:
-    inputs:
-      operation:
-        type: choice
-        options: [plan, apply]
-        default: plan
-        description: 'Create a project KMS key and operator; apply requires a second review'
-      approval:
-        type: string
-        default: ''
-        description: 'Apply only: APPLY-REVIEWED-BANKING-FOUNDATION'
 permissions:
   contents: read
 concurrency:

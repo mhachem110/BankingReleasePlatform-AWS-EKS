@@ -1,3 +1,4 @@
+# Reusable stage: launch through Infra CI/CD on reviewed dev.
 name: Controlled Banking infrastructure
 on:
   workflow_call:
@@ -14,21 +15,13 @@ on:
       network_interface_json:
         type: string
         default: ''
+      policy_review_json:
+        type: string
+        default: ''
     outputs:
       interface_json:
         description: Platform outputs only after live verification and zero drift
         value: ${{ jobs.apply.outputs.interface_json }}
-  workflow_dispatch:
-    inputs:
-      operation:
-        type: choice
-        options: [plan, apply]
-        default: plan
-        description: 'Plan only by default; apply pauses again for saved-plan and cost review'
-      approval:
-        type: string
-        default: ''
-        description: 'Apply only: APPLY-REVIEWED-PHASE3-PLAN'
 permissions:
   contents: read
 concurrency:
@@ -70,7 +63,7 @@ jobs:
       IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
       IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
       NETWORK_SEED_REVIEW_JSON: ${{ vars.NETWORK_SEED_REVIEW_JSON }}
-      PLATFORM_POLICY_REVIEW_JSON: ${{ vars.PLATFORM_POLICY_REVIEW_JSON }}
+      PLATFORM_POLICY_REVIEW_JSON: ${{ inputs.policy_review_json || vars.PLATFORM_POLICY_REVIEW_JSON }}
       PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
       FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
       NETWORK_INTERFACE_JSON: ${{ inputs.network_interface_json }}
@@ -158,7 +151,7 @@ jobs:
       IAM_PREREQUISITES_READY: ${{ vars.IAM_PREREQUISITES_READY }}
       IAM_BOUNDARY_POLICY_SHA256: ${{ vars.IAM_BOUNDARY_POLICY_SHA256 }}
       NETWORK_SEED_REVIEW_JSON: ${{ vars.NETWORK_SEED_REVIEW_JSON }}
-      PLATFORM_POLICY_REVIEW_JSON: ${{ vars.PLATFORM_POLICY_REVIEW_JSON }}
+      PLATFORM_POLICY_REVIEW_JSON: ${{ inputs.policy_review_json || vars.PLATFORM_POLICY_REVIEW_JSON }}
       PLATFORM_INPUTS_JSON: ${{ vars.PLATFORM_INPUTS_JSON }}
       FOUNDATION_INTERFACE_JSON: ${{ inputs.foundation_interface_json }}
       NETWORK_INTERFACE_JSON: ${{ inputs.network_interface_json }}

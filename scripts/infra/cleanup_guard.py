@@ -16,6 +16,7 @@ KEYS = {"vpc-seed": "banking-release-platform/dev/platform/terraform.tfstate",
         "prod-data": "banking-release-platform/prod/data/terraform.tfstate",
         "iam-prerequisites": "banking-release-platform/shared/iam-prerequisites/terraform.tfstate",
         "policy-prerequisites": "banking-release-platform/shared/policy-prerequisites/terraform.tfstate",
+        "platform-caps": "banking-release-platform/shared/platform-caps/terraform.tfstate",
         "runtime-foundation": "banking-release-platform/shared/runtime-foundation/terraform.tfstate"}
 LOCAL = {"terraform_data"}
 UNTAGGABLE = LOCAL | {"aws_route", "aws_route_table_association", "aws_ecr_lifecycle_policy",
@@ -28,7 +29,7 @@ def inputs(env):
     require(env.get("CLEANUP_ENABLED") == "true" and env.get("AWS_OPERATIONS_ENABLED") == "false", "Explicit cleanup window; creation must be disabled")
     require(env.get("ROLE_ARN") == BOOTSTRAP and env.get("AWS_EXPECTED_ACCOUNT_ID") == ACCOUNT and env.get("AWS_REGION") == REGION and env.get("TF_STATE_BUCKET") == BUCKET, "Wrong cleanup identity/account/Region/backend")
     target = env.get("TARGET")
-    require(target in {"vpc-seed", "policy-prerequisites", "iam-prerequisites", "runtime-foundation"} and env.get("OPERATION") in {"plan", "apply"}, "Only the verified project prerequisites are enabled")
+    require(target in {"vpc-seed", "policy-prerequisites", "iam-prerequisites", "runtime-foundation", "platform-caps"} and env.get("OPERATION") in {"plan", "apply"}, "Only the verified project prerequisites are enabled")
     if env["OPERATION"] == "apply":
         require(env.get("APPROVAL") == "DESTROY-REVIEWED-BANKING-" + target.upper(), "Exact destroy phrase and separate environment review required")
     require(re.fullmatch(r"[1-9][0-9]*", env.get("GITHUB_RUN_ID", "")) and re.fullmatch(r"[1-9][0-9]*", env.get("GITHUB_RUN_ATTEMPT", "")), "Use an actual workflow run")
@@ -45,7 +46,7 @@ def backend(config):
 def read_policy(config):
     bucket = "arn:aws:s3:::" + BUCKET
     dependency_keys = {config["key"], KEYS["dev-data"], KEYS["prod-data"]}
-    if config["target"] == "policy-prerequisites":
+    if config["target"] in {"policy-prerequisites", "platform-caps"}:
         dependency_keys.update({KEYS["platform"], KEYS["iam-prerequisites"]})
     # Compact read-only project scope leaves enough room for exact role deletes
     # in the STS 2,048-character inline cap. Writes still name one selected state.
@@ -65,6 +66,9 @@ def read_policy(config):
 
 
 def inventory(target):
+    if target == "platform-caps":
+        from publish_platform_caps import inventory as cap_inventory
+        return cap_inventory()
     if target == "runtime-foundation":
         return {"terraform_data.authorization", "aws_kms_key.runtime", "aws_kms_alias.runtime", "aws_iam_role.operator", "aws_iam_role_policy.operator"}
     if target == "vpc-seed":
@@ -103,6 +107,11 @@ def state_review(state, config, env):
     require(managed and len({r["address"] for r in managed}) == len(managed), "Nonempty singleton state without duplicate/deposed entries required")
     addresses = {r["address"] for r in managed}
     require(addresses <= inventory(config["target"]), "Unrelated resource address in cleanup state")
+    if config["target"] == "platform-caps":
+        from publish_platform_caps import documents, canonical, KEY
+        require(state.get('outputs',{}).get('state_key',{}).get('value') == KEY and
+                state.get('outputs',{}).get('contract_version',{}).get('value') == 1, 'Cap state contract differs')
+        cap_documents = documents(state['outputs']['bindings']['value'])
     if config["target"] == "vpc-seed":
         require(addresses == SEED_ADDRESSES, "VPC seed cleanup refuses a full/partial platform state")
     if config["target"] == "iam-prerequisites":
@@ -113,7 +122,7 @@ def state_review(state, config, env):
     if config["target"] == "runtime-foundation":
         require("aws_kms_alias.runtime" not in addresses or "aws_kms_key.runtime" in addresses, "Alias cleanup requires its managed key")
         require("aws_iam_role_policy.operator" not in addresses or "aws_iam_role.operator" in addresses, "Inline cleanup requires its managed operator")
-    expected_env = "prod" if config["target"] == "prod-data" else "shared" if config["target"] in {"iam-prerequisites", "policy-prerequisites", "runtime-foundation"} else "dev"
+    expected_env = "prod" if config["target"] == "prod-data" else "shared" if config["target"] in {"iam-prerequisites", "policy-prerequisites", "runtime-foundation", "platform-caps"} else "dev"
     seed = interface(env) if config["target"] in {"vpc-seed", "platform"} else None
     for item in managed:
         value, kind = item["values"], item["type"]
@@ -144,9 +153,14 @@ def state_review(state, config, env):
             key = next(r["values"]["id"] for r in managed if r["type"] == "aws_kms_key")
             require(value.get("name") == value["id"] == ALIAS and value.get("target_key_id") == key, "Only the reviewed runtime alias/key binding may be removed")
         if kind == "aws_iam_policy":
-            from policy_prerequisites import POLICIES, document
             key = item["address"].split('"')[1]
-            require(value.get("arn") == value["id"] == POLICIES[key][0] and json.loads(value.get("policy") or "{}") == document(key), "Only the reviewed project policy documents may be removed")
+            if config['target'] == 'platform-caps':
+                from publish_platform_caps import ARNS, TAGS
+                require(value.get('arn') == value['id'] == ARNS[key] and value.get('tags') == dict(TAGS,Name=key)
+                        and json.loads(value.get('policy') or '{}') == cap_documents[key], 'Only the source-generated platform caps may be removed')
+            else:
+                from policy_prerequisites import POLICIES, document
+                require(value.get("arn") == value["id"] == POLICIES[key][0] and json.loads(value.get("policy") or "{}") == document(key), "Only the reviewed project policy documents may be removed")
         if kind == "aws_iam_role_policy_attachment":
             key = item["address"].rsplit(".", 1)[1]
             require(value.get("role") == ROLE_ARNS[key].split("/")[-1] and value.get("policy_arn") == ATTACHMENTS[key], "Unexpected role attachment")
@@ -209,12 +223,12 @@ def preflight(config, report, env):
     check_identity()
     if config["target"] == "runtime-foundation":
         foundation_preflight(report)
-    if config["target"] in {"platform", "vpc-seed", "iam-prerequisites", "policy-prerequisites", "runtime-foundation"}:
+    if config["target"] in {"platform", "vpc-seed", "iam-prerequisites", "policy-prerequisites", "runtime-foundation", "platform-caps"}:
         for name in ["dev-data", "prod-data"]:
             other_state_empty(KEYS[name])
-    if config["target"] == "policy-prerequisites":
+    if config["target"] in {"policy-prerequisites", "platform-caps"}:
         from policy_prerequisites import document
-        for name in ["platform", "iam-prerequisites"]:
+        for name in (["platform", "iam-prerequisites"] if config['target']=='policy-prerequisites' else ['platform']):
             other_state_empty(KEYS[name])
         for item in report["inventory"]:
             if item["type"] != "aws_iam_policy":
@@ -228,7 +242,8 @@ def preflight(config, report, env):
             require(len(versions) == 1 and versions[0].get("IsDefaultVersion") is True, "Additional policy versions require a separate inventory review")
             version = aws("iam", "get-policy-version", "--policy-arn", arn, "--version-id", meta["DefaultVersionId"])["PolicyVersion"]
             key = item["address"].split('"')[1]
-            require(version["Document"] == document(key), "Live project policy document changed")
+            expected = json.loads(item['values']['policy']) if config['target'] == 'platform-caps' else document(key)
+            require(version["Document"] == expected, "Live project policy document changed")
     if config["target"] == "iam-prerequisites":
         other_state_empty(KEYS["platform"])
         require(aws("eks", "describe-cluster", "--name", "banking-dev", absent_codes=("ResourceNotFoundException",)).get("absent"), "Cluster must be absent before service-role teardown")
@@ -333,8 +348,10 @@ def vpc_delete_cap(config, env):
 
 def policy_delete_cap(config):
     from policy_prerequisites import POLICIES
+    from publish_platform_caps import ARNS
+    arns = sorted(ARNS.values()) if config['target'] == 'platform-caps' else [v[0] for v in POLICIES.values()]
     doc = json.loads(read_policy(config))
-    doc["Statement"] += [{"Effect": "Allow", "Action": "iam:DeletePolicy", "Resource": [v[0] for v in POLICIES.values()],
+    doc["Statement"] += [{"Effect": "Allow", "Action": "iam:DeletePolicy", "Resource": arns,
                           "Condition": {"StringEquals": {"aws:ResourceTag/Project": "BankingReleasePlatform", "aws:ResourceTag/Environment": "shared"}}},
                          {"Effect": "Allow", "Action": "s3:PutObject", "Resource": "arn:aws:s3:::" + BUCKET + "/" + config["key"]}]
     value = json.dumps(doc, separators=(",", ":"))
@@ -394,9 +411,11 @@ if __name__ == "__main__":
         if config["target"] == "vpc-seed":
             seed = interface(os.environ)
             require(aws("ec2", "describe-vpcs", "--vpc-ids", seed["vpc_id"], absent_codes=("InvalidVpcID.NotFound",)).get("absent"), "VPC still exists")
-        elif config["target"] == "policy-prerequisites":
+        elif config["target"] in {"policy-prerequisites", "platform-caps"}:
             from policy_prerequisites import POLICIES
-            for arn, _ in POLICIES.values():
+            from publish_platform_caps import ARNS
+            policy_arns = ARNS.values() if config['target'] == 'platform-caps' else [v[0] for v in POLICIES.values()]
+            for arn in policy_arns:
                 require(aws("iam", "get-policy", "--policy-arn", arn, absent_codes=("NoSuchEntity",)).get("absent"), "Project policy still exists")
         elif config["target"] == "runtime-foundation":
             from runtime_foundation import OPERATOR, ALIAS

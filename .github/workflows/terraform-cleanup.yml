@@ -1,10 +1,10 @@
-name: Reviewed Banking project cleanup
+name: Terraform Destroy
 on:
   workflow_dispatch:
     inputs:
       target:
         type: choice
-        options: [vpc-seed, policy-prerequisites, iam-prerequisites, runtime-foundation]
+        options: [vpc-seed, policy-prerequisites, iam-prerequisites, runtime-foundation, platform-caps]
         default: vpc-seed
         description: 'Only unused project prerequisites: VPC seed, policies, service roles, runtime key/operator'
       operation:
@@ -19,7 +19,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ${{ inputs.target == 'vpc-seed' && 'banking-dev-platform' || 'banking-shared-iam-prerequisites' }}
+  group: banking-project-lifecycle
   cancel-in-progress: false
 env:
   AWS_EC2_METADATA_DISABLED: 'true'
@@ -117,7 +117,9 @@ jobs:
         run: |
           echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership and live dependencies before approving apply. Only unused project prerequisites may be removed. Runtime key cleanup schedules deletion after seven days; retained encrypted logs/snapshots, grants and live users block it. Backend and unrelated/shared resources remain intact.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && ((inputs.target == 'vpc-seed' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED') || (inputs.target == 'policy-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES') || (inputs.target == 'iam-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-IAM-PREREQUISITES') || (inputs.target == 'runtime-foundation' && inputs.approval == 'DESTROY-REVIEWED-BANKING-RUNTIME-FOUNDATION'))
+    # Both jobs run the guard: it rejects an unknown target or wrong destroy
+    # phrase before requesting AWS credentials. Apply also has its own review.
+    if: inputs.operation == 'apply'
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
