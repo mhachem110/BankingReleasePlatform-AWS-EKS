@@ -1,0 +1,58 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EnableExistingAccountIAMPermissions",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::866934333672:root"
+      },
+      "Action": "kms:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "BankingCloudWatchLogEncryption",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "logs.us-east-2.amazonaws.com"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ArnLike": {
+          "kms:EncryptionContext:aws:logs:arn": [
+            "arn:aws:logs:us-east-2:866934333672:log-group:/banking/banking-*/*",
+            "arn:aws:logs:us-east-2:866934333672:log-group:/aws/eks/banking-dev/cluster",
+            "arn:aws:logs:us-east-2:866934333672:log-group:/aws/rds/instance/banking-*-postgres/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "BankingAlarmEncryption",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudwatch.amazonaws.com"
+      },
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:SourceAccount": "866934333672"
+        },
+        "ArnLike": {
+          "aws:SourceArn": "arn:aws:cloudwatch:us-east-2:866934333672:alarm:banking-*"
+        }
+      }
+    }
+  ]
+}

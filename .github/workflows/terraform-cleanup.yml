@@ -4,9 +4,9 @@ on:
     inputs:
       target:
         type: choice
-        options: [vpc-seed, policy-prerequisites, iam-prerequisites]
+        options: [vpc-seed, policy-prerequisites, iam-prerequisites, runtime-foundation]
         default: vpc-seed
-        description: 'Only the verified test VPC, unused project policies or unused project service roles'
+        description: 'Only unused project prerequisites: VPC seed, policies, service roles, runtime key/operator'
       operation:
         type: choice
         options: [plan, apply]
@@ -115,9 +115,9 @@ jobs:
           if-no-files-found: error
       - name: Publish destroy review instructions
         run: |
-          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership and live dependencies before approving apply. Only the verified VPC seed, unused project policies or unused project service roles may be deleted. Backend and unrelated/shared IAM remain intact.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review cleanup-plan.txt, cleanup-plan-review.json, saved SHA256, exact selected inventory, ownership and live dependencies before approving apply. Only unused project prerequisites may be removed. Runtime key cleanup schedules deletion after seven days; retained encrypted logs/snapshots, grants and live users block it. Backend and unrelated/shared resources remain intact.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && ((inputs.target == 'vpc-seed' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED') || (inputs.target == 'policy-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES') || (inputs.target == 'iam-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-IAM-PREREQUISITES'))
+    if: inputs.operation == 'apply' && ((inputs.target == 'vpc-seed' && inputs.approval == 'DESTROY-REVIEWED-BANKING-VPC-SEED') || (inputs.target == 'policy-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-POLICY-PREREQUISITES') || (inputs.target == 'iam-prerequisites' && inputs.approval == 'DESTROY-REVIEWED-BANKING-IAM-PREREQUISITES') || (inputs.target == 'runtime-foundation' && inputs.approval == 'DESTROY-REVIEWED-BANKING-RUNTIME-FOUNDATION'))
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
