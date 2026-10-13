@@ -18,7 +18,7 @@ recreating the VPC. IAM/KMS/EKS readiness guards in the full platform are retain
 The seed and full platform share one workflow concurrency group.
 
 The seed needs neither an IAM remote state nor a nominated key/operator. Its
-1,873-character inline STS cap restricts the session to a Banking-tagged Ohio VPC,
+1,944-character inline STS cap restricts the session to a Banking-tagged Ohio VPC,
 DNS modifications on that tagged VPC, metadata reads and the exact platform
 state/lock objects. DeleteObject is restricted to `.tflock`; no DeleteVpc,
 IAM/KMS write, subnet, public IP, gateway, NAT, database or EKS allow exists.

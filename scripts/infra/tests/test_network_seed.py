@@ -33,7 +33,7 @@ class SeedTests(unittest.TestCase):
         self.assertEqual(operation, 'describe-security-groups')
         return dict(SecurityGroups=[dict(GroupId=self.info['default_security_group_id'], VpcId=self.info['vpc_id'], GroupName='default', OwnerId=ACCOUNT)])
 
-    def test_actual_targeted_mock_plan_has_only_one_aws_vpc(self):
+    def test_independent_mock_plan_has_only_one_aws_vpc(self):
         result = plan_review(self.plan, self.values, effective_tags=False)
         self.assertEqual(result['inventory'], sorted(ADDRESSES))
         self.assertEqual(result['aws_vpcs'], 1)

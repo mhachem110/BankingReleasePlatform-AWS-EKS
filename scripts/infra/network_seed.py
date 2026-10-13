@@ -37,7 +37,7 @@ def session_policy():
     bucket = "arn:aws:s3:::" + BUCKET
     vpc = f"arn:aws:ec2:{REGION}:{ACCOUNT}:vpc/*"
     rows = [
-        {"Effect": "Allow", "Action": ["sts:GetCallerIdentity", "ec2:DescribeVpcs", "ec2:DescribeVpcAttribute", "ec2:DescribeSecurityGroups"], "Resource": "*"},
+        {"Effect": "Allow", "Action": ["sts:GetCallerIdentity", "ec2:DescribeVpcs", "ec2:DescribeVpcAttribute", "ec2:DescribeSecurityGroups", "ec2:DescribeNetworkAcls", "ec2:DescribeRouteTables", "ec2:DescribeTags"], "Resource": "*"},
         {"Effect": "Allow", "Action": "ec2:CreateVpc", "Resource": vpc,
          "Condition": {"StringEquals": {"aws:RequestedRegion": REGION, "aws:RequestTag/Project": "BankingReleasePlatform", "aws:RequestTag/Environment": "dev", "aws:RequestTag/ManagedBy": "Terraform", "aws:RequestTag/Name": "banking-dev-vpc"}}},
         {"Effect": "Allow", "Action": "ec2:CreateTags", "Resource": vpc,
