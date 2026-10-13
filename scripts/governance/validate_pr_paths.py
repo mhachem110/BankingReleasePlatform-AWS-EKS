@@ -41,12 +41,7 @@ CLOUD_PREFIXES = (
     "docs/security/", "docs/infrastructure/", "iam/", "policies/",
     "config/aws/", "config/iam/",
 )
-CLOUD_FILES = frozenset({
-    "AGENTS.md", ".gitignore",
-    # Historical repository-level architecture and Phase 1 reports are maintained
-    # with the shared project documentation, not application source changes.
-    "docs/architecture.md", "docs/phase-1-pr.md", "docs/phase-1-report.md",
-})
+CLOUD_FILES = frozenset({"AGENTS.md", ".gitignore"})
 MAX_FILES = 3000  # GitHub's list-files endpoint limit; reject larger PRs.
 
 
