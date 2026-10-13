@@ -41,6 +41,17 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path), self.assertRaises(policy.PolicyError):
                 policy.validate(pull_request(cloud=True), [file(path)], REPO)
 
+    def test_infra_can_relocate_only_known_legacy_docs_and_script_guide(self):
+        paths = sorted(policy.LEGACY_DOC_PATHS)
+        files = [file(path, "removed") for path in paths]
+        files.append(file("scripts/README.md", "added"))
+        policy.validate(pull_request("infra", cloud=True, count=len(files)), files, REPO)
+        for path in ["docs/new.md", "docs/deployment/new-policy.json", "scripts/new-guide.md"]:
+            with self.subTest(path=path), self.assertRaises(policy.PolicyError):
+                policy.validate(pull_request("infra", cloud=True), [file(path)], REPO)
+            with self.subTest(app_path=path), self.assertRaises(policy.PolicyError):
+                policy.validate(pull_request(cloud=True), [file(path)], REPO)
+
     def test_rename_out_of_workflow_directory_is_rejected(self):
         with self.assertRaises(policy.PolicyError):
             policy.validate(pull_request(), [file("apps/readme.txt", "renamed", ".github/workflows/deploy.yml")], REPO)
