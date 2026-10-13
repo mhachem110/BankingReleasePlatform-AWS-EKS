@@ -80,7 +80,11 @@ provider "aws" {
                 self.assertTrue(Path(mirror).is_dir(), "Initialize the module provider before this test.")
                 cli = path / "terraform.rc"
                 cli.write_text('provider_installation { filesystem_mirror { path = "' + mirror + '" } }')
-                env = {k: v for k, v in os.environ.items() if not k.startswith(("AWS_", "TF_VAR_"))}
+                # The fixture uses an explicit filesystem mirror. Terraform rejects
+                # that combination when CI also exports a provider plugin cache.
+                # Isolate only this subprocess so the real provider still executes.
+                env = {k: v for k, v in os.environ.items()
+                       if not k.startswith(("AWS_", "TF_VAR_")) and k != "TF_PLUGIN_CACHE_DIR"}
                 env.update(TF_CLI_CONFIG_FILE=str(cli), AWS_EC2_METADATA_DISABLED="true", AWS_SHARED_CREDENTIALS_FILE=str(path / "absent"),
                            AWS_CONFIG_FILE=str(path / "absent"), TF_IN_AUTOMATION="true")
 

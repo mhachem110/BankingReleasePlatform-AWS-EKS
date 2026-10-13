@@ -4,5 +4,6 @@
   "retrieved_date": "2026-10-11",
   "upstream_sha256": "16f232c9d9f79366fe949c4550ad517a202380058a9e48d45a4e215044a20a6a",
   "local_json_semantically_matches_upstream": true,
-  "scope": "Dedicated controller IRSA role only. Not attached or applied."
+  "scope": "Dedicated controller IRSA role only. Terraform attaches this exact policy to the controller role after a reviewed runtime plan.",
+  "compatible_chart": "aws-load-balancer-controller 3.6.0 (app v3.6.0); the upstream v3.6.0 IAM policy has the same SHA256 as this reviewed file"
 }

@@ -1,5 +1,9 @@
 # ONE Banking administrator handoff — shared EKS demonstration
 
+> Historical request. The current deployment runner and one-time setup are in
+> [PROJECT-PIPELINE.md](PROJECT-PIPELINE.md). The permanent `banking-deployer`
+> runner described below is superseded by the temporary private CodeBuild runner.
+
 The current provisioning design is [SINGLE-PROVISIONER.md](SINGLE-PROVISIONER.md).
 It uses the existing bootstrap role and a separately approved Terraform IAM stage
 to create the three service roles. The administrator authorizes bounded grants and

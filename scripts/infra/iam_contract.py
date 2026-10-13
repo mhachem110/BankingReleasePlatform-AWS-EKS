@@ -50,10 +50,19 @@ def verify_live_roles(call, boundary_hash):
         attached = call("iam", "list-attached-role-policies", "--role-name", name)
         require({p["PolicyArn"] for p in attached.get("AttachedPolicies", [])} == ({ATTACHMENTS[key]} if key in ATTACHMENTS else set()), "Managed policy inventory drift: " + name)
         inline = call("iam", "list-role-policies", "--role-name", name)
-        require(set(inline.get("PolicyNames", [])) == ({"BankingFlowLogs"} if key == "flow" else set()), "Inline policy inventory drift: " + name)
+        allowed_inline = ({"BankingFlowLogs"} if key == "flow" else
+                          {"BankingFargateApplicationLogs"} if key == "fargate" else set())
+        actual_inline = set(inline.get("PolicyNames", []))
+        require(actual_inline <= allowed_inline and
+                (key != "flow" or actual_inline == allowed_inline), "Inline policy inventory drift: " + name)
         if key == "flow":
             actual = call("iam", "get-role-policy", "--role-name", name, "--policy-name", "BankingFlowLogs")
             require(actual.get("PolicyDocument") == flow_policy(), "Flow log policy drift")
+        if key == "fargate" and actual_inline:
+            from runtime_prerequisites import fargate_log_policy
+            actual = call("iam", "get-role-policy", "--role-name", name,
+                          "--policy-name", "BankingFargateApplicationLogs")
+            require(actual.get("PolicyDocument") == fargate_log_policy(), "Fargate application log policy drift")
     meta = call("iam", "get-policy", "--policy-arn", BOUNDARY)
     version = call("iam", "get-policy-version", "--policy-arn", BOUNDARY, "--version-id", meta["Policy"]["DefaultVersionId"])
     require(digest(version["PolicyVersion"]["Document"]) == boundary_hash, "Boundary changed after review")

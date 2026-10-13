@@ -57,9 +57,24 @@ def runtime_values(environment):
     for section, settings in values.items():
         if not isinstance(settings, dict) or set(settings) - allowed[section]:
             raise ValueError("Unknown runtime setting; plaintext credentials and arbitrary Helm overrides are forbidden")
+    if environment in {"dev", "prod"}:
+        # Data bootstrap installs these exact namespace-owned objects from the
+        # verified RDS/SQS interfaces. No GitHub setting carries a password or
+        # manually copied queue/role ARN.
+        queue = f"https://sqs.us-east-2.amazonaws.com/866934333672/banking-{environment}-payments"
+        expected = {
+            "persistence": {"enabled": True, "accountSecretName": "banking-account-db",
+                            "paymentSecretName": "banking-payment-db", "caConfigMapName": "banking-rds-ca"},
+            "messaging": {"enabled": True, "approved": True,
+                          "roleArn": f"arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-payment-runtime-{environment}",
+                          "queueUrl": queue, "deadLetterQueueUrl": queue + "-dlq"},
+            "monitoring": {"scrape": True},
+        }
+        if values and values != expected:
+            raise ValueError("Dev/prod must use the exact verified database, queue and namespace references")
+        return expected
     if values.get("persistence", {}).get("enabled") or values.get("messaging", {}).get("enabled"):
-        if environment not in {"dev", "prod"} or os.environ.get("APP_DATA_OPERATIONS_ENABLED") != "true":
-            raise ValueError("Data/messaging requires separate explicit dev/prod authorization")
+        raise ValueError("Stage/UAT use only their reviewed stateless demonstration until separate data infrastructure exists")
     if values.get("messaging", {}).get("enabled"):
         settings = values["messaging"]
         prefix = f"https://sqs.us-east-2.amazonaws.com/866934333672/banking-{environment}-payments"

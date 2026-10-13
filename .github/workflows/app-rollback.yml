@@ -28,14 +28,80 @@ concurrency:
   group: banking-deployment-${{ inputs.environment }}
   cancel-in-progress: false # Serialize recovery with App CD.
 jobs:
-  restore:
+  rescan:
+    # Docker and Trivy stay on a standard hosted runner; recovery waits for it.
     if: >-
       inputs.approval == 'ROLLBACK-REVIEWED-BANKING-APP' &&
       ((inputs.environment == 'dev' && github.ref == 'refs/heads/dev') ||
        (inputs.environment == 'stage' && github.ref == 'refs/heads/stage') ||
        (inputs.environment == 'uat' && github.ref == 'refs/heads/uat') ||
        (inputs.environment == 'prod' && github.ref == 'refs/heads/main'))
-    runs-on: [self-hosted, linux, x64, banking-deployer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      DEPLOY_ENV: ${{ inputs.environment }}
+      DEPLOYMENT_RUN_ID: ${{ inputs.deployment_run_id }}
+      REVISION: ${{ inputs.revision }}
+      APP_DEPLOYMENTS_ENABLED: ${{ vars.APP_DEPLOYMENTS_ENABLED }}
+      APP_RELEASE_MODE: ${{ vars.APP_RELEASE_MODE }}
+      APP_DEPLOY_ROLE_ARN: ${{ vars.APP_DEPLOY_ROLE_ARN }}
+      INFRA_ROLE_ARN: ${{ vars.INFRA_ROLE_ARN }}
+      BOOTSTRAP_ROLE_ARN: ${{ vars.BOOTSTRAP_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_ACCOUNT_REPOSITORY: ${{ vars.ECR_ACCOUNT_REPOSITORY }}
+      ECR_PAYMENT_REPOSITORY: ${{ vars.ECR_PAYMENT_REPOSITORY }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      manifest_sha256: ${{ steps.digest.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - id: config
+        run: python scripts/deploy/preflight.py --environment "$DEPLOY_ENV"
+      - run: python scripts/deploy/rollback.py prepare --environment "$DEPLOY_ENV" --deployment-run-id "$DEPLOYMENT_RUN_ID" --revision "$REVISION"
+      - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
+        with:
+          role-to-assume: ${{ vars.APP_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          inline-session-policy: ${{ steps.config.outputs.session_policy }}
+          unset-current-credentials: true
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+          role-session-name: banking-rollback-rescan-${{ github.run_id }}
+      - run: aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+      - run: python scripts/deploy/scan.py --manifest release/rollback-release.json
+      - id: digest
+        run: echo "sha256=$(sha256sum release/rollback-release.json | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: rollback-trivy-${{ github.run_id }}
+          path: artifacts/application/scanned/reports
+          retention-days: 90
+      - if: always()
+        run: docker logout "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+  restore:
+    needs: rescan
+    if: >-
+      inputs.approval == 'ROLLBACK-REVIEWED-BANKING-APP' &&
+      ((inputs.environment == 'dev' && github.ref == 'refs/heads/dev') ||
+       (inputs.environment == 'stage' && github.ref == 'refs/heads/stage') ||
+       (inputs.environment == 'uat' && github.ref == 'refs/heads/uat') ||
+       (inputs.environment == 'prod' && github.ref == 'refs/heads/main'))
+    # Recovery gets a fresh temporary VPC runner under the same namespace gate.
+    runs-on: codebuild-banking-release-deployer-${{ github.run_id }}-${{ github.run_attempt }}
     timeout-minutes: 60
     environment: ${{ inputs.environment }}
     permissions:
@@ -71,6 +137,10 @@ jobs:
       - run: python scripts/deploy/install-tools.py
       - name: Bind recovery to a successful receipt and immutable publication
         run: python scripts/deploy/rollback.py prepare --environment "$DEPLOY_ENV" --deployment-run-id "$DEPLOYMENT_RUN_ID" --revision "$REVISION"
+      - name: Match the hosted Trivy scan's approved digest pair
+        env:
+          REVIEWED_SHA256: ${{ needs.rescan.outputs.manifest_sha256 }}
+        run: echo "$REVIEWED_SHA256  release/rollback-release.json" | sha256sum --check --strict
       - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
         with:
           role-to-assume: ${{ vars.APP_DEPLOY_ROLE_ARN }}
@@ -79,10 +149,6 @@ jobs:
           unset-current-credentials: true
           allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
           role-session-name: banking-app-rollback-${{ github.run_id }}
-      - name: Authenticate for scanning the selected digest pair
-        run: aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-      - name: Trivy gate on the restored images
-        run: python scripts/deploy/scan.py --manifest release/rollback-release.json
       - name: Restore and wait for healthy Fargate replicas
         run: python scripts/deploy/rollback.py restore --environment "$DEPLOY_ENV" --deployment-run-id "$DEPLOYMENT_RUN_ID" --revision "$REVISION"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -90,13 +156,4 @@ jobs:
           name: rollback-${{ inputs.environment }}-${{ github.run_id }}
           path: release/rollback.json
           if-no-files-found: error
-          retention-days: 90
-      - name: Clear registry credentials
-        if: always()
-        run: docker logout "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: rollback-trivy-${{ github.run_id }}
-          path: artifacts/application/scanned/reports
           retention-days: 90

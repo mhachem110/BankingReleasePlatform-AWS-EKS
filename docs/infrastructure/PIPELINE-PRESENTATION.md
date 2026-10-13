@@ -10,11 +10,11 @@ available as evidence.
 | Application CI | Build and assess application changes | Locked NuGet restore with direct/transitive vulnerability audit, .NET checks, Helm safety, Trivy vulnerability/secret scans of saved container bytes; no AWS token |
 | App CD | `publish` on dev; `deploy` the same digest pair through reviewed branches | Native environment approval, separate bounded OIDC role, scanned archive hashes, immutable ECR, trusted run receipts and branch ancestry, digest rescan, Helm timeout/readiness and failure rollback |
 | Infra CI/CD | One ordered dependency run | Credential-free CI/Checkov, protected bootstrap jobs, actual dependency IDs, bounded session caps, reviewed binary plans, S3 locks, ownership checks, verified resource reuse |
-| Terraform Destroy | Deliberate cleanup | Creation/cleanup mutually exclusive, same lifecycle lock, selected native state and ownership inventory, dependency checks, separately approved saved destroy binary |
+| Terraform Destroy | Deliberate cleanup | Applications and exact ECR images first; RDS with explicit final snapshots; then runtime, runner, EKS/network and unused IAM. Selected native states, ownership checks and separately approved saved destroy binaries |
 | App Rollback | Restore an earlier successful Helm revision | Same deployment lock/environment gate, successful deployment receipt, exact published digests, Trivy rescan, namespace RBAC and bounded rollout wait |
 
 `app-validation.yml` and `app-publish.yml` are reusable application implementations.
-Foundation, network, platform caps, platform and data implementations are reusable
+Foundation, network, platform caps, platform, temporary runner and data implementations are reusable
 stages behind Infra CI/CD. Keeping the code in small files makes its controls
 readable while reducing separate deployment buttons. Existing CI check names are
 preserved so current branch protections continue to recognize them.
@@ -38,18 +38,18 @@ Two replicas, probes, disruption budgets and Fargate profiles provide the worklo
 availability controls. Two-AZ private subnets do not guarantee even Fargate Pod
 placement. One NAT remains the documented training cost/availability tradeoff.
 
-## Actual readiness
+## Architecture and evidence to show
 
-These source changes are not evidence of a completed live project. The runtime
-foundation and platform session-cap publisher are coded; the full project entry
-is still a draft. Runtime IAM and alert prerequisites, production data wiring,
-private deployment runner registration, Kubernetes bootstrap and full paid
-platform/data teardown must be finished before the final deployment.
+Draw GitHub-hosted CI and Terraform planning on the left; the protected CodeBuild
+job in two private subnets on the right. The job obtains short-lived GitHub OIDC
+credentials and uses namespace-specific EKS access entries. Show the same
+scanned ECR digest pair promoted from banking-dev to banking-prod, the private
+RDS and SQS/DLQ pair for each namespace, the transactional payment outbox, and
+CloudWatch alarms to encrypted project alert queues. Explain that approval of a
+Terraform saved plan, a GitHub environment and the AWS role are separate gates.
 
-Destroy currently supports unused prerequisite resources only. It deliberately
-does not advertise complete EKS/RDS teardown. RDS final snapshots and retained
-encrypted data require an explicit retention decision before key deletion.
-
-No additional tests, AWS apply or AWS destroy runs were launched for this code
-checkpoint after the owner's instruction to stop testing. Existing repository
-checks and native deployment approvals have not been weakened.
+The current evidence is code and offline validation only. The CodeBuild GitHub
+App connection, permission boundary for Fargate log shipping, live deployment,
+production promotion, alert delivery and rollback demonstration need actual AWS
+evidence before the trainer can present them as working. A final RDS snapshot
+keeps the runtime KMS key in use; retirement must account for that dependency.

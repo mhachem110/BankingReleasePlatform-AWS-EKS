@@ -97,6 +97,18 @@ jobs:
       foundation_interface_json: ${{ needs.foundation.outputs.interface_json }}
       network_interface_json: ${{ needs.network.outputs.interface_json }}
       policy_review_json: ${{ needs.platform-caps.outputs.policy_review_json }}
+  runner:
+    # The private CodeBuild runner is created only after the platform verifies.
+    if: >-
+      !cancelled() && inputs.target == 'project' && inputs.operation == 'apply' &&
+      needs.platform.result == 'success' &&
+      fromJSON(needs.platform.outputs.interface_json || '{}').verified == true
+    needs: platform
+    uses: ./.github/workflows/runner-operations.yml
+    permissions: *deployment-permissions
+    with:
+      operation: ${{ inputs.operation }}
+      platform_interface_json: ${{ needs.platform.outputs.interface_json }}
   runtime:
     # Publish dev/prod monitoring, encrypted alarm delivery and data caps only
     # after the EKS issuer, network and runtime key exist and verify live.
@@ -143,19 +155,22 @@ jobs:
       platform_interface_json: ${{ needs.platform.outputs.interface_json }}
       runtime_interface_json: ${{ needs.runtime.outputs.interface_json }}
   kubernetes:
-    # Owner-managed namespace/RBAC install requires the registered trusted runner.
-    # A missing runner readiness flag leaves Project incomplete instead of claiming success.
+    # CodeBuild exists, then the operator installs the exact runtime resources.
     if: >-
       !cancelled() && inputs.target == 'project' && inputs.operation == 'apply' &&
-      needs.data-prod.result == 'success' && needs.platform.result == 'success'
-    needs: [data-prod, platform]
+      needs.data-prod.result == 'success' && needs.runner.result == 'success' &&
+      needs.runner.outputs.verified == 'true'
+    needs: [data, data-prod, platform, runner, runtime]
     uses: ./.github/workflows/kubernetes-bootstrap.yml
     permissions: *deployment-permissions
     with:
       platform_interface_json: ${{ needs.platform.outputs.interface_json }}
+      runtime_interface_json: ${{ needs.runtime.outputs.interface_json }}
+      dev_data_interface_json: ${{ needs.data.outputs.interface_json }}
+      prod_data_interface_json: ${{ needs.data-prod.outputs.interface_json }}
   evidence:
     if: always()
-    needs: [authorize, ci, foundation, network, platform-caps, platform, runtime, data, data-prod, kubernetes]
+    needs: [authorize, ci, foundation, network, platform-caps, platform, runner, runtime, data, data-prod, kubernetes]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -179,9 +194,9 @@ jobs:
               caps = json.loads(results['platform-caps'].get('outputs', {}).get('policy_review_json') or '[]')
               assert len(caps) == 3, 'Missing verified session caps'
           if os.environ['OPERATION'] == 'apply':
-              names = ['foundation', 'network', 'platform', 'runtime', 'data', 'data-prod', 'kubernetes'] if os.environ['TARGET'] == 'project' else [os.environ['TARGET']]
+              names = ['foundation', 'network', 'platform', 'runner', 'runtime', 'data', 'data-prod', 'kubernetes'] if os.environ['TARGET'] == 'project' else [os.environ['TARGET']]
               for name in names:
                   outputs = results[name].get('outputs', {})
-                  proof = outputs.get('verified') == 'true' if name in {'data', 'data-prod', 'kubernetes'} else json.loads(outputs.get('interface_json') or '{}').get('verified') is True
+                  proof = outputs.get('verified') == 'true' if name in {'runner', 'data', 'data-prod', 'kubernetes'} else json.loads(outputs.get('interface_json') or '{}').get('verified') is True
                   assert proof, 'Missing actual verification evidence for ' + name
           PY

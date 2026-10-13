@@ -19,6 +19,26 @@ KEY = "banking-release-platform/shared/runtime-prerequisites/terraform.tfstate"
 ROOT = "infra/runtime-prerequisites"
 NAMES = {"dev": "BankingReleasePlatformPhase6Session", "prod": "BankingReleasePlatformPhase6ProdSession"}
 TAGS = {"Project": "BankingReleasePlatform", "ManagedBy": "Terraform", "Owner": "MahmoudHachem"}
+CONTROLLER = f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-alb-controller"
+CONTROLLER_POLICY = json.loads((Path(__file__).resolve().parents[2] / "iam/phase3/aws-load-balancer-controller-v2.14.1.json").read_text())
+FARGATE = f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-fargate-execution"
+
+
+def fargate_log_policy():
+    return {"Version": "2012-10-17", "Statement": [{
+        "Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:DescribeLogStreams", "logs:PutLogEvents"],
+        "Resource": [f"arn:aws:logs:{REGION}:{ACCOUNT}:log-group:/banking/banking-{env}/application:*"
+                     for env in NAMES]}]}
+
+
+def controller_trust(issuer):
+    host = issuer.removeprefix("https://")
+    return {"Version": "2012-10-17", "Statement": [{
+        "Effect": "Allow", "Principal": {"Federated": f"arn:aws:iam::{ACCOUNT}:oidc-provider/{host}"},
+        "Action": "sts:AssumeRoleWithWebIdentity",
+        "Condition": {"StringEquals": {host + ":aud": "sts.amazonaws.com",
+                                      host + ":sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"}}
+    }]}
 
 
 def role(env):
@@ -80,7 +100,8 @@ def configuration(env):
 
 
 def inventory():
-    addresses = {"terraform_data.authorization", "aws_kms_key.alerts", "aws_kms_alias.alerts"}
+    addresses = {"terraform_data.authorization", "aws_kms_key.alerts", "aws_kms_alias.alerts",
+                 "aws_iam_role.controller", "aws_iam_role_policy.controller", "aws_iam_role_policy.fargate_application_logs"}
     for env in NAMES:
         for typ, name in (("aws_iam_role", "monitoring"), ("aws_iam_role_policy_attachment", "monitoring"),
                           ("aws_iam_role", "payment"), ("aws_iam_role_policy", "payment"),
@@ -125,6 +146,15 @@ def preflight(config):
     managed = rows(state)
     if not managed:
         # A pre-existing same-name resource without our native state is never adopted.
+        fargate = aws("iam", "get-role", "--role-name", FARGATE.split("/")[-1])["Role"]
+        require(fargate["Arn"] == FARGATE and fargate.get("PermissionsBoundary", {}).get("PermissionsBoundaryArn") ==
+                f"arn:aws:iam::{ACCOUNT}:policy/cloudbatch818-mahmoud-banking-service-boundary",
+                "Fargate execution role/boundary changed")
+        require("BankingFargateApplicationLogs" not in
+                aws("iam", "list-role-policies", "--role-name", FARGATE.split("/")[-1])["PolicyNames"],
+                "Unmanaged Fargate application logging policy collision")
+        require(aws("iam", "get-role", "--role-name", CONTROLLER.split("/")[-1],
+                    absent_codes=("NoSuchEntity",)).get("absent"), "Controller role collision")
         for env in NAMES:
             require(aws("iam", "get-role", "--role-name", role(env).split("/")[-1], absent_codes=("NoSuchEntity",)).get("absent"), "Monitoring role collision")
             require(aws("iam", "get-policy", "--policy-arn", policy(env), absent_codes=("NoSuchEntity",)).get("absent"), "Data policy collision")
@@ -136,6 +166,21 @@ def preflight(config):
     require({r["address"] for r in managed} == inventory(), "Partial/unknown runtime state requires reviewed recovery")
     require(state.get("outputs", {}).get("state_key", {}).get("value") == KEY and
             state.get("outputs", {}).get("contract_version", {}).get("value") == 1, "Runtime state contract changed")
+    controller = next(r for r in managed if r["address"] == "aws_iam_role.controller")["values"]
+    require(controller["arn"] == CONTROLLER and json.loads(controller["assume_role_policy"]) == controller_trust(config["oidc_issuer_url"]),
+            "Controller role state changed")
+    actual_controller = aws("iam", "get-role", "--role-name", controller["name"])["Role"]
+    require(actual_controller["Arn"] == CONTROLLER and actual_controller["AssumeRolePolicyDocument"] == controller_trust(config["oidc_issuer_url"]),
+            "Controller role trust drift")
+    require(aws("iam", "list-role-policies", "--role-name", controller["name"])["PolicyNames"] == ["BankingAWSLoadBalancerController"] and
+            not aws("iam", "list-attached-role-policies", "--role-name", controller["name"])["AttachedPolicies"],
+            "Controller role gained an unreviewed policy")
+    require(aws("iam", "get-role-policy", "--role-name", controller["name"],
+                "--policy-name", "BankingAWSLoadBalancerController")["PolicyDocument"] == CONTROLLER_POLICY,
+            "Controller policy differs from the pinned upstream source")
+    require(aws("iam", "get-role-policy", "--role-name", FARGATE.split("/")[-1],
+                "--policy-name", "BankingFargateApplicationLogs")["PolicyDocument"] == fargate_log_policy(),
+            "Fargate application log delivery policy drift")
     for env in NAMES:
         item = next(r for r in managed if r["address"] == f'aws_iam_role.monitoring["{env}"]')["values"]
         require(item["arn"] == role(env) and json.loads(item["assume_role_policy"]) == monitoring_trust(env), "Monitoring role state changed")
@@ -163,6 +208,23 @@ def plan_review(plan, config):
     require(len(changes) == len(inventory()) and {r["address"] for r in changes} == inventory(), "Unexpected runtime resource inventory")
     require(all(r["change"]["actions"] == ["create"] and not r["change"].get("importing") and not r.get("previous_address") for r in changes), "Only first creation is allowed")
     for row in changes:
+        if row["address"] == "aws_iam_role.controller":
+            after = row["change"]["after"]
+            require(after["name"] == CONTROLLER.split("/")[-1] and
+                    json.loads(after["assume_role_policy"]) == controller_trust(config["oidc_issuer_url"]),
+                    "Controller trust source mismatch")
+            continue
+        if row["address"] == "aws_iam_role_policy.controller":
+            after = row["change"]["after"]
+            require(after["name"] == "BankingAWSLoadBalancerController" and
+                    json.loads(after["policy"]) == CONTROLLER_POLICY, "Controller policy source mismatch")
+            continue
+        if row["address"] == "aws_iam_role_policy.fargate_application_logs":
+            after = row["change"]["after"]
+            require(after["name"] == "BankingFargateApplicationLogs" and
+                    after["role"] == FARGATE.split("/")[-1] and
+                    json.loads(after["policy"]) == fargate_log_policy(), "Fargate log policy source mismatch")
+            continue
         if row["type"] == "aws_iam_policy":
             env = row["address"].split('"')[1]
             after = row["change"]["after"]
@@ -191,8 +253,7 @@ def session_policy(write=False):
             dict(Effect="Allow", Action="s3:GetObject", Resource=bucket + "/banking-release-platform/*/terraform.tfstate"),
             dict(Effect="Allow", Action=["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], Resource=state + ".tflock")]
     if write:
-        resources = [f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-rds-monitoring*",
-                     f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-payment-runtime-*",
+        resources = [f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-*",
                      f"arn:aws:iam::{ACCOUNT}:policy/BankingReleasePlatformPhase6*Session",
                      f"arn:aws:sns:{REGION}:{ACCOUNT}:banking-*-alerts",
                      f"arn:aws:sqs:{REGION}:{ACCOUNT}:banking-*-alerts"]

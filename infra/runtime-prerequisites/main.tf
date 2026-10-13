@@ -94,6 +94,42 @@ resource "aws_iam_role_policy" "payment" {
   role     = aws_iam_role.payment[each.key].id
   policy   = var.payment_permissions[each.key]
 }
+
+# One cluster-scoped controller role uses the reviewed upstream policy. The
+# service account subject and EKS issuer are exact; application Pods cannot use it.
+resource "aws_iam_role" "controller" {
+  name = "cloudbatch818-mahmoud-banking-alb-controller"
+  path = "/"
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Effect = "Allow", Principal = { Federated = var.oidc_provider_arn }, Action = "sts:AssumeRoleWithWebIdentity",
+    Condition = { StringEquals = {
+      "${local.issuer}:aud" = "sts.amazonaws.com",
+      "${local.issuer}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
+    } }
+  }] })
+  tags       = merge(local.tags, { Environment = "dev", Name = "banking-alb-controller" })
+  depends_on = [terraform_data.authorization]
+  lifecycle { prevent_destroy = true }
+}
+
+resource "aws_iam_role_policy" "controller" {
+  name   = "BankingAWSLoadBalancerController"
+  role   = aws_iam_role.controller.id
+  policy = jsonencode(jsondecode(file("${path.module}/../../iam/phase3/aws-load-balancer-controller-v2.14.1.json")))
+}
+# Fargate's managed log router uses the pod execution identity, not workload
+# IRSA. The administrator-controlled boundary must allow these exact groups.
+resource "aws_iam_role_policy" "fargate_application_logs" {
+  name = "BankingFargateApplicationLogs"
+  role = "cloudbatch818-mahmoud-banking-fargate-execution"
+  policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Effect = "Allow"
+    Action = ["logs:CreateLogStream", "logs:DescribeLogStreams", "logs:PutLogEvents"]
+    Resource = [for env in keys(local.environments) :
+    "arn:aws:logs:${local.region}:${local.account}:log-group:/banking/banking-${env}/application:*"]
+  }] })
+  depends_on = [terraform_data.authorization]
+}
 # Alert delivery needs its own key policy: SNS sends into an encrypted SQS
 # queue and CloudWatch publishes into an encrypted topic. The application key
 # intentionally has different encryption contexts and remains untouched.
@@ -174,6 +210,7 @@ resource "aws_iam_policy" "data_session" {
 }
 output "interface" {
   value = { for env, value in local.environments : env => {
+    controller_role_arn = aws_iam_role.controller.arn
     monitoring_role_arn = aws_iam_role.monitoring[env].arn
     payment_role_arn    = aws_iam_role.payment[env].arn
     alert_topic_arn     = aws_sns_topic.alerts[env].arn
@@ -185,5 +222,6 @@ output "interface" {
   }
 }
 output "alert_key_arn" { value = aws_kms_key.alerts.arn }
+output "controller_role_arn" { value = aws_iam_role.controller.arn }
 output "state_key" { value = "banking-release-platform/shared/runtime-prerequisites/terraform.tfstate" }
 output "contract_version" { value = 1 }

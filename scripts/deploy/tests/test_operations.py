@@ -39,14 +39,19 @@ class GuardTests(unittest.TestCase):
                     self.fail("Occupied port was accepted")
             launch.assert_not_called()
 
-    def test_runtime_data_requires_separate_dev_authorization_and_rejects_secrets(self):
+    def test_runtime_data_uses_fixed_namespace_references_and_rejects_secrets(self):
         runtime = {"persistence":{"enabled":True,"accountSecretName":"banking-dev-account-db"}}
         with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":json.dumps(runtime)}, clear=True), self.assertRaises(ValueError):
             common.runtime_values("dev")
-        with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":json.dumps(runtime),"APP_DATA_OPERATIONS_ENABLED":"true"}, clear=True):
-            self.assertEqual(common.runtime_values("dev"), runtime)
-            with self.assertRaises(ValueError):
-                common.runtime_values("stage")
+        with patch.dict(os.environ, {}, clear=True):
+            actual = common.runtime_values("dev")
+            self.assertEqual(actual["persistence"]["accountSecretName"], "banking-account-db")
+            self.assertEqual(actual["messaging"]["queueUrl"],
+                             "https://sqs.us-east-2.amazonaws.com/866934333672/banking-dev-payments")
+            self.assertEqual(common.runtime_values("prod")["persistence"]["paymentSecretName"], "banking-payment-db")
+            self.assertEqual(common.runtime_values("stage"), {})
+        with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":json.dumps(runtime)}, clear=True), self.assertRaises(ValueError):
+            common.runtime_values("stage")
         for values in [{"images":{}},{"persistence":{"password":"never-accepted"}},{"messaging":{"accessKey":"never-accepted"}}]:
             with patch.dict(os.environ, {"APP_RUNTIME_VALUES_JSON":json.dumps(values),"APP_DATA_OPERATIONS_ENABLED":"true"}, clear=True), self.assertRaises(ValueError):
                 common.runtime_values("dev")

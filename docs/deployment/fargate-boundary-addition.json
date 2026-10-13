@@ -1,0 +1,12 @@
+{
+  "Effect": "Allow",
+  "Action": ["logs:CreateLogStream", "logs:DescribeLogStreams", "logs:PutLogEvents"],
+  "Resource": [
+    "arn:aws:logs:us-east-2:866934333672:log-group:/banking/banking-dev/application:*",
+    "arn:aws:logs:us-east-2:866934333672:log-group:/banking/banking-prod/application:*"
+  ],
+  "Condition": {
+    "StringEquals": {"aws:RequestedRegion": "us-east-2"},
+    "ArnEquals": {"aws:PrincipalArn": "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-fargate-execution"}
+  }
+}
