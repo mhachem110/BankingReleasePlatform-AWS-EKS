@@ -85,5 +85,5 @@ an additional explicit retention decision is made. No cleanup has been run.
 App CD now combines publication/deployment, and App Rollback is a separate protected
 recovery entry. See [the presentation walkthrough](PIPELINE-PRESENTATION.md) for
 controls and the precise readiness limits. Existing required checks and protections
-stay in place. No additional tests or AWS apply/destroy runs were launched after
-the owner asked to stop testing.
+stay in place. The complete offline suite and PR checks validate code only;
+no AWS apply or destroy has been dispatched for this change.
