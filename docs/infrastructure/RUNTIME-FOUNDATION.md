@@ -19,6 +19,13 @@ operator, alias and tagged runtime keys. It cannot attach managed policies, chan
 bootstrap IAM or administer existing shared keys. Same-run binary/backend/document
 checks precede apply; live key/trust/tags/policy/rotation checks and zero drift follow.
 
+A rerun reads this exact native state and verifies all five managed addresses,
+ownership, output bindings and actual key/operator configuration. A complete
+unchanged plan requests no write session and skips apply. An incomplete state,
+changed policy, key substitution or mixed create/no-op plan stops for recovery;
+the workflow never destroys a stage to make a rerun succeed. Verified resources
+are retained for the final deployment, following the owner's latest instruction.
+
 The key enables annual rotation and retains the account-root IAM delegation needed
 for existing owner grants. It permits CloudWatch encryption only for Banking log
 contexts and alarms in the project account/Region. This does not add rights to the

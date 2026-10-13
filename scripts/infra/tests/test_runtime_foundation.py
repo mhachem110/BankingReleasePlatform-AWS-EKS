@@ -43,7 +43,34 @@ class FoundationTests(unittest.TestCase):
             if operation=='get-caller-identity':return dict(Account=f.ACCOUNT,Arn=f'arn:aws:sts::{f.ACCOUNT}:assumed-role/cloudbatch818-mahmoud-cloudops-bootstrap/test')
             if operation=='get-role':return dict(Role={'Arn':f.OPERATOR})
             raise AssertionError(operation)
-        with patch('runtime_foundation.verify_authorization'),self.assertRaisesRegex(ValueError,'already exists'):f.preflight(call)
+        with patch('runtime_foundation.verify_authorization'),self.assertRaisesRegex(ValueError,'already exists'):f.preflight(call, state={})
+
+    def test_resume_accepts_only_complete_unchanged_plan_and_same_alias_target(self):
+        plan = copy.deepcopy(self.plan)
+        plan['applyable'] = False
+        for row in plan['resource_changes']:
+            row['change']['actions'] = ['no-op']
+            if row['type'] == 'aws_kms_key':row['change']['after']['key_id'] = 'fixture-key'
+            if row['type'] == 'aws_kms_alias':row['change']['after']['target_key_id'] = 'fixture-key'
+        self.assertEqual(f.plan_review(plan, False)['managed_creates'], 0)
+        mixed = copy.deepcopy(plan);mixed['resource_changes'][0]['change']['actions'] = ['create']
+        with self.assertRaisesRegex(ValueError, 'partial'):f.plan_review(mixed, False)
+        wrong = copy.deepcopy(plan)
+        next(r for r in wrong['resource_changes'] if r['type'] == 'aws_kms_alias')['change']['after']['target_key_id'] = 'shared-key'
+        with self.assertRaisesRegex(ValueError, 'same project key'):f.plan_review(wrong, False)
+
+    def test_resume_requires_native_complete_state_live_verification_and_matching_outputs(self):
+        _, _, state = self.cleanup_fixture()
+        state['outputs'] = {k:dict(value=v) for k,v in dict(state_key=f.KEY, contract_version=1,
+            kms_key_arn=state['resources'][1]['instances'][0]['attributes']['arn'], operator_role_arn=f.OPERATOR).items()}
+        with patch('runtime_foundation.verify') as live:
+            self.assertEqual(f.existing_outputs(state), state['outputs']);live.assert_called_once()
+        for issue in ['partial', 'output', 'live']:
+            changed = copy.deepcopy(state)
+            if issue == 'partial':changed['resources'].pop()
+            if issue == 'output':changed['outputs']['kms_key_arn']['value'] += 'wrong'
+            with self.subTest(issue=issue),patch('runtime_foundation.verify',side_effect=ValueError('Live drift') if issue=='live' else None),self.assertRaises(ValueError):f.existing_outputs(changed)
+        self.assertIsNone(f.existing_outputs({}))
 
     def cleanup_fixture(self):
         key_id='01234567-0123-0123-0123-0123456789ab'; key=f'arn:aws:kms:{f.REGION}:{f.ACCOUNT}:key/{key_id}'
