@@ -60,7 +60,7 @@ resource "aws_iam_role" "monitoring" {
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "monitoring.rds.amazonaws.com" }, Action = "sts:AssumeRole",
     Condition = { StringEquals = { "aws:SourceAccount" = local.account },
-                  ArnEquals = { "aws:SourceArn" = "arn:aws:rds:${local.region}:${local.account}:db:banking-${each.key}-postgres" } }
+    ArnEquals = { "aws:SourceArn" = "arn:aws:rds:${local.region}:${local.account}:db:banking-${each.key}-postgres" } }
   }] })
   tags       = merge(local.tags, { Environment = each.key, Name = each.value.role })
   depends_on = [terraform_data.authorization]
@@ -103,16 +103,16 @@ resource "aws_kms_key" "alerts" {
   enable_key_rotation     = true
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Sid = "AccountIAM", Effect = "Allow", Principal = { AWS = "arn:aws:iam::${local.account}:root" }, Action = "kms:*", Resource = "*" },
-    { Sid = "BankingAlarmPublishers", Effect = "Allow", Principal = { Service = ["cloudwatch.amazonaws.com", "sns.amazonaws.com"] },
+    { Sid    = "BankingAlarmPublishers", Effect = "Allow", Principal = { Service = ["cloudwatch.amazonaws.com", "sns.amazonaws.com"] },
       Action = ["kms:Decrypt", "kms:GenerateDataKey*"], Resource = "*",
       Condition = { StringEquals = {
         "kms:EncryptionContext:aws:sns:topicArn" = [for env in keys(local.environments) : "arn:aws:sns:${local.region}:${local.account}:banking-${env}-alerts"]
-      } } },
-    { Sid = "BankingAlertQueues", Effect = "Allow", Principal = { Service = "sns.amazonaws.com" },
+    } } },
+    { Sid    = "BankingAlertQueues", Effect = "Allow", Principal = { Service = "sns.amazonaws.com" },
       Action = ["kms:Decrypt", "kms:GenerateDataKey*"], Resource = "*",
       Condition = { StringEquals = {
         "kms:EncryptionContext:aws:sqs:arn" = [for env in keys(local.environments) : "arn:aws:sqs:${local.region}:${local.account}:banking-${env}-alerts"]
-      } } }
+    } } }
   ] })
   tags       = merge(local.tags, { Name = "banking-alert-delivery" })
   depends_on = [terraform_data.authorization]
@@ -144,13 +144,13 @@ resource "aws_sqs_queue_policy" "alerts" {
   for_each  = local.environments
   queue_url = aws_sqs_queue.alerts[each.key].id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Sid = "OnlyOwnedAlertTopic", Effect = "Allow", Principal = { Service = "sns.amazonaws.com" },
+    { Sid    = "OnlyOwnedAlertTopic", Effect = "Allow", Principal = { Service = "sns.amazonaws.com" },
       Action = "sqs:SendMessage", Resource = aws_sqs_queue.alerts[each.key].arn,
       Condition = { ArnEquals = { "aws:SourceArn" = aws_sns_topic.alerts[each.key].arn },
-                    StringEquals = { "aws:SourceAccount" = local.account } } },
-    { Sid = "DenyPlaintext", Effect = "Deny", Principal = "*", Action = "sqs:*",
+    StringEquals = { "aws:SourceAccount" = local.account } } },
+    { Sid      = "DenyPlaintext", Effect = "Deny", Principal = "*", Action = "sqs:*",
       Resource = aws_sqs_queue.alerts[each.key].arn,
-      Condition = { Bool = { "aws:SecureTransport" = "false" } } }
+    Condition = { Bool = { "aws:SecureTransport" = "false" } } }
   ] })
 }
 resource "aws_sns_topic_subscription" "alerts" {
@@ -174,14 +174,16 @@ resource "aws_iam_policy" "data_session" {
 }
 output "interface" {
   value = { for env, value in local.environments : env => {
-    monitoring_role_arn    = aws_iam_role.monitoring[env].arn
-    payment_role_arn       = aws_iam_role.payment[env].arn
-    alert_topic_arn        = aws_sns_topic.alerts[env].arn
-    alert_queue_url        = aws_sqs_queue.alerts[env].id
-    data_policy_arn        = aws_iam_policy.data_session[env].arn
-    data_policy_sha256     = sha256(var.data_session_policies[env])
-    subscription_arn      = aws_sns_topic_subscription.alerts[env].arn
-  } } }
+    monitoring_role_arn = aws_iam_role.monitoring[env].arn
+    payment_role_arn    = aws_iam_role.payment[env].arn
+    alert_topic_arn     = aws_sns_topic.alerts[env].arn
+    alert_queue_url     = aws_sqs_queue.alerts[env].id
+    data_policy_arn     = aws_iam_policy.data_session[env].arn
+    data_policy_sha256  = sha256(var.data_session_policies[env])
+    subscription_arn    = aws_sns_topic_subscription.alerts[env].arn
+    }
+  }
+}
 output "alert_key_arn" { value = aws_kms_key.alerts.arn }
 output "state_key" { value = "banking-release-platform/shared/runtime-prerequisites/terraform.tfstate" }
 output "contract_version" { value = 1 }
