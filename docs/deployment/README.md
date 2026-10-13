@@ -1,5 +1,14 @@
 # Application deployment: Phase 4 and Phase 5 checkpoint
 
+> Current handoff: the Banking platform, ephemeral CodeBuild runner, application
+> publication/deployment, rollback, monitoring and protected cleanup source are
+> integrated on the infrastructure workstream. The account owner reports the
+> CodeBuild connection and bootstrap permissions are configured. The latest
+> implementation changes have not been tested or deployed; live AWS and
+> Kubernetes acceptance is the next jointly reviewed step. The phase notes below
+> record the earlier application checkpoint and must not be read as current AWS
+> deployment evidence. See [the current pipeline](../infrastructure/PROJECT-PIPELINE.md).
+
 Prepared on the reusable feature/app branch in an independent worktree. No AWS calls,
 ECR publication, Kubernetes deployment, IAM changes, ALBs or other paid resources were
 performed. Live deployment remains pending Phase 3 and explicit approval.
