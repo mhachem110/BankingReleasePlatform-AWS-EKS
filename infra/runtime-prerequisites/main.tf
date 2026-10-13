@@ -21,6 +21,10 @@ variable "data_session_policies" {
   description = "Canonical dev/prod data policies generated from the verified platform interface"
   type        = map(string)
 }
+variable "payment_permissions" {
+  description = "Exact payment-only dev/prod SQS and KMS policies from the verified runtime key"
+  type        = map(string)
+}
 locals {
   account = "866934333672"
   region  = "us-east-2"
@@ -40,7 +44,8 @@ resource "terraform_data" "authorization" {
         can(regex("^arn:aws:kms:us-east-2:866934333672:key/[a-f0-9-]{36}$", var.kms_key_arn)) &&
         can(regex("^https://oidc.eks.us-east-2.amazonaws.com/id/[A-Fa-f0-9]{32}$", var.oidc_issuer_url)) &&
         var.oidc_provider_arn == "arn:aws:iam::${local.account}:oidc-provider/${local.issuer}" &&
-        toset(keys(var.data_session_policies)) == toset(keys(local.environments))
+        toset(keys(var.data_session_policies)) == toset(keys(local.environments)) &&
+        toset(keys(var.payment_permissions)) == toset(keys(local.environments))
       )
       error_message = "Use the exact verified Banking EKS issuer, project key and two generated session caps."
     }
@@ -65,6 +70,29 @@ resource "aws_iam_role_policy_attachment" "monitoring" {
   for_each   = local.environments
   role       = aws_iam_role.monitoring[each.key].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
+# A payment Pod gets only its own queue and KMS-through-SQS permissions. The
+# OIDC trust binds the live EKS issuer to one namespace/service account.
+resource "aws_iam_role" "payment" {
+  for_each = local.environments
+  name     = "cloudbatch818-mahmoud-banking-payment-runtime-${each.key}"
+  path     = "/"
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Effect = "Allow", Principal = { Federated = var.oidc_provider_arn }, Action = "sts:AssumeRoleWithWebIdentity",
+    Condition = { StringEquals = {
+      "${local.issuer}:aud" = "sts.amazonaws.com",
+      "${local.issuer}:sub" = "system:serviceaccount:banking-${each.key}:banking-payment"
+    } }
+  }] })
+  tags       = merge(local.tags, { Environment = each.key, Name = "banking-${each.key}-payment-runtime" })
+  depends_on = [terraform_data.authorization]
+  lifecycle { prevent_destroy = true }
+}
+resource "aws_iam_role_policy" "payment" {
+  for_each = local.environments
+  name     = "BankingPaymentRuntime"
+  role     = aws_iam_role.payment[each.key].id
+  policy   = var.payment_permissions[each.key]
 }
 # Alert delivery needs its own key policy: SNS sends into an encrypted SQS
 # queue and CloudWatch publishes into an encrypted topic. The application key
@@ -147,6 +175,7 @@ resource "aws_iam_policy" "data_session" {
 output "interface" {
   value = { for env, value in local.environments : env => {
     monitoring_role_arn    = aws_iam_role.monitoring[env].arn
+    payment_role_arn       = aws_iam_role.payment[env].arn
     alert_topic_arn        = aws_sns_topic.alerts[env].arn
     alert_queue_url        = aws_sqs_queue.alerts[env].id
     data_policy_arn        = aws_iam_policy.data_session[env].arn

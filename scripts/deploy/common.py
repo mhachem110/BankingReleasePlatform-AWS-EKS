@@ -58,8 +58,15 @@ def runtime_values(environment):
         if not isinstance(settings, dict) or set(settings) - allowed[section]:
             raise ValueError("Unknown runtime setting; plaintext credentials and arbitrary Helm overrides are forbidden")
     if values.get("persistence", {}).get("enabled") or values.get("messaging", {}).get("enabled"):
-        if environment != "dev" or os.environ.get("APP_DATA_OPERATIONS_ENABLED") != "true":
-            raise ValueError("Data/messaging requires separate explicit dev authorization")
+        if environment not in {"dev", "prod"} or os.environ.get("APP_DATA_OPERATIONS_ENABLED") != "true":
+            raise ValueError("Data/messaging requires separate explicit dev/prod authorization")
+    if values.get("messaging", {}).get("enabled"):
+        settings = values["messaging"]
+        prefix = f"https://sqs.us-east-2.amazonaws.com/866934333672/banking-{environment}-payments"
+        if (settings.get("approved") is not True or values.get("persistence", {}).get("enabled") is not True or
+                settings.get("roleArn") != f"arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-payment-runtime-{environment}" or
+                settings.get("queueUrl") != prefix or settings.get("deadLetterQueueUrl") != prefix + "-dlq"):
+            raise ValueError("Messaging must use the approved namespace-specific runtime role and queues")
     return values
 
 def run(args, *, capture=False, check=True, **kwargs):

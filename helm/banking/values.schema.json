@@ -286,15 +286,15 @@
         },
         "roleArn": {
           "type": "string",
-          "pattern": "^$|^arn:aws:iam::866934333672:role/([A-Za-z0-9_+=,.@-]+/)*cloudbatch818-mahmoud-banking-payment-runtime-dev$"
+          "pattern": "^$|^arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-payment-runtime-(dev|prod)$"
         },
         "queueUrl": {
           "type": "string",
-          "pattern": "^$|^https://sqs\\.us-east-2\\.amazonaws\\.com/866934333672/banking-dev-[a-z0-9-]+$"
+          "pattern": "^$|^https://sqs\\.us-east-2\\.amazonaws\\.com/866934333672/banking-(dev|prod)-payments$"
         },
         "deadLetterQueueUrl": {
           "type": "string",
-          "pattern": "^$|^https://sqs\\.us-east-2\\.amazonaws\\.com/866934333672/banking-dev-[a-z0-9-]+$"
+          "pattern": "^$|^https://sqs\\.us-east-2\\.amazonaws\\.com/866934333672/banking-(dev|prod)-payments-dlq$"
         }
       }
     },

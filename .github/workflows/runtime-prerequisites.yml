@@ -131,7 +131,7 @@ jobs:
       - name: Publish source-generated runtime review instructions
         if: steps.status.outputs.interface_json == ''
         run: |
-          echo 'Review the owned alert key, dev/prod monitoring roles, encrypted SNS/SQS delivery, two unattached data session caps and saved-plan SHA256. A separate bootstrap environment review gates apply.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review the owned alert key, dev/prod monitoring and payment-only IRSA roles, encrypted SNS/SQS delivery, two unattached data session caps and saved-plan SHA256. A separate bootstrap environment review gates apply.' >> "$GITHUB_STEP_SUMMARY"
   apply:
     if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-RUNTIME' && needs.plan.outputs.apply_required == 'true'
     needs: [prerequisites, plan]

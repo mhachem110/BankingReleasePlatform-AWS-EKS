@@ -10,8 +10,8 @@
 {{- if and .Values.persistence.enabled (or (not .Values.persistence.accountSecretName) (not .Values.persistence.paymentSecretName) (not .Values.persistence.caConfigMapName)) }}
 {{- fail "Persistence requires existing operator-managed account/payment Secrets and CA ConfigMap" }}
 {{- end }}
-{{- if and .Values.messaging.enabled (or (not .Values.messaging.approved) (not .Values.persistence.enabled) (not .Values.messaging.roleArn) (not .Values.messaging.queueUrl) (not .Values.messaging.deadLetterQueueUrl) (ne .Release.Namespace "banking-dev")) }}
-{{- fail "Messaging requires approved dev runtime IRSA, durable persistence and two existing queues" }}
+{{- if and .Values.messaging.enabled (or (not .Values.messaging.approved) (not .Values.persistence.enabled) (not (has .Release.Namespace (list "banking-dev" "banking-prod"))) (ne .Values.messaging.roleArn (printf "arn:aws:iam::866934333672:role/cloudbatch818-mahmoud-banking-payment-runtime-%s" (trimPrefix "banking-" .Release.Namespace))) (ne .Values.messaging.queueUrl (printf "https://sqs.us-east-2.amazonaws.com/866934333672/%s-payments" .Release.Namespace)) (ne .Values.messaging.deadLetterQueueUrl (printf "https://sqs.us-east-2.amazonaws.com/866934333672/%s-payments-dlq" .Release.Namespace))) }}
+{{- fail "Messaging requires approved namespace-bound IRSA, persistence and exact project queues" }}
 {{- end }}
 {{- if and .Values.messaging.enabled (eq .Values.messaging.queueUrl .Values.messaging.deadLetterQueueUrl) }}
 {{- fail "Messaging source and dead-letter queues must be distinct" }}

@@ -11,7 +11,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from data_iam import session_cap, monitoring_trust
+from data_iam import session_cap, monitoring_trust, payment_trust, payment_permissions
 from iam_contract import ACCOUNT, REGION, BOOTSTRAP, BUCKET, canonical, digest, require
 from cleanup_guard import aws, rows
 
@@ -31,6 +31,10 @@ def topic(env):
 
 def policy(env):
     return f"arn:aws:iam::{ACCOUNT}:policy/{NAMES[env]}"
+
+
+def payment_role(env):
+    return f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-payment-runtime-{env}"
 
 
 def backend():
@@ -63,13 +67,15 @@ def configuration(env):
     require(len(subnets) == 2 and len(set(subnets)) == 2 and all(re.fullmatch(r"subnet-[a-f0-9]{17}", s) for s in subnets), "Wrong database subnets")
     sg = actual("cluster_security_group_id")
     require(re.fullmatch(r"sg-[a-f0-9]{17}", sg), "Wrong cluster group")
-    documents = {}
+    documents, payments = {}, {}
     for target in NAMES:
         values = {"kms_key_arn": key, "vpc_id": actual("vpc_id"), "cluster_security_group_id": sg,
                   "database_subnet_ids": subnets, "monitoring_role_arn": role(target), "alert_topic_arn": topic(target)}
         documents[target] = canonical(session_cap(values, policy(target), target))
+        payments[target] = canonical(payment_permissions(key, target))
     return {"kms_key_arn": key, "oidc_issuer_url": issuer, "oidc_provider_arn": provider,
-            "data_session_policies": documents, "vpc_id": actual("vpc_id"), "database_subnet_ids": subnets,
+            "data_session_policies": documents, "payment_permissions": payments,
+            "vpc_id": actual("vpc_id"), "database_subnet_ids": subnets,
             "cluster_security_group_id": sg}
 
 
@@ -77,6 +83,7 @@ def inventory():
     addresses = {"terraform_data.authorization", "aws_kms_key.alerts", "aws_kms_alias.alerts"}
     for env in NAMES:
         for typ, name in (("aws_iam_role", "monitoring"), ("aws_iam_role_policy_attachment", "monitoring"),
+                          ("aws_iam_role", "payment"), ("aws_iam_role_policy", "payment"),
                           ("aws_sqs_queue", "alerts"), ("aws_sns_topic", "alerts"),
                           ("aws_sqs_queue_policy", "alerts"), ("aws_sns_topic_subscription", "alerts"),
                           ("aws_iam_policy", "data_session")):
@@ -121,6 +128,7 @@ def preflight(config):
         for env in NAMES:
             require(aws("iam", "get-role", "--role-name", role(env).split("/")[-1], absent_codes=("NoSuchEntity",)).get("absent"), "Monitoring role collision")
             require(aws("iam", "get-policy", "--policy-arn", policy(env), absent_codes=("NoSuchEntity",)).get("absent"), "Data policy collision")
+            require(aws("iam", "get-role", "--role-name", payment_role(env).split("/")[-1], absent_codes=("NoSuchEntity",)).get("absent"), "Payment role collision")
             require(aws("sns", "get-topic-attributes", "--topic-arn", topic(env), absent_codes=("NotFound",)).get("absent"), "Alert topic collision")
             require(aws("sqs", "get-queue-url", "--queue-name", f"banking-{env}-alerts", absent_codes=("AWS.SimpleQueueService.NonExistentQueue",)).get("absent"), "Alert queue collision")
         require(aws("kms", "describe-key", "--key-id", "alias/banking-release-platform-alerts", absent_codes=("NotFoundException",)).get("absent"), "Alert key alias collision")
@@ -133,6 +141,15 @@ def preflight(config):
         require(item["arn"] == role(env) and json.loads(item["assume_role_policy"]) == monitoring_trust(env), "Monitoring role state changed")
         actual = aws("iam", "get-role", "--role-name", item["name"])["Role"]
         require(actual["Arn"] == role(env) and actual["AssumeRolePolicyDocument"] == monitoring_trust(env), "Monitoring role drift")
+        payment = next(r for r in managed if r["address"] == f'aws_iam_role.payment["{env}"]')["values"]
+        require(payment["arn"] == payment_role(env) and json.loads(payment["assume_role_policy"]) == payment_trust(config["oidc_issuer_url"], env), "Payment role state changed")
+        actual_payment = aws("iam", "get-role", "--role-name", payment["name"])["Role"]
+        require(actual_payment["Arn"] == payment_role(env) and actual_payment["AssumeRolePolicyDocument"] == payment_trust(config["oidc_issuer_url"], env), "Payment role drift")
+        require(not aws("iam", "list-attached-role-policies", "--role-name", payment["name"])["AttachedPolicies"] and
+                aws("iam", "list-role-policies", "--role-name", payment["name"])["PolicyNames"] == ["BankingPaymentRuntime"],
+                "Payment role gained an unreviewed policy")
+        actual_policy = aws("iam", "get-role-policy", "--role-name", payment["name"], "--policy-name", "BankingPaymentRuntime")["PolicyDocument"]
+        require(actual_policy == json.loads(config["payment_permissions"][env]), "Payment queue/KMS policy drift")
         meta = aws("iam", "get-policy", "--policy-arn", policy(env))["Policy"]
         document = aws("iam", "get-policy-version", "--policy-arn", policy(env), "--version-id", meta["DefaultVersionId"])["PolicyVersion"]["Document"]
         require(document == json.loads(config["data_session_policies"][env]) and meta["AttachmentCount"] == 0, "Data cap drift")
@@ -153,7 +170,14 @@ def plan_review(plan, config):
         if row["type"] == "aws_iam_role":
             env = row["address"].split('"')[1]
             after = row["change"]["after"]
-            require(after["name"] == role(env).split("/")[-1] and json.loads(after["assume_role_policy"]) == monitoring_trust(env), "Trust source mismatch")
+            if row["name"] == "monitoring":
+                require(after["name"] == role(env).split("/")[-1] and json.loads(after["assume_role_policy"]) == monitoring_trust(env), "Monitoring trust source mismatch")
+            else:
+                require(after["name"] == payment_role(env).split("/")[-1] and json.loads(after["assume_role_policy"]) == payment_trust(config["oidc_issuer_url"], env), "Payment trust source mismatch")
+        if row["type"] == "aws_iam_role_policy":
+            env = row["address"].split('"')[1]
+            require(row["change"]["after"]["name"] == "BankingPaymentRuntime" and
+                    json.loads(row["change"]["after"]["policy"]) == json.loads(config["payment_permissions"][env]), "Payment policy source mismatch")
     require(plan.get("applyable") is True, "Expected a complete creation plan")
     return {"creates": len(changes), "updates": 0, "deletes": 0,
             "policy_sha256": {env: digest(json.loads(config["data_session_policies"][env])) for env in NAMES}}
@@ -168,10 +192,11 @@ def session_policy(write=False):
             dict(Effect="Allow", Action=["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], Resource=state + ".tflock")]
     if write:
         resources = [f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-rds-monitoring*",
+                     f"arn:aws:iam::{ACCOUNT}:role/cloudbatch818-mahmoud-banking-payment-runtime-*",
                      f"arn:aws:iam::{ACCOUNT}:policy/BankingReleasePlatformPhase6*Session",
                      f"arn:aws:sns:{REGION}:{ACCOUNT}:banking-*-alerts",
                      f"arn:aws:sqs:{REGION}:{ACCOUNT}:banking-*-alerts"]
-        rows += [dict(Effect="Allow", Action=["iam:CreateRole", "iam:AttachRolePolicy", "iam:TagRole", "iam:CreatePolicy", "iam:TagPolicy", "sns:CreateTopic", "sns:Subscribe", "sns:TagResource", "sqs:CreateQueue", "sqs:SetQueueAttributes", "sqs:TagQueue"], Resource=resources + ["arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"]),
+        rows += [dict(Effect="Allow", Action=["iam:CreateRole", "iam:AttachRolePolicy", "iam:PutRolePolicy", "iam:TagRole", "iam:CreatePolicy", "iam:TagPolicy", "sns:CreateTopic", "sns:Subscribe", "sns:TagResource", "sqs:CreateQueue", "sqs:SetQueueAttributes", "sqs:TagQueue"], Resource=resources + ["arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"]),
                  dict(Effect="Allow", Action="kms:CreateKey", Resource="*", Condition={"StringEquals": {"aws:RequestTag/Project": "BankingReleasePlatform", "aws:RequestTag/Name": "banking-alert-delivery"}}),
                  dict(Effect="Allow", Action=["kms:CreateAlias", "kms:EnableKeyRotation", "kms:TagResource", "kms:PutKeyPolicy"], Resource=f"arn:aws:kms:{REGION}:{ACCOUNT}:key/*"),
                  dict(Effect="Allow", Action="kms:CreateAlias", Resource=f"arn:aws:kms:{REGION}:{ACCOUNT}:alias/banking-release-platform-alerts"),
@@ -187,7 +212,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = configuration(os.environ)
     if args.command == "inputs":
-        tfvars = {k: config[k] for k in ("kms_key_arn", "oidc_issuer_url", "oidc_provider_arn", "data_session_policies")}
+        tfvars = {k: config[k] for k in ("kms_key_arn", "oidc_issuer_url", "oidc_provider_arn", "data_session_policies", "payment_permissions")}
         Path("runtime-config.json").write_text(json.dumps(config, indent=2))
         Path("runtime.tfvars.json").write_text(json.dumps(tfvars, indent=2))
         Path("runtime.tfbackend.json").write_text(json.dumps(backend(), indent=2))

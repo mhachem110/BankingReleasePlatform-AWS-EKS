@@ -88,9 +88,10 @@ owner review, no administrator bypass, exact dev/main branch restrictions and co
 non-secret variables. APP_RELEASE_MODE=shared-cluster-demo permits dev then prod
 against banking-dev, retaining the source branch promotion routes dev/stage/uat/main.
 Stage/UAT are available for branch governance and remain inactive as paid workloads.
-Deployment/data switches remain false and prod runtime is explicitly memory mode.
-Prod persistence/messaging cannot be enabled through the current dev-only workflow;
-its isolated data design requires a separate actual resource/cost plan approval.
+Deployment/data switches remain false until both environment-specific data plans,
+runtime IRSA roles, secret delivery and final acceptance have been reviewed.
+Prod persistence/messaging may use only its own namespace-bound role and queues;
+the default remains memory mode until those actual resources and secrets exist.
 
 The existing CloudOps deployment role trusts/permissions are user-reported and await
 full AWS audit. Workflow STS caps add no permission and constrain dev publication and
