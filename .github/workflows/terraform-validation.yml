@@ -14,6 +14,7 @@ on:
       - 'helm/**'
       - '.github/workflows/infra-operations.yml'
       - '.github/workflows/iam-prerequisites.yml'
+      - '.github/workflows/policy-prerequisites.yml'
       - '.github/workflows/network-prerequisites.yml'
       - '.github/workflows/data-operations.yml'
       - '.github/workflows/verify-prerequisites.yml'
@@ -32,6 +33,7 @@ on:
       - 'helm/**'
       - '.github/workflows/infra-operations.yml'
       - '.github/workflows/iam-prerequisites.yml'
+      - '.github/workflows/policy-prerequisites.yml'
       - '.github/workflows/network-prerequisites.yml'
       - '.github/workflows/data-operations.yml'
       - '.github/workflows/verify-prerequisites.yml'
@@ -54,12 +56,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for root in infra/modules/state-bucket infra/bootstrap infra/environments/dev infra/modules/network infra/modules/vpc-seed infra/network-seed infra/cleanup infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
+          for root in infra/modules/state-bucket infra/bootstrap infra/environments/dev infra/modules/network infra/modules/vpc-seed infra/network-seed infra/cleanup infra/policy-prerequisites infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
             terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
             terraform -chdir="$root" validate
           done
           terraform -chdir=infra/modules/state-bucket test
-          for root in infra/modules/network infra/network-seed infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
+          for root in infra/modules/network infra/network-seed infra/policy-prerequisites infra/modules/registry infra/modules/eks infra/environments/dev/platform infra/iam-prerequisites infra/modules/data-services infra/environments/dev/data infra/environments/prod/data; do
             terraform -chdir="$root" test
           done
           python -m unittest discover -s scripts/bootstrap/tests -v
@@ -71,7 +73,7 @@ jobs:
         run: python scripts/deploy/install-tools.py
       - name: Validate infrastructure and application workflows
         run: |
-          actionlint -config-file scripts/deploy/actionlint.yaml .github/workflows/verify-prerequisites.yml .github/workflows/infra-operations.yml .github/workflows/iam-prerequisites.yml .github/workflows/network-prerequisites.yml .github/workflows/data-operations.yml .github/workflows/terraform-cleanup.yml .github/workflows/terraform-validation.yml .github/workflows/terraform-operations.yml .github/workflows/branch-governance.yml .github/workflows/app-ci.yml .github/workflows/app-validation.yml .github/workflows/app-publish.yml .github/workflows/app-deploy.yml
+          actionlint -config-file scripts/deploy/actionlint.yaml .github/workflows/verify-prerequisites.yml .github/workflows/infra-operations.yml .github/workflows/iam-prerequisites.yml .github/workflows/policy-prerequisites.yml .github/workflows/network-prerequisites.yml .github/workflows/data-operations.yml .github/workflows/terraform-cleanup.yml .github/workflows/terraform-validation.yml .github/workflows/terraform-operations.yml .github/workflows/branch-governance.yml .github/workflows/app-ci.yml .github/workflows/app-validation.yml .github/workflows/app-publish.yml .github/workflows/app-deploy.yml
       - name: Helm lint, rendering and workload safety tests
         run: |
           python -m pip install PyYAML==6.0.3

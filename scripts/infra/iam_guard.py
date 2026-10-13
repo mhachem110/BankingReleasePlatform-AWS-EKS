@@ -94,14 +94,8 @@ def preflight(inputs, call=read):
     name = BOOTSTRAP.split("/")[-1]
     bootstrap = call("iam", "get-role", "--role-name", name)["Role"]
     require(bootstrap.get("Arn") == BOOTSTRAP, "Bootstrap role identity changed")
-    original_trusts = {"GitHubOIDCRetailBootstrap": "834e6a92b1e204f695a9f0abe9e9dbba46e24377de7d844afbc05dd0827e23bb", "GitHubOIDCBankingBootstrap": "6405bb4174b22353c79094bb1f61b222213dfc2336c91f4fa1d89a04bcba0ce8"}
-    statements = bootstrap["AssumeRolePolicyDocument"]["Statement"]
-    require(all(any(s.get("Sid") == sid and digest(s) == h for s in statements) for sid, h in original_trusts.items()), "Original Retail/Banking bootstrap trusts changed; stop for review")
-    attached = call("iam", "list-attached-role-policies", "--role-name", name)
-    require(POLICY_ARN in {p["PolicyArn"] for p in attached.get("AttachedPolicies", [])}, "Administrator has not attached the exact bounded IAM grant to the bootstrap identity")
-    originals = {"CloudOpsTrackerBootstrap": "78c12672b53ed0365036c5f65ca2d1fd1151d8f51417cc468611c7fe8ad1d076", "BankingReleasePlatformState": "ec727a3eb94b54085034192764bd015c7aaf97a2be66b9de8df6294ab92f6150"}
-    inline = {n: call("iam", "get-role-policy", "--role-name", name, "--policy-name", n)["PolicyDocument"] for n in originals}
-    require(all(digest(inline[n]) == expected for n, expected in originals.items()), "Original bootstrap permissions changed; stop for review")
+    from bootstrap_authorization import verify as verify_authorization
+    authorization = verify_authorization(call)
     docs = {}
     for arn in [BOUNDARY, POLICY_ARN, *ATTACHMENTS.values()]:
         meta = call("iam", "get-policy", "--policy-arn", arn)["Policy"]
@@ -110,8 +104,8 @@ def preflight(inputs, call=read):
     require(docs[BOUNDARY]["sha256"] == inputs["boundary_policy_sha256"], "Live boundary differs from approved source")
     expected = json.loads((POLICY_FOLDER / "BankingTerraformProvisioner-IamPrerequisites.json").read_text())
     require(docs[POLICY_ARN]["sha256"] == digest(expected), "Live IAM provisioning cap differs from reviewed proposal")
-    docs["bootstrapAuthorization"] = {"arn": bootstrap["Arn"], "trust": bootstrap["AssumeRolePolicyDocument"], "boundary": bootstrap.get("PermissionsBoundary"), "attachedInventory": sorted(p["PolicyArn"] for p in attached.get("AttachedPolicies", [])), "originalInlinePolicies": inline,
-        "simulations": permission_simulations(call), "advisoryOnly": "Simulation does not prove all resource/SCP/RCP contexts; separate administrator authorization and apply approval remain required"}
+    docs["bootstrapAuthorization"] = dict(authorization, simulations=permission_simulations(call),
+        advisoryOnly="Session caps restrict the owner-installed grant and are not role attachments. Simulation does not prove every resource/SCP/RCP context; the protected saved-plan apply must succeed.")
     return docs
 
 
