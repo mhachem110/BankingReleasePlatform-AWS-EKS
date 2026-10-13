@@ -108,7 +108,7 @@ jobs:
           if-no-files-found: error
       - name: Publish key and operator review instructions
         run: |
-          echo 'Review the new symmetric rotated KMS key, its policy and alias, the restricted operator role/trust, exact ownership and saved-plan SHA256. One key costs $1/month, hourly prorated, plus requests and future rotations. No existing keys or bootstrap IAM are changed; this plan creates no EKS, NAT, runner or databases.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review the new symmetric rotated KMS key, its policy and alias, the restricted operator role/trust, exact ownership and saved-plan SHA256. One key costs USD 1/month, hourly prorated, plus requests and future rotations. No existing keys or bootstrap IAM are changed; this plan creates no EKS, NAT, runner or databases.' >> "$GITHUB_STEP_SUMMARY"
   apply:
     if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-FOUNDATION'
     needs: [prerequisites, plan]
