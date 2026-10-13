@@ -123,10 +123,16 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Publish source-generated session policy review instructions
+        if: steps.plan-review.outputs.apply_required == 'true'
         run: |
           echo 'Review the three source-generated session policy documents, actual key/VPC/default-group/operator bindings, ownership and saved-plan SHA256. No policy is attached to bootstrap and no role permissions change.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Record verified policy reuse
+        if: steps.plan-review.outputs.apply_required != 'true'
+        run: echo 'Platform caps are unchanged. The protected apply job will reverify them without requesting a write session.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-PLATFORM-CAPS' && needs.plan.outputs.apply_required == 'true'
+    # Reverify unchanged policies under the protected read session; only a
+    # creation plan requests the separate bounded write session.
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-PLATFORM-CAPS'
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -135,8 +135,11 @@ jobs:
           path: seed-verification.json
           retention-days: 7
           if-no-files-found: error
+      - if: steps.status.outputs.existing == 'true'
+        run: echo 'The owned VPC is already verified. The protected apply job will recheck it without planning or creating another VPC.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-VPC-SEED' && needs.plan.outputs.existing != 'true'
+    # Reused VPCs are verified again without a write session or seed-root plan.
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-VPC-SEED'
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     environment: bootstrap
@@ -157,7 +160,7 @@ jobs:
       APPROVAL: ${{ inputs.approval }}
       REVIEWED_DIGEST: ${{ needs.plan.outputs.digest }}
     outputs:
-      interface_json: ${{ steps.verify.outputs.interface_json }}
+      interface_json: ${{ steps.verify.outputs.interface_json || steps.reuse.outputs.interface_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -167,14 +170,17 @@ jobs:
       - id: config
         run: python scripts/infra/network_seed.py inputs
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.plan.outputs.existing != 'true'
         with:
           name: banking-vpc-seed-reviewed-plan
           path: reviewed
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        if: needs.plan.outputs.existing != 'true'
         with:
           terraform_version: '1.15.8'
           terraform_wrapper: false
       - name: Verify same-run saved plan and unchanged approved inputs
+        if: needs.plan.outputs.existing != 'true'
         run: |
           set -euo pipefail
           echo "$REVIEWED_DIGEST  reviewed/platform.tfplan" | sha256sum --check --strict
@@ -191,7 +197,24 @@ jobs:
           inline-session-policy: ${{ steps.config.outputs.session_policy }}
           unset-current-credentials: true
           translate-env-variables: false
+      - name: Reverify the reused VPC against state and live AWS
+        id: reuse
+        if: needs.plan.outputs.existing == 'true'
+        env:
+          PLAN_INTERFACE_JSON: ${{ needs.plan.outputs.interface_json }}
+        run: |
+          set -euo pipefail
+          python scripts/infra/network_seed.py status
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          planned = json.loads(os.environ['PLAN_INTERFACE_JSON'])
+          live = json.loads(Path('seed-verification.json').read_text())
+          if not live.get('verified') or live != planned:
+              raise ValueError('Reused VPC changed after the protected plan')
+          PY
       - name: Reinspect under read-only credentials before requesting write access
+        if: needs.plan.outputs.existing != 'true'
         run: |
           set -euo pipefail
           python scripts/infra/network_seed.py preflight
@@ -205,8 +228,10 @@ jobs:
           python scripts/infra/network_seed.py plan
       # The write cap permits only tagged VPC creation after the saved-plan gate.
       - id: write-cap
+        if: needs.plan.outputs.existing != 'true'
         run: python scripts/infra/network_seed.py write-cap
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        if: needs.plan.outputs.existing != 'true'
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -218,6 +243,7 @@ jobs:
           translate-env-variables: false
       - name: Apply only the reviewed saved plan, then verify
         id: verify
+        if: needs.plan.outputs.existing != 'true'
         env:
           WRITE_PROBE: 'true'
         run: |
@@ -228,6 +254,7 @@ jobs:
           python scripts/infra/network_seed.py verify
           terraform -chdir="$root" plan -input=false -lock-timeout=5m -detailed-exitcode -var-file="$GITHUB_WORKSPACE/reviewed/platform.tfvars.json"
       - name: Publish actual VPC/default group IDs for the separately approved full platform plan
+        if: needs.plan.outputs.existing != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: banking-vpc-seed-verified-interface

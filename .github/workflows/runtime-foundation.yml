@@ -116,10 +116,16 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Publish key and operator review instructions
+        if: steps.plan-review.outputs.apply_required == 'true'
         run: |
           echo 'Review the new symmetric rotated KMS key, its policy and alias, the restricted operator role/trust, exact ownership and saved-plan SHA256. One key costs USD 1/month, hourly prorated, plus requests and future rotations. No existing keys or bootstrap IAM are changed; this plan creates no EKS, NAT, runner or databases.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Record verified foundation reuse
+        if: steps.plan-review.outputs.apply_required != 'true'
+        run: echo 'Foundation is unchanged. The protected apply job will reverify the live key and operator without requesting a write session.' >> "$GITHUB_STEP_SUMMARY"
   apply:
-    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-FOUNDATION' && needs.plan.outputs.apply_required == 'true'
+    # A no-op plan still enters this protected job to reverify the owned key and
+    # operator. The write session and Terraform apply remain creation-only.
+    if: inputs.operation == 'apply' && inputs.approval == 'APPLY-REVIEWED-BANKING-FOUNDATION'
     needs: [prerequisites, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
